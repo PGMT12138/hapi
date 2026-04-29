@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/Spinner'
 import { useTranslation } from '@/lib/use-translation'
 import { CloseIcon } from '@/components/icons'
+import { formatTimestamp } from '@/chat/presentation'
 
 function NewMessagesIndicator(props: { count: number; onClick: () => void }) {
     const { t } = useTranslation()
@@ -137,6 +138,9 @@ export function ConversationOutlinePanel(props: {
                                         </span>
                                         <span className="line-clamp-2 text-sm leading-snug text-[var(--app-fg)]">
                                             {item.label}
+                                        </span>
+                                        <span className="block text-[10px] text-[var(--app-hint)]">
+                                            {formatTimestamp(item.createdAt)}
                                         </span>
                                     </span>
                                 </button>

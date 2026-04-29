@@ -8,6 +8,7 @@ import { CliOutputBlock } from '@/components/CliOutputBlock'
 import { CopyIcon, CheckIcon } from '@/components/icons'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { getConversationMessageAnchorId } from '@/chat/outline'
+import { formatTimestamp } from '@/chat/presentation'
 
 export function HappyUserMessage() {
     const ctx = useHappyChatContext()
@@ -33,6 +34,7 @@ export function HappyUserMessage() {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.attachments
     })
+    const createdAt = useAssistantState(({ message }) => message.createdAt)
     const isCliOutput = useAssistantState(({ message }) => {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.kind === 'cli-output'
@@ -93,6 +95,11 @@ export function HappyUserMessage() {
                     </div>
                 )}
             </div>
+            {createdAt && (
+                <div className="mt-0.5 text-right text-[10px] text-[var(--app-hint)]">
+                    {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
+                </div>
+            )}
         </MessagePrimitive.Root>
     )
 }

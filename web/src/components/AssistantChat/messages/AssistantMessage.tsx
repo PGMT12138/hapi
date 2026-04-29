@@ -8,6 +8,7 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
 import { getAssistantCopyText } from '@/components/AssistantChat/messages/assistantCopyText'
 import { getConversationMessageAnchorId } from '@/chat/outline'
+import { formatTimestamp, formatDuration } from '@/chat/presentation'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -40,6 +41,11 @@ export function HappyAssistantMessage() {
     const copyText = useAssistantState(({ message }) => {
         if (message.role !== 'assistant') return ''
         return getAssistantCopyText(message.content)
+    })
+    const createdAt = useAssistantState(({ message }) => message.createdAt)
+    const durationMs = useAssistantState(({ message }) => {
+        const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
+        return custom?.durationMs
     })
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
@@ -76,6 +82,12 @@ export function HappyAssistantMessage() {
                             ? <CheckIcon className="h-3.5 w-3.5 text-green-500" />
                             : <CopyIcon className="h-3.5 w-3.5 text-[var(--app-hint)]" />}
                     </button>
+                </div>
+            )}
+            {createdAt && (
+                <div className="mt-0.5 text-[10px] text-[var(--app-hint)]">
+                    {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
+                    {durationMs != null && ` (${formatDuration(durationMs)})`}
                 </div>
             )}
         </MessagePrimitive.Root>

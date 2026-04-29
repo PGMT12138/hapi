@@ -16,9 +16,25 @@ export type HappyChatMessageMetadata = {
     event?: AgentEvent
     source?: CliOutputBlock['source']
     attachments?: AttachmentMetadata[]
+    durationMs?: number
 }
 
-function toThreadMessageLike(block: ChatBlock): ThreadMessageLike {
+function buildDurationMap(blocks: readonly ChatBlock[]): Map<string, number> {
+    const map = new Map<string, number>()
+    let lastUserCreatedAt: number | undefined
+    for (const block of blocks) {
+        if (block.kind === 'user-text') {
+            lastUserCreatedAt = block.createdAt
+        } else if (block.kind === 'agent-text' || block.kind === 'agent-reasoning') {
+            if (lastUserCreatedAt != null) {
+                map.set(block.id, block.createdAt - lastUserCreatedAt)
+            }
+        }
+    }
+    return map
+}
+
+function toThreadMessageLike(block: ChatBlock, durationMap: Map<string, number>): ThreadMessageLike {
     if (block.kind === 'user-text') {
         const messageId = `user:${block.id}`
         return {
@@ -46,7 +62,10 @@ function toThreadMessageLike(block: ChatBlock): ThreadMessageLike {
             createdAt: new Date(block.createdAt),
             content: [{ type: 'text', text: block.text }],
             metadata: {
-                custom: { kind: 'assistant' } satisfies HappyChatMessageMetadata
+                custom: {
+                    kind: 'assistant',
+                    durationMs: durationMap.get(block.id)
+                } satisfies HappyChatMessageMetadata
             }
         }
     }
@@ -59,7 +78,10 @@ function toThreadMessageLike(block: ChatBlock): ThreadMessageLike {
             createdAt: new Date(block.createdAt),
             content: [{ type: 'reasoning', text: block.text }],
             metadata: {
-                custom: { kind: 'assistant' } satisfies HappyChatMessageMetadata
+                custom: {
+                    kind: 'assistant',
+                    durationMs: durationMap.get(block.id)
+                } satisfies HappyChatMessageMetadata
             }
         }
     }
@@ -177,10 +199,13 @@ export function useHappyRuntime(props: {
     attachmentAdapter?: AttachmentAdapter
     allowSendWhenInactive?: boolean
 }) {
+    // Pre-compute duration map so the converter callback can access it
+    const durationMap = useMemo(() => buildDurationMap(props.blocks), [props.blocks])
+
     // Use cached message converter for performance optimization
     // This prevents re-converting all messages on every render
     const convertedMessages = useExternalMessageConverter<ChatBlock>({
-        callback: toThreadMessageLike,
+        callback: useCallback((block: ChatBlock) => toThreadMessageLike(block, durationMap), [durationMap]),
         messages: props.blocks as ChatBlock[],
         isRunning: props.session.thinking,
     })
