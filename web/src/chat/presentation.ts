@@ -11,6 +11,27 @@ export function formatUnixTimestamp(value: number): string {
     return date.toLocaleString()
 }
 
+export function formatDuration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`
+    const seconds = ms / 1000
+    if (seconds < 60) return `${seconds.toFixed(1)}s`
+    const minutes = Math.floor(seconds / 60)
+    const secs = Math.round(seconds % 60)
+    return `${minutes}m${secs}s`
+}
+
+export function formatTimestamp(value: number): string {
+    const date = normalizeTimestamp(value)
+    if (Number.isNaN(date.getTime())) return String(value)
+    const y = date.getFullYear()
+    const M = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const h = String(date.getHours()).padStart(2, '0')
+    const m = String(date.getMinutes()).padStart(2, '0')
+    const s = String(date.getSeconds()).padStart(2, '0')
+    return `${y}-${M}-${d} ${h}:${m}:${s}`
+}
+
 export function formatResetTime(value: number): string {
     const date = normalizeTimestamp(value)
     if (Number.isNaN(date.getTime())) return String(value)
@@ -33,14 +54,6 @@ function formatLimitType(limitType: string | undefined): string {
     if (limitType === 'five_hour') return '5-hour'
     if (limitType === 'seven_day') return '7-day'
     return limitType.replace(/_/g, ' ')
-}
-
-function formatDuration(ms: number): string {
-    const seconds = ms / 1000
-    if (seconds < 60) return `${seconds.toFixed(1)}s`
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.round(seconds % 60)
-    return `${mins}m ${secs}s`
 }
 
 export type EventPresentation = {
