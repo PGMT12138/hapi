@@ -1,5 +1,6 @@
 import os from 'node:os'
 import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { ApiClient } from '@/api/api'
@@ -39,8 +40,15 @@ export type SessionBootstrapResult = {
 }
 
 export function buildMachineMetadata(options?: { workspaceRoot?: string }): MachineMetadata {
+    let hostname: string | undefined
+    try {
+        if (existsSync(configuration.settingsFile)) {
+            const raw = readFileSync(configuration.settingsFile, 'utf8')
+            hostname = JSON.parse(raw).hostname
+        }
+    } catch { /* ignore */ }
     return {
-        host: process.env.HAPI_HOSTNAME || os.hostname(),
+        host: hostname || process.env.HAPI_HOSTNAME || os.hostname(),
         platform: os.platform(),
         happyCliVersion: packageJson.version,
         homeDir: os.homedir(),
@@ -60,11 +68,19 @@ export function buildSessionMetadata(options: {
 }): Metadata {
     const happyLibDir = runtimePath()
     const worktreeInfo = readWorktreeEnv()
+    let hostname: string | undefined
+    try {
+        if (existsSync(configuration.settingsFile)) {
+            const raw = readFileSync(configuration.settingsFile, 'utf8')
+            hostname = JSON.parse(raw).hostname
+        }
+    } catch { /* ignore */ }
+
     const now = options.now ?? Date.now()
 
     return {
         path: options.workingDirectory,
-        host: process.env.HAPI_HOSTNAME || os.hostname(),
+        host: hostname || process.env.HAPI_HOSTNAME || os.hostname(),
         version: packageJson.version,
         os: os.platform(),
         machineId: options.machineId,
