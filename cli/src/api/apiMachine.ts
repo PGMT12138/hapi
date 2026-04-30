@@ -13,6 +13,7 @@ import type { RunnerState, Machine, MachineMetadata } from './types'
 import { RunnerStateSchema, MachineMetadataSchema } from './types'
 import { backoff } from '@/utils/time'
 import { getInvokedCwd } from '@/utils/invokedCwd'
+import { buildMachineMetadata } from '@/agent/sessionFactory'
 import { RpcHandlerManager } from './rpc/RpcHandlerManager'
 import { registerCommonHandlers } from '../modules/common/registerCommonHandlers'
 import type { SpawnSessionOptions, SpawnSessionResult } from '../modules/common/rpcTypes'
@@ -424,6 +425,19 @@ export class ApiMachineClient {
                 })
             } else if (desiredWorkspaceRoot) {
                 console.log(`[HAPI] Workspace root already up to date on hub: ${desiredWorkspaceRoot}`)
+            }
+
+            // Sync hostname if it has changed
+            const desiredHost = buildMachineMetadata().host
+            const hubHost = this.machine.metadata?.host
+            if (desiredHost !== hubHost) {
+                this.updateMachineMetadata((current) => {
+                    const base = current ?? this.machine.metadata
+                    if (!base) return { host: desiredHost } as MachineMetadata
+                    return { ...base, host: desiredHost }
+                }).catch((error) => {
+                    logger.debug('[API MACHINE] Failed to sync hostname:', error instanceof Error ? error.message : error)
+                })
             }
 
             this.startKeepAlive()
