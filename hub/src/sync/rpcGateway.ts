@@ -131,13 +131,14 @@ export class RpcGateway {
         worktreeName?: string,
         resumeSessionId?: string,
         effort?: string,
-        permissionMode?: PermissionMode
+        permissionMode?: PermissionMode,
+        env?: Record<string, string>
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
         try {
             const result = await this.machineRpc(
                 machineId,
                 'spawn-happy-session',
-                { type: 'spawn-in-directory', directory, agent, model, modelReasoningEffort, yolo, sessionType, worktreeName, resumeSessionId, effort, permissionMode }
+                { type: 'spawn-in-directory', directory, agent, model, modelReasoningEffort, yolo, sessionType, worktreeName, resumeSessionId, effort, permissionMode, env }
             )
             if (result && typeof result === 'object') {
                 const obj = result as Record<string, unknown>
@@ -260,6 +261,14 @@ export class RpcGateway {
 
     async listCodexModelsForMachine(machineId: string): Promise<RpcListCodexModelsResponse> {
         return await this.machineRpc(machineId, 'listCodexModels', {}) as RpcListCodexModelsResponse
+    }
+
+    async readProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; vars?: Record<string, string>; hasLocal?: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'read-project-env', { directory }) as { success: boolean; vars?: Record<string, string>; hasLocal?: boolean; error?: string }
+    }
+
+    async writeProjectEnv(machineId: string, directory: string, vars: Record<string, string> | null): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'write-project-env', { directory, vars }) as { success: boolean; error?: string }
     }
 
     private async sessionRpc(sessionId: string, method: string, params: unknown): Promise<unknown> {

@@ -13,6 +13,7 @@ import { useTranslation } from '@/lib/use-translation'
 import type { AgentType, ClaudeEffort, CodexReasoningEffort, SessionType } from './types'
 import { ActionButtons } from './ActionButtons'
 import { AgentSelector } from './AgentSelector'
+import { ApiKeySection } from './ApiKeySection'
 import { DirectorySection } from './DirectorySection'
 import { MachineSelector } from './MachineSelector'
 import { ModelSelector } from './ModelSelector'
@@ -58,6 +59,7 @@ export function NewSession(props: {
     const [worktreeName, setWorktreeName] = useState('')
     const [directoryCreationConfirmed, setDirectoryCreationConfirmed] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [projectEnv, setProjectEnv] = useState<Record<string, string> | undefined>(undefined)
     const worktreeInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -291,7 +293,8 @@ export function NewSession(props: {
                 modelReasoningEffort: resolvedModelReasoningEffort,
                 yolo: yoloMode,
                 sessionType,
-                worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined
+                worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined,
+                env: projectEnv
             })
 
             if (result.type === 'success') {
@@ -354,6 +357,14 @@ export function NewSession(props: {
                 agent={agent}
                 isDisabled={isFormDisabled}
                 onAgentChange={setAgent}
+            />
+            <ApiKeySection
+                api={props.api}
+                machineId={machineId}
+                directory={directory}
+                agent={agent}
+                isDisabled={isFormDisabled}
+                onEnvChange={setProjectEnv}
             />
             <ModelSelector
                 agent={agent}

@@ -12,7 +12,13 @@ const spawnBodySchema = z.object({
     modelReasoningEffort: z.string().optional(),
     yolo: z.boolean().optional(),
     sessionType: z.enum(['simple', 'worktree']).optional(),
-    worktreeName: z.string().optional()
+    worktreeName: z.string().optional(),
+    env: z.record(z.string(), z.string()).optional()
+})
+
+const projectEnvBodySchema = z.object({
+    directory: z.string().min(1),
+    vars: z.record(z.string(), z.string()).nullable()
 })
 
 const pathsExistsSchema = z.object({
@@ -61,7 +67,9 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             parsed.data.sessionType,
             parsed.data.worktreeName,
             undefined,
-            parsed.data.effort
+            parsed.data.effort,
+            undefined,
+            parsed.data.env as Record<string, string> | undefined
         )
         return c.json(result)
     })
@@ -143,6 +151,58 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to list Codex models'
             }, 500)
+        }
+    })
+
+    app.get('/machines/:id/project-env', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        const directory = c.req.query('directory')
+        if (!directory) {
+            return c.json({ success: false, error: 'directory query parameter is required' }, 400)
+        }
+
+        try {
+            const result = await engine.readProjectEnv(machineId, directory)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to read project env' }, 500)
+        }
+    })
+
+    app.put('/machines/:id/project-env', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = projectEnvBodySchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ success: false, error: 'Invalid body' }, 400)
+        }
+
+        try {
+            const vars = parsed.data.vars as Record<string, string> | null
+            const result = await engine.writeProjectEnv(machineId, parsed.data.directory, vars)
+            return c.json(result)
+        } catch (err) {
+            return c.json({ success: false, error: err instanceof Error ? err.message : 'Failed to write project env' }, 500)
         }
     })
 

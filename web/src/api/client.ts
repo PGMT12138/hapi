@@ -433,11 +433,12 @@ export class ApiClient {
         yolo?: boolean,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string,
-        effort?: string
+        effort?: string,
+        env?: Record<string, string>
     ): Promise<SpawnResponse> {
         return await this.request<SpawnResponse>(`/api/machines/${encodeURIComponent(machineId)}/spawn`, {
             method: 'POST',
-            body: JSON.stringify({ directory, agent, model, modelReasoningEffort, yolo, sessionType, worktreeName, effort })
+            body: JSON.stringify({ directory, agent, model, modelReasoningEffort, yolo, sessionType, worktreeName, effort, env })
         })
     }
 
@@ -445,6 +446,17 @@ export class ApiClient {
         return await this.request<CodexModelsResponse>(
             `/api/machines/${encodeURIComponent(machineId)}/codex-models`
         )
+    }
+
+    async getProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; vars?: Record<string, string>; hasLocal?: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-env?directory=${encodeURIComponent(directory)}`)
+    }
+
+    async setProjectEnv(machineId: string, directory: string, vars: Record<string, string> | null): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-env`, {
+            method: 'PUT',
+            body: JSON.stringify({ directory, vars })
+        })
     }
 
     async getSessionCodexModels(sessionId: string): Promise<CodexModelsResponse> {
