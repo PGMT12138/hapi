@@ -8,13 +8,10 @@ type ApiKeySectionProps = {
     directory: string
     agent: string
     isDisabled: boolean
-    onEnvChange: (env: Record<string, string> | undefined) => void
 }
 
-const API_KEY_KEY = 'ANTHROPIC_API_KEY'
-
 export function ApiKeySection(props: ApiKeySectionProps) {
-    const { api, machineId, directory, agent, isDisabled, onEnvChange } = props
+    const { api, machineId, directory, agent, isDisabled } = props
     const { t } = useTranslation()
 
     const [useGlobal, setUseGlobal] = useState(true)
@@ -26,13 +23,11 @@ export function ApiKeySection(props: ApiKeySectionProps) {
 
     const trimmedDirectory = directory.trim()
 
-    // Load project env when machine and directory change
     useEffect(() => {
         if (!api || !machineId || !trimmedDirectory) {
             setLoadedKey(null)
             setApiKey('')
             setUseGlobal(true)
-            onEnvChange(undefined)
             return
         }
 
@@ -43,17 +38,14 @@ export function ApiKeySection(props: ApiKeySectionProps) {
         api.getProjectEnv(machineId, trimmedDirectory)
             .then((result) => {
                 if (cancelled) return
-                if (result.success && result.hasLocal && result.vars) {
-                    const key = result.vars[API_KEY_KEY] || ''
-                    setLoadedKey(key)
-                    setApiKey(key)
+                if (result.success && result.hasLocal && result.apiKey) {
+                    setLoadedKey(result.apiKey)
+                    setApiKey(result.apiKey)
                     setUseGlobal(false)
-                    onEnvChange(key ? { [API_KEY_KEY]: key } : undefined)
                 } else {
                     setLoadedKey(null)
                     setApiKey('')
                     setUseGlobal(true)
-                    onEnvChange(undefined)
                 }
             })
             .catch(() => {
@@ -67,44 +59,43 @@ export function ApiKeySection(props: ApiKeySectionProps) {
         return () => { cancelled = true }
     }, [api, machineId, trimmedDirectory])
 
-    // Only show for Claude agent
     if (agent !== 'claude') return null
 
     const handleToggleGlobal = useCallback(() => {
         if (!useGlobal) {
-            // Switching TO global: clear project config
             setUseGlobal(true)
             setApiKey('')
-            onEnvChange(undefined)
             if (api && machineId && trimmedDirectory) {
                 setIsSaving(true)
                 api.setProjectEnv(machineId, trimmedDirectory, null)
+                    .then((result) => {
+                        if (result.success) setLoadedKey(null)
+                        else setError(result.error || 'Failed to clear')
+                    })
                     .catch(() => setError('Failed to clear config'))
                     .finally(() => setIsSaving(false))
             }
         } else {
-            // Switching AWAY from global
             setUseGlobal(false)
         }
-    }, [useGlobal, api, machineId, trimmedDirectory, onEnvChange])
+    }, [useGlobal, api, machineId, trimmedDirectory])
 
     const handleSave = useCallback(() => {
         if (!api || !machineId || !trimmedDirectory) return
         setIsSaving(true)
         setError(null)
-        const vars = apiKey.trim() ? { [API_KEY_KEY]: apiKey.trim() } : null
-        api.setProjectEnv(machineId, trimmedDirectory, vars)
+        const value = apiKey.trim() || null
+        api.setProjectEnv(machineId, trimmedDirectory, value)
             .then((result) => {
                 if (result.success) {
-                    setLoadedKey(apiKey.trim() || null)
-                    onEnvChange(apiKey.trim() ? { [API_KEY_KEY]: apiKey.trim() } : undefined)
+                    setLoadedKey(value)
                 } else {
                     setError(result.error || 'Failed to save')
                 }
             })
             .catch(() => setError('Failed to save'))
             .finally(() => setIsSaving(false))
-    }, [api, machineId, trimmedDirectory, apiKey, onEnvChange])
+    }, [api, machineId, trimmedDirectory, apiKey])
 
     const hasChanges = apiKey !== (loadedKey || '')
 

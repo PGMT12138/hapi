@@ -12,13 +12,12 @@ const spawnBodySchema = z.object({
     modelReasoningEffort: z.string().optional(),
     yolo: z.boolean().optional(),
     sessionType: z.enum(['simple', 'worktree']).optional(),
-    worktreeName: z.string().optional(),
-    env: z.record(z.string(), z.string()).optional()
+    worktreeName: z.string().optional()
 })
 
 const projectEnvBodySchema = z.object({
     directory: z.string().min(1),
-    vars: z.record(z.string(), z.string()).nullable()
+    apiKey: z.string().nullable()
 })
 
 const pathsExistsSchema = z.object({
@@ -67,9 +66,7 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             parsed.data.sessionType,
             parsed.data.worktreeName,
             undefined,
-            parsed.data.effort,
-            undefined,
-            parsed.data.env as Record<string, string> | undefined
+            parsed.data.effort
         )
         return c.json(result)
     })
@@ -198,8 +195,7 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
 
         try {
-            const vars = parsed.data.vars as Record<string, string> | null
-            const result = await engine.writeProjectEnv(machineId, parsed.data.directory, vars)
+            const result = await engine.writeProjectEnv(machineId, parsed.data.directory, parsed.data.apiKey)
             return c.json(result)
         } catch (err) {
             return c.json({ success: false, error: err instanceof Error ? err.message : 'Failed to write project env' }, 500)

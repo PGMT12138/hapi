@@ -399,8 +399,7 @@ export class SyncEngine {
         worktreeName?: string,
         resumeSessionId?: string,
         effort?: string,
-        permissionMode?: PermissionMode,
-        env?: Record<string, string>
+        permissionMode?: PermissionMode
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
         return await this.rpcGateway.spawnSession(
             machineId,
@@ -413,8 +412,7 @@ export class SyncEngine {
             worktreeName,
             resumeSessionId,
             effort,
-            permissionMode,
-            env
+            permissionMode
         )
     }
 
@@ -422,8 +420,8 @@ export class SyncEngine {
         return await this.rpcGateway.readProjectEnv(machineId, directory)
     }
 
-    async writeProjectEnv(machineId: string, directory: string, vars: Record<string, string> | null) {
-        return await this.rpcGateway.writeProjectEnv(machineId, directory, vars)
+    async writeProjectEnv(machineId: string, directory: string, apiKey: string | null) {
+        return await this.rpcGateway.writeProjectEnv(machineId, directory, apiKey)
     }
 
     async resumeSession(sessionId: string, namespace: string, opts?: { permissionMode?: PermissionMode }): Promise<ResumeSessionResult> {

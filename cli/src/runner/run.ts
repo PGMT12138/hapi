@@ -378,10 +378,6 @@ export async function startRunner(options: { workspaceRoot?: string } = {}): Pro
           };
         }
 
-        if (options.env) {
-          extraEnv = { ...extraEnv, ...options.env };
-        }
-
         const args = buildCliArgs(agent, options, yolo);
 
         // sessionId reserved for future use
@@ -409,8 +405,7 @@ export async function startRunner(options: { workspaceRoot?: string } = {}): Pro
           stdio: ['ignore', 'pipe', 'pipe'],  // Capture stdout/stderr for debugging
           env: {
             ...process.env,
-            ...extraEnv,
-            ...(options.env || {})
+            ...extraEnv
           }
         });
 

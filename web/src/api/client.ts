@@ -433,12 +433,11 @@ export class ApiClient {
         yolo?: boolean,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string,
-        effort?: string,
-        env?: Record<string, string>
+        effort?: string
     ): Promise<SpawnResponse> {
         return await this.request<SpawnResponse>(`/api/machines/${encodeURIComponent(machineId)}/spawn`, {
             method: 'POST',
-            body: JSON.stringify({ directory, agent, model, modelReasoningEffort, yolo, sessionType, worktreeName, effort, env })
+            body: JSON.stringify({ directory, agent, model, modelReasoningEffort, yolo, sessionType, worktreeName, effort })
         })
     }
 
@@ -448,14 +447,14 @@ export class ApiClient {
         )
     }
 
-    async getProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; vars?: Record<string, string>; hasLocal?: boolean; error?: string }> {
+    async getProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; apiKey?: string; hasLocal?: boolean; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-env?directory=${encodeURIComponent(directory)}`)
     }
 
-    async setProjectEnv(machineId: string, directory: string, vars: Record<string, string> | null): Promise<{ success: boolean; error?: string }> {
+    async setProjectEnv(machineId: string, directory: string, apiKey: string | null): Promise<{ success: boolean; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-env`, {
             method: 'PUT',
-            body: JSON.stringify({ directory, vars })
+            body: JSON.stringify({ directory, apiKey })
         })
     }
 

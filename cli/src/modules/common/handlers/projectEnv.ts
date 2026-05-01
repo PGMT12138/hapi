@@ -1,14 +1,13 @@
 import { logger } from '@/ui/logger'
 import { readFile, writeFile, mkdir, unlink } from 'fs/promises'
-import { createHash } from 'crypto'
 import { join, resolve } from 'path'
-import { homedir } from 'os'
 import { existsSync } from 'fs'
 import type { RpcHandlerManager } from '@/api/rpc/RpcHandlerManager'
 import { rpcError } from '../rpcResponses'
 
-interface ProjectEnvVars {
-    [key: string]: string
+interface ProjectSettings {
+    apiKey?: string
+    [key: string]: unknown
 }
 
 interface ReadProjectEnvRequest {
@@ -17,14 +16,14 @@ interface ReadProjectEnvRequest {
 
 interface ReadProjectEnvResponse {
     success: boolean
-    vars?: ProjectEnvVars
+    apiKey?: string
     hasLocal?: boolean
     error?: string
 }
 
 interface WriteProjectEnvRequest {
     directory: string
-    vars: ProjectEnvVars | null
+    apiKey: string | null
 }
 
 interface WriteProjectEnvResponse {
@@ -32,48 +31,63 @@ interface WriteProjectEnvResponse {
     error?: string
 }
 
-function getEnvFilePath(directory: string): string {
-    const hash = createHash('sha256').update(resolve(directory)).digest('hex').slice(0, 16)
-    const hapiHome = process.env.HAPI_HOME?.replace(/^~/, homedir()) || join(homedir(), '.hapi')
-    return join(hapiHome, 'project-env', `${hash}.json`)
+function getSettingsFilePath(directory: string): string {
+    return join(resolve(directory), '.claude', 'settings.local.json')
+}
+
+async function readSettingsFile(filePath: string): Promise<ProjectSettings> {
+    if (!existsSync(filePath)) return {}
+    const content = await readFile(filePath, 'utf-8')
+    return JSON.parse(content) as ProjectSettings
 }
 
 export function registerProjectEnvHandlers(rpcHandlerManager: RpcHandlerManager): void {
     rpcHandlerManager.registerHandler<ReadProjectEnvRequest, ReadProjectEnvResponse>('read-project-env', async (data) => {
         try {
-            const envFile = getEnvFilePath(data.directory)
-            if (!existsSync(envFile)) {
-                return { success: true, vars: {}, hasLocal: false }
+            const filePath = getSettingsFilePath(data.directory)
+            const settings = await readSettingsFile(filePath)
+            const apiKey = settings.apiKey
+            return {
+                success: true,
+                apiKey: typeof apiKey === 'string' ? apiKey : '',
+                hasLocal: typeof apiKey === 'string' && apiKey.length > 0
             }
-            const content = await readFile(envFile, 'utf-8')
-            const vars = JSON.parse(content) as ProjectEnvVars
-            return { success: true, vars, hasLocal: true }
         } catch (error) {
-            logger.debug('Failed to read project env:', error)
-            return rpcError('Failed to read project env')
+            logger.debug('Failed to read project settings:', error)
+            return rpcError('Failed to read project settings')
         }
     })
 
     rpcHandlerManager.registerHandler<WriteProjectEnvRequest, WriteProjectEnvResponse>('write-project-env', async (data) => {
         try {
-            const envFile = getEnvFilePath(data.directory)
-            const envDir = join(envFile, '..')
+            const filePath = getSettingsFilePath(data.directory)
+            const claudeDir = join(filePath, '..')
 
-            if (data.vars === null || Object.keys(data.vars).length === 0) {
-                if (existsSync(envFile)) {
-                    await unlink(envFile)
+            if (data.apiKey === null) {
+                // Remove apiKey from settings, delete file if empty
+                if (!existsSync(filePath)) return { success: true }
+                const settings = await readSettingsFile(filePath)
+                delete settings.apiKey
+                const keys = Object.keys(settings)
+                if (keys.length === 0) {
+                    await unlink(filePath)
+                } else {
+                    await writeFile(filePath, JSON.stringify(settings, null, 2))
                 }
                 return { success: true }
             }
 
-            if (!existsSync(envDir)) {
-                await mkdir(envDir, { recursive: true })
+            // Write apiKey into settings
+            if (!existsSync(claudeDir)) {
+                await mkdir(claudeDir, { recursive: true })
             }
-            await writeFile(envFile, JSON.stringify(data.vars, null, 2))
+            const settings = await readSettingsFile(filePath)
+            settings.apiKey = data.apiKey
+            await writeFile(filePath, JSON.stringify(settings, null, 2))
             return { success: true }
         } catch (error) {
-            logger.debug('Failed to write project env:', error)
-            return rpcError('Failed to write project env')
+            logger.debug('Failed to write project settings:', error)
+            return rpcError('Failed to write project settings')
         }
     })
 }

@@ -59,7 +59,6 @@ export function NewSession(props: {
     const [worktreeName, setWorktreeName] = useState('')
     const [directoryCreationConfirmed, setDirectoryCreationConfirmed] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [projectEnv, setProjectEnv] = useState<Record<string, string> | undefined>(undefined)
     const worktreeInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -293,8 +292,7 @@ export function NewSession(props: {
                 modelReasoningEffort: resolvedModelReasoningEffort,
                 yolo: yoloMode,
                 sessionType,
-                worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined,
-                env: projectEnv
+                worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined
             })
 
             if (result.type === 'success') {
@@ -364,7 +362,6 @@ export function NewSession(props: {
                 directory={directory}
                 agent={agent}
                 isDisabled={isFormDisabled}
-                onEnvChange={setProjectEnv}
             />
             <ModelSelector
                 agent={agent}
