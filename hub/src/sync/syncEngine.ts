@@ -420,8 +420,16 @@ export class SyncEngine {
         return await this.rpcGateway.readProjectEnv(machineId, directory)
     }
 
-    async writeProjectEnv(machineId: string, directory: string, apiKey: string | null) {
-        return await this.rpcGateway.writeProjectEnv(machineId, directory, apiKey)
+    async writeProjectEnv(machineId: string, directory: string, env: Record<string, string> | null) {
+        return await this.rpcGateway.writeProjectEnv(machineId, directory, env)
+    }
+
+    async readGlobalEnv(machineId: string) {
+        return await this.rpcGateway.readGlobalEnv(machineId)
+    }
+
+    async writeGlobalEnv(machineId: string, env: Record<string, string>) {
+        return await this.rpcGateway.writeGlobalEnv(machineId, env)
     }
 
     async resumeSession(sessionId: string, namespace: string, opts?: { permissionMode?: PermissionMode }): Promise<ResumeSessionResult> {

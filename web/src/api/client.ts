@@ -12,6 +12,8 @@ import type {
     MachinesResponse,
     MessagesResponse,
     CodexModelsResponse,
+    ModelConfigPreset,
+    ModelConfigPresetsResponse,
     PermissionMode,
     PushSubscriptionPayload,
     PushUnsubscribePayload,
@@ -447,14 +449,25 @@ export class ApiClient {
         )
     }
 
-    async getProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; apiKey?: string; hasLocal?: boolean; error?: string }> {
+    async getProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; env?: Record<string, string>; hasLocal?: boolean; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-env?directory=${encodeURIComponent(directory)}`)
     }
 
-    async setProjectEnv(machineId: string, directory: string, apiKey: string | null): Promise<{ success: boolean; error?: string }> {
+    async setProjectEnv(machineId: string, directory: string, env: Record<string, string> | null): Promise<{ success: boolean; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-env`, {
             method: 'PUT',
-            body: JSON.stringify({ directory, apiKey })
+            body: JSON.stringify({ directory, env })
+        })
+    }
+
+    async getGlobalEnv(machineId: string): Promise<{ success: boolean; env?: Record<string, string>; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/global-env`)
+    }
+
+    async setGlobalEnv(machineId: string, env: Record<string, string>): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/global-env`, {
+            method: 'PUT',
+            body: JSON.stringify({ env })
         })
     }
 
@@ -498,6 +511,30 @@ export class ApiClient {
         return await this.request('/api/voice/token', {
             method: 'POST',
             body: JSON.stringify(options || {})
+        })
+    }
+
+    async getModelConfigPresets(): Promise<ModelConfigPresetsResponse> {
+        return await this.request<ModelConfigPresetsResponse>('/api/model-config-presets')
+    }
+
+    async createModelConfigPreset(name: string, env: Record<string, string>): Promise<{ preset: ModelConfigPreset }> {
+        return await this.request('/api/model-config-presets', {
+            method: 'POST',
+            body: JSON.stringify({ name, env })
+        })
+    }
+
+    async updateModelConfigPreset(id: string, updates: { name?: string; env?: Record<string, string> }): Promise<{ preset: ModelConfigPreset }> {
+        return await this.request(`/api/model-config-presets/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates)
+        })
+    }
+
+    async deleteModelConfigPreset(id: string): Promise<{ ok: boolean }> {
+        return await this.request(`/api/model-config-presets/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
         })
     }
 }

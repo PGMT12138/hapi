@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 
 import { MachineStore } from './machineStore'
 import { MessageStore } from './messageStore'
+import { ModelConfigPresetStore } from './modelConfigPresetStore'
 import { PushStore } from './pushStore'
 import { SessionStore } from './sessionStore'
 import { UserStore } from './userStore'
@@ -11,6 +12,7 @@ import { UserStore } from './userStore'
 export type {
     StoredMachine,
     StoredMessage,
+    StoredModelConfigPreset,
     StoredPushSubscription,
     StoredSession,
     StoredUser,
@@ -18,17 +20,19 @@ export type {
 } from './types'
 export { MachineStore } from './machineStore'
 export { MessageStore } from './messageStore'
+export { ModelConfigPresetStore } from './modelConfigPresetStore'
 export { PushStore } from './pushStore'
 export { SessionStore } from './sessionStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 8
+const SCHEMA_VERSION: number = 9
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
     'messages',
     'users',
-    'push_subscriptions'
+    'push_subscriptions',
+    'model_config_presets'
 ] as const
 
 export class Store {
@@ -40,6 +44,7 @@ export class Store {
     readonly messages: MessageStore
     readonly users: UserStore
     readonly push: PushStore
+    readonly modelConfigPresets: ModelConfigPresetStore
 
     constructor(dbPath: string) {
         this.dbPath = dbPath
@@ -81,6 +86,7 @@ export class Store {
         this.messages = new MessageStore(this.db)
         this.users = new UserStore(this.db)
         this.push = new PushStore(this.db)
+        this.modelConfigPresets = new ModelConfigPresetStore(this.db)
     }
 
     private initSchema(): void {
@@ -97,6 +103,7 @@ export class Store {
             5: () => this.migrateFromV5ToV6(),
             6: () => this.migrateFromV6ToV7(),
             7: () => this.migrateFromV7ToV8(),
+            8: () => this.migrateFromV8ToV9(),
         })
 
         if (currentVersion === 0) {
@@ -220,6 +227,17 @@ export class Store {
                 UNIQUE(namespace, endpoint)
             );
             CREATE INDEX IF NOT EXISTS idx_push_subscriptions_namespace ON push_subscriptions(namespace);
+
+            CREATE TABLE IF NOT EXISTS model_config_presets (
+                id TEXT PRIMARY KEY,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                name TEXT NOT NULL,
+                env TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(namespace, name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_model_config_presets_namespace ON model_config_presets(namespace);
         `)
     }
 
@@ -422,6 +440,21 @@ export class Store {
                 'Back up and rebuild the database, or run an offline migration to the expected schema version.'
             )
         }
+    }
+
+    private migrateFromV8ToV9(): void {
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS model_config_presets (
+                id TEXT PRIMARY KEY,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                name TEXT NOT NULL,
+                env TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(namespace, name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_model_config_presets_namespace ON model_config_presets(namespace);
+        `)
     }
 
     private buildSchemaMismatchError(currentVersion: number): Error {

@@ -17,4 +17,6 @@ export const queryKeys = {
     slashCommands: (sessionId: string) => ['slash-commands', sessionId] as const,
     sessionCodexModels: (sessionId: string) => ['session-codex-models', sessionId] as const,
     skills: (sessionId: string) => ['skills', sessionId] as const,
+    modelConfigPresets: ['model-config-presets'] as const,
+    globalEnv: (machineId: string) => ['global-env', machineId] as const,
 }

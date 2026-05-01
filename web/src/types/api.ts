@@ -249,3 +249,15 @@ export type VisibilityPayload = {
 }
 
 export type SyncEvent = ProtocolSyncEvent
+
+export type ModelConfigPreset = {
+    id: string
+    name: string
+    env: Record<string, string>
+    createdAt: number
+    updatedAt: number
+}
+
+export type ModelConfigPresetsResponse = {
+    presets: ModelConfigPreset[]
+}

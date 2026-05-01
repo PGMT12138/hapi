@@ -262,12 +262,20 @@ export class RpcGateway {
         return await this.machineRpc(machineId, 'listCodexModels', {}) as RpcListCodexModelsResponse
     }
 
-    async readProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; apiKey?: string; hasLocal?: boolean; error?: string }> {
-        return await this.machineRpc(machineId, 'read-project-env', { directory }) as { success: boolean; apiKey?: string; hasLocal?: boolean; error?: string }
+    async readProjectEnv(machineId: string, directory: string): Promise<{ success: boolean; env?: Record<string, string>; hasLocal?: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'read-project-env', { directory }) as { success: boolean; env?: Record<string, string>; hasLocal?: boolean; error?: string }
     }
 
-    async writeProjectEnv(machineId: string, directory: string, apiKey: string | null): Promise<{ success: boolean; error?: string }> {
-        return await this.machineRpc(machineId, 'write-project-env', { directory, apiKey }) as { success: boolean; error?: string }
+    async writeProjectEnv(machineId: string, directory: string, env: Record<string, string> | null): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'write-project-env', { directory, env }) as { success: boolean; error?: string }
+    }
+
+    async readGlobalEnv(machineId: string): Promise<{ success: boolean; env?: Record<string, string>; error?: string }> {
+        return await this.machineRpc(machineId, 'read-global-env', {}) as { success: boolean; env?: Record<string, string>; error?: string }
+    }
+
+    async writeGlobalEnv(machineId: string, env: Record<string, string>): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'write-global-env', { env }) as { success: boolean; error?: string }
     }
 
     private async sessionRpc(sessionId: string, method: string, params: unknown): Promise<unknown> {

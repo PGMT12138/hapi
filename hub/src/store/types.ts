@@ -62,6 +62,15 @@ export type StoredPushSubscription = {
     createdAt: number
 }
 
+export type StoredModelConfigPreset = {
+    id: string
+    namespace: string
+    name: string
+    env: Record<string, string>
+    createdAt: number
+    updatedAt: number
+}
+
 export type VersionedUpdateResult<T> =
     | { result: 'success'; version: number; value: T }
     | { result: 'version-mismatch'; version: number; value: T }

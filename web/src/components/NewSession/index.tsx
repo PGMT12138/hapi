@@ -13,7 +13,7 @@ import { useTranslation } from '@/lib/use-translation'
 import type { AgentType, ClaudeEffort, CodexReasoningEffort, SessionType } from './types'
 import { ActionButtons } from './ActionButtons'
 import { AgentSelector } from './AgentSelector'
-import { ApiKeySection } from './ApiKeySection'
+import { ApiKeySection, type PendingEnvAction } from './ApiKeySection'
 import { DirectorySection } from './DirectorySection'
 import { MachineSelector } from './MachineSelector'
 import { ModelSelector } from './ModelSelector'
@@ -59,6 +59,7 @@ export function NewSession(props: {
     const [worktreeName, setWorktreeName] = useState('')
     const [directoryCreationConfirmed, setDirectoryCreationConfirmed] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [pendingEnvAction, setPendingEnvAction] = useState<PendingEnvAction>({ needsWrite: false, env: null, isValid: true })
     const worktreeInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -278,6 +279,15 @@ export function NewSession(props: {
                 return
             }
 
+            // Write pending env config before spawning
+            if (pendingEnvAction.needsWrite && props.api && machineId) {
+                try {
+                    await props.api.setProjectEnv(machineId, trimmedDirectory, pendingEnvAction.env)
+                } catch {
+                    // Best-effort: continue with session creation
+                }
+            }
+
             const resolvedModel = model !== 'auto' && agent !== 'opencode' ? model : undefined
             const resolvedEffort = agent === 'claude' && effort !== 'auto' ? effort : undefined
             const resolvedModelReasoningEffort = agent === 'codex' && modelReasoningEffort !== 'default'
@@ -311,7 +321,7 @@ export function NewSession(props: {
         }
     }
 
-    const canCreate = Boolean(machineId && trimmedDirectory && !isFormDisabled && !missingWorktreeDirectory)
+    const canCreate = Boolean(machineId && trimmedDirectory && !isFormDisabled && !missingWorktreeDirectory && pendingEnvAction.isValid)
 
     return (
         <div className="flex flex-col divide-y divide-[var(--app-divider)]">
@@ -362,6 +372,7 @@ export function NewSession(props: {
                 directory={directory}
                 agent={agent}
                 isDisabled={isFormDisabled}
+                onEnvChange={setPendingEnvAction}
             />
             <ModelSelector
                 agent={agent}

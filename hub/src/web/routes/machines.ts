@@ -17,7 +17,7 @@ const spawnBodySchema = z.object({
 
 const projectEnvBodySchema = z.object({
     directory: z.string().min(1),
-    apiKey: z.string().nullable()
+    env: z.record(z.string(), z.string()).nullable()
 })
 
 const pathsExistsSchema = z.object({
@@ -195,10 +195,56 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
 
         try {
-            const result = await engine.writeProjectEnv(machineId, parsed.data.directory, parsed.data.apiKey)
+            const result = await engine.writeProjectEnv(machineId, parsed.data.directory, parsed.data.env)
             return c.json(result)
         } catch (err) {
             return c.json({ success: false, error: err instanceof Error ? err.message : 'Failed to write project env' }, 500)
+        }
+    })
+
+    app.get('/machines/:id/global-env', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        try {
+            const result = await engine.readGlobalEnv(machineId)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to read global env' }, 500)
+        }
+    })
+
+    app.put('/machines/:id/global-env', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = z.object({ env: z.record(z.string(), z.string()) }).safeParse(body)
+        if (!parsed.success) {
+            return c.json({ success: false, error: 'Invalid body' }, 400)
+        }
+
+        try {
+            const result = await engine.writeGlobalEnv(machineId, parsed.data.env)
+            return c.json(result)
+        } catch (err) {
+            return c.json({ success: false, error: err instanceof Error ? err.message : 'Failed to write global env' }, 500)
         }
     })
 

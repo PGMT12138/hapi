@@ -294,6 +294,26 @@ export default {
   'settings.about.appVersion': 'App Version',
   'settings.about.protocolVersion': 'Protocol Version',
 
+  // Model Presets
+  'modelPresets.title': 'Model Management',
+  'modelPresets.nav': 'Model Management',
+  'modelPresets.empty': 'No presets yet',
+  'modelPresets.add': 'Add Preset',
+  'modelPresets.name': 'Name',
+  'modelPresets.namePlaceholder': 'Enter preset name',
+  'modelPresets.save': 'Save',
+  'modelPresets.edit': 'Edit',
+  'modelPresets.delete': 'Delete',
+  'modelPresets.deleteConfirm': 'Are you sure you want to delete this preset?',
+  'modelPresets.cancel': 'Cancel',
+  'modelPresets.jsonImport': 'JSON Import',
+  'modelPresets.jsonParse': 'Parse',
+  'modelPresets.jsonError': 'Invalid JSON format',
+  'modelPresets.globalConfig': 'Global Config',
+  'modelPresets.globalConfigDesc': '~/.claude/settings.json',
+  'modelPresets.selectMachine': 'Select Machine',
+  'modelPresets.presetSection': 'Model Presets',
+
   // Browse / Workspace
   'browse.title': 'Browse',
   'browse.goUp': 'Go up',

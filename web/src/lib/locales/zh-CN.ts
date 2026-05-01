@@ -296,6 +296,26 @@ export default {
   'settings.about.appVersion': '应用版本',
   'settings.about.protocolVersion': '协议版本',
 
+  // Model Presets
+  'modelPresets.title': '模型管理',
+  'modelPresets.nav': '模型管理',
+  'modelPresets.empty': '暂无预设',
+  'modelPresets.add': '添加预设',
+  'modelPresets.name': '名称',
+  'modelPresets.namePlaceholder': '输入预设名称',
+  'modelPresets.save': '保存',
+  'modelPresets.edit': '编辑',
+  'modelPresets.delete': '删除',
+  'modelPresets.deleteConfirm': '确定删除此预设？',
+  'modelPresets.cancel': '取消',
+  'modelPresets.jsonImport': 'JSON 导入',
+  'modelPresets.jsonParse': '解析',
+  'modelPresets.jsonError': 'JSON 格式不正确',
+  'modelPresets.globalConfig': '全局配置',
+  'modelPresets.globalConfigDesc': '~/.claude/settings.json',
+  'modelPresets.selectMachine': '选择机器',
+  'modelPresets.presetSection': '模型预设',
+
   // Browse / Workspace
   'browse.title': '浏览',
   'browse.goUp': '返回上层',

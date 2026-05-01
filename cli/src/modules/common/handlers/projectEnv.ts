@@ -6,7 +6,7 @@ import type { RpcHandlerManager } from '@/api/rpc/RpcHandlerManager'
 import { rpcError } from '../rpcResponses'
 
 interface ProjectSettings {
-    apiKey?: string
+    env?: Record<string, string>
     [key: string]: unknown
 }
 
@@ -16,14 +16,14 @@ interface ReadProjectEnvRequest {
 
 interface ReadProjectEnvResponse {
     success: boolean
-    apiKey?: string
+    env?: Record<string, string>
     hasLocal?: boolean
     error?: string
 }
 
 interface WriteProjectEnvRequest {
     directory: string
-    apiKey: string | null
+    env: Record<string, string> | null
 }
 
 interface WriteProjectEnvResponse {
@@ -46,11 +46,12 @@ export function registerProjectEnvHandlers(rpcHandlerManager: RpcHandlerManager)
         try {
             const filePath = getSettingsFilePath(data.directory)
             const settings = await readSettingsFile(filePath)
-            const apiKey = settings.apiKey
+            const env = settings.env
+            const hasLocal = typeof env === 'object' && env !== null && Object.keys(env).length > 0
             return {
                 success: true,
-                apiKey: typeof apiKey === 'string' ? apiKey : '',
-                hasLocal: typeof apiKey === 'string' && apiKey.length > 0
+                env: hasLocal ? env : {},
+                hasLocal
             }
         } catch (error) {
             logger.debug('Failed to read project settings:', error)
@@ -63,26 +64,19 @@ export function registerProjectEnvHandlers(rpcHandlerManager: RpcHandlerManager)
             const filePath = getSettingsFilePath(data.directory)
             const claudeDir = join(filePath, '..')
 
-            if (data.apiKey === null) {
-                // Remove apiKey from settings, delete file if empty
+            if (data.env === null) {
                 if (!existsSync(filePath)) return { success: true }
                 const settings = await readSettingsFile(filePath)
-                delete settings.apiKey
-                const keys = Object.keys(settings)
-                if (keys.length === 0) {
-                    await unlink(filePath)
-                } else {
-                    await writeFile(filePath, JSON.stringify(settings, null, 2))
-                }
+                delete settings.env
+                await writeFile(filePath, JSON.stringify(settings, null, 2))
                 return { success: true }
             }
 
-            // Write apiKey into settings
             if (!existsSync(claudeDir)) {
                 await mkdir(claudeDir, { recursive: true })
             }
             const settings = await readSettingsFile(filePath)
-            settings.apiKey = data.apiKey
+            settings.env = data.env
             await writeFile(filePath, JSON.stringify(settings, null, 2))
             return { success: true }
         } catch (error) {
