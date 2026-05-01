@@ -208,7 +208,7 @@ export function WorkspaceBrowser(props: {
                 value={machineId ?? ''}
                 onChange={e => setMachineId(e.target.value || null)}
                 disabled={machinesLoading}
-                className="flex-1 bg-[#2a2a2a] text-sm text-[#e0e0e0] outline-none"
+                className="flex-1 bg-[#131316] text-sm text-[#e8e8ec] outline-none"
             >
                 {machines.map(m => (
                     <option key={m.id} value={m.id}>

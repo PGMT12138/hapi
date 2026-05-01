@@ -49,7 +49,7 @@ export function HappyUserMessage() {
     const canRetry = status === 'failed' && typeof localId === 'string' && Boolean(ctx.onRetryMessage)
     const onRetry = canRetry ? () => ctx.onRetryMessage!(localId) : undefined
 
-    const userBubbleClass = `w-fit min-w-0 max-w-[92%] ml-auto rounded-xl bg-[var(--app-secondary-bg)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
+    const userBubbleClass = `w-fit min-w-0 max-w-[92%] ml-auto rounded-xl bg-[var(--app-secondary-bg)] border border-[var(--app-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
 
     if (isCliOutput) {
         return (
@@ -68,38 +68,35 @@ export function HappyUserMessage() {
     const hasAttachments = attachments && attachments.length > 0
 
     return (
-        <MessagePrimitive.Root
-            id={getConversationMessageAnchorId(messageId)}
-            className={`${userBubbleClass} group/msg scroll-mt-4`}
-        >
-            <div className="flex items-end gap-2">
-                <div className="flex-1 min-w-0">
-                    {hasText && <LazyRainbowText text={text} />}
-                    {hasAttachments && <MessageAttachments attachments={attachments} />}
-                </div>
-                {(hasText || status) && (
-                    <div className="shrink-0 self-end pb-0.5 flex items-center gap-1">
-                        {hasText && (
-                            <button
-                                type="button"
-                                title="Copy"
-                                className="opacity-60 sm:opacity-0 sm:group-hover/msg:opacity-100 transition-[opacity,background-color] p-0.5 rounded hover:bg-[var(--app-subtle-bg)]"
-                                onClick={() => copy(text)}
-                            >
-                                {copied
-                                    ? <CheckIcon className="h-3.5 w-3.5 text-green-500" />
-                                    : <CopyIcon className="h-3.5 w-3.5 text-[var(--app-hint)]" />}
-                            </button>
-                        )}
-                        {status && <MessageStatusIndicator status={status} onRetry={onRetry} />}
+        <div className="w-fit min-w-0 max-w-[92%] ml-auto scroll-mt-4" id={getConversationMessageAnchorId(messageId)}>
+            <MessagePrimitive.Root className={`${userBubbleClass} group/msg`}>
+                {hasText && <LazyRainbowText text={text} />}
+                {hasAttachments && <MessageAttachments attachments={attachments} />}
+                {status && (
+                    <div className="flex items-center justify-end gap-1 mt-0.5">
+                        <MessageStatusIndicator status={status} onRetry={onRetry} />
                     </div>
                 )}
+            </MessagePrimitive.Root>
+            <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[10px] text-[var(--app-hint)]">
+                {createdAt && (
+                    <span>
+                        {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
+                    </span>
+                )}
+                {hasText && (
+                    <button
+                        type="button"
+                        title="Copy"
+                        className="p-0.5 rounded hover:bg-[var(--app-subtle-bg)] transition-[background-color]"
+                        onClick={() => copy(text)}
+                    >
+                        {copied
+                            ? <CheckIcon className="h-3.5 w-3.5 text-green-500" />
+                            : <CopyIcon className="h-3.5 w-3.5" />}
+                    </button>
+                )}
             </div>
-            {createdAt && (
-                <div className="mt-0.5 text-right text-[10px] text-[var(--app-hint)]">
-                    {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
-                </div>
-            )}
-        </MessagePrimitive.Root>
+        </div>
     )
 }

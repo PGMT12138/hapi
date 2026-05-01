@@ -276,7 +276,7 @@ function UnifiedButton(props: {
         ariaLabel = t('composer.voice')
     } else {
         icon = <SendIcon />
-        className = 'bg-[#C0C0C0] text-white'
+        className = 'bg-[#1a1a1e] text-[#e8e8ec]'
         ariaLabel = t('composer.send')
     }
 
@@ -394,7 +394,7 @@ export function ComposerButtons(props: {
                         title={props.voiceMicMuted ? t('voice.unmute') : t('voice.mute')}
                         className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
                             props.voiceMicMuted
-                                ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                ? 'bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-border)]'
                                 : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                         }`}
                         onClick={props.onVoiceMicToggle}

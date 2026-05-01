@@ -130,5 +130,30 @@ export function registerCliHandlers(socket: CliSocketWithData, deps: CliHandlers
     socket.on('disconnect', () => {
         rpcRegistry.unregisterAll(socket)
         cleanupTerminalHandlers(socket, { terminalRegistry, terminalNamespace })
+
+        // Auto-invoke queued messages for the disconnected CLI's session.
+        // When CLI disconnects unexpectedly (crash, kill, network failure) it
+        // may not emit session-end, leaving user messages stuck in queued state
+        // with invoked_at = null forever.
+        if (sessionId && resolveSessionAccess(sessionId).ok) {
+            try {
+                const queued = store.messages.getUninvokedLocalMessages(sessionId)
+                const localIds = queued
+                    .map((m) => m.localId)
+                    .filter((id): id is string => typeof id === 'string')
+                if (localIds.length > 0) {
+                    const invokedAt = Date.now()
+                    store.messages.markMessagesInvoked(sessionId, localIds, invokedAt)
+                    onWebappEvent?.({
+                        type: 'messages-consumed',
+                        sessionId,
+                        localIds,
+                        invokedAt
+                    })
+                }
+            } catch (err) {
+                console.error('disconnect markMessagesInvoked failed', err)
+            }
+        }
     })
 }
