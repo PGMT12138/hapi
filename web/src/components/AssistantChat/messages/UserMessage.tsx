@@ -49,7 +49,7 @@ export function HappyUserMessage() {
     const canRetry = status === 'failed' && typeof localId === 'string' && Boolean(ctx.onRetryMessage)
     const onRetry = canRetry ? () => ctx.onRetryMessage!(localId) : undefined
 
-    const userBubbleClass = `w-fit min-w-0 max-w-[92%] ml-auto rounded-xl bg-[var(--app-secondary-bg)] border border-[var(--app-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
+    const userBubbleClass = `max-w-[92%] rounded-xl bg-[var(--app-secondary-bg)] border border-[var(--app-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
 
     if (isCliOutput) {
         return (
@@ -68,7 +68,7 @@ export function HappyUserMessage() {
     const hasAttachments = attachments && attachments.length > 0
 
     return (
-        <div className="w-fit min-w-0 max-w-[92%] ml-auto scroll-mt-4" id={getConversationMessageAnchorId(messageId)}>
+        <div className="flex flex-col items-end max-w-[92%] ml-auto scroll-mt-4" id={getConversationMessageAnchorId(messageId)}>
             <MessagePrimitive.Root className={`${userBubbleClass} group/msg`}>
                 {hasText && <LazyRainbowText text={text} />}
                 {hasAttachments && <MessageAttachments attachments={attachments} />}
@@ -78,7 +78,7 @@ export function HappyUserMessage() {
                     </div>
                 )}
             </MessagePrimitive.Root>
-            <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[10px] text-[var(--app-hint)]">
+            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--app-hint)]">
                 {createdAt && (
                     <span>
                         {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
