@@ -49,7 +49,7 @@ export function HappyUserMessage() {
     const canRetry = status === 'failed' && typeof localId === 'string' && Boolean(ctx.onRetryMessage)
     const onRetry = canRetry ? () => ctx.onRetryMessage!(localId) : undefined
 
-    const userBubbleClass = `max-w-[92%] rounded-xl bg-[var(--app-secondary-bg)] border border-[var(--app-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
+    const userBubbleClass = `inline-block text-left max-w-[92%] align-top rounded-xl bg-[var(--app-secondary-bg)] border border-[var(--app-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
 
     if (isCliOutput) {
         return (
@@ -68,9 +68,13 @@ export function HappyUserMessage() {
     const hasAttachments = attachments && attachments.length > 0
 
     return (
-        <div className="flex flex-col items-end max-w-[92%] ml-auto scroll-mt-4" id={getConversationMessageAnchorId(messageId)}>
+        <div className="text-right scroll-mt-4" id={getConversationMessageAnchorId(messageId)}>
             <MessagePrimitive.Root className={`${userBubbleClass} group/msg`}>
-                {hasText && <LazyRainbowText text={text} />}
+                {hasText && (
+                    <div style={{ maxWidth: 'none' }}>
+                        <LazyRainbowText text={text} />
+                    </div>
+                )}
                 {hasAttachments && <MessageAttachments attachments={attachments} />}
                 {status && (
                     <div className="flex items-center justify-end gap-1 mt-0.5">
@@ -78,7 +82,7 @@ export function HappyUserMessage() {
                     </div>
                 )}
             </MessagePrimitive.Root>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--app-hint)]">
+            <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[10px] text-[var(--app-hint)]">
                 {createdAt && (
                     <span>
                         {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}

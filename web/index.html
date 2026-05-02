@@ -25,12 +25,16 @@
         <!-- Safari Pinned Tab -->
         <link rel="mask-icon" href="/mask-icon.svg" color="#111827" />
 
+        <meta name="color-scheme" content="light dark" />
+
         <!-- Prevent flash of white background on dark mode -->
         <style>
-            html { background: #fff }
+            html { background: #fff; color-scheme: light dark }
             @media (prefers-color-scheme: dark) {
-                html { background: #0a0a0c; color-scheme: dark }
+                html:not([data-theme="light"]) { background: #0a0a0c }
             }
+            [data-theme="light"] { background: #fff !important }
+            [data-theme="dark"] { background: #0a0a0c !important }
         </style>
         <script>
             (function () {
