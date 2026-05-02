@@ -81,9 +81,9 @@ function applyTheme(scheme: ColorScheme): void {
     const isDark = scheme === 'dark'
     document.documentElement.setAttribute('data-theme', scheme)
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
-    document.documentElement.style.background = isDark ? '#0a0a0c' : '#ffffff'
-    document.body.style.background = isDark ? '#0a0a0c' : '#ffffff'
-    document.body.style.color = isDark ? '#e8e8ec' : '#111827'
+    document.documentElement.style.background = isDark ? '#050506' : '#ffffff'
+    document.body.style.background = isDark ? '#050506' : '#ffffff'
+    document.body.style.color = isDark ? '#e0e0e4' : '#111827'
 }
 
 function applyPlatform(): void {

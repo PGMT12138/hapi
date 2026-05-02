@@ -3,6 +3,7 @@ import { useTranslation } from '@/lib/use-translation'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { useAppContext } from '@/lib/app-context'
 import { useMachines } from '@/hooks/queries/useMachines'
+import { OptionPicker } from '@/components/ui/OptionPicker'
 import { useModelConfigPresets } from '@/hooks/queries/useModelConfigPresets'
 import { useGlobalEnv } from '@/hooks/queries/useGlobalEnv'
 import { useModelConfigPresetActions } from '@/hooks/mutations/useModelConfigPresetActions'
@@ -392,20 +393,17 @@ export default function ModelPresetsPage() {
                         <div className="flex flex-col gap-3">
                             {machines.length > 0 && (
                                 <>
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-xs text-[var(--app-hint)]">{t('modelPresets.selectMachine')}</label>
-                                        <select
-                                            value={activeMachineId ?? ''}
-                                            onChange={(e) => setSelectedMachineId(e.target.value)}
-                                            className="px-3 py-2 text-sm rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-[var(--app-link)]"
-                                        >
-                                            {machines.map((m) => (
-                                                <option key={m.id} value={m.id}>
-                                                    {m.metadata?.displayName || m.metadata?.host || m.id.slice(0, 8)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    <OptionPicker
+                                        label={t('modelPresets.selectMachine')}
+                                        value={activeMachineId ?? ''}
+                                        onChange={setSelectedMachineId}
+                                        options={machines.map((m) => ({
+                                            value: m.id,
+                                            label: m.metadata?.displayName || m.metadata?.host || m.id.slice(0, 8),
+                                            description: m.metadata?.platform,
+                                        }))}
+                                        className="!px-0 !py-0"
+                                    />
                                     <GlobalConfigCard
                                     env={globalEnv}
                                     onUpdate={handleUpdateGlobalEnv}

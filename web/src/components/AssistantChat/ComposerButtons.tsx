@@ -276,7 +276,7 @@ function UnifiedButton(props: {
         ariaLabel = t('composer.voice')
     } else {
         icon = <SendIcon />
-        className = 'bg-[#1a1a1e] text-[#e8e8ec]'
+        className = 'bg-[#111114] text-[#e0e0e4]'
         ariaLabel = t('composer.send')
     }
 

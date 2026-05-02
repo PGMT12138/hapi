@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { ApiClient } from '@/api/client'
 import type { Machine, MachineDirectoryEntry } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
+import { OptionPicker } from '@/components/ui/OptionPicker'
 import { useTranslation } from '@/lib/use-translation'
 
 function FolderIcon(props: { className?: string }) {
@@ -204,22 +205,21 @@ export function WorkspaceBrowser(props: {
     const machineSelector = (
         <div className="flex items-center gap-2">
             <MachineIcon className="h-4 w-4 text-[var(--app-hint)] shrink-0" />
-            <select
-                value={machineId ?? ''}
-                onChange={e => setMachineId(e.target.value || null)}
-                disabled={machinesLoading}
-                className="flex-1 bg-[#131316] text-sm text-[#e8e8ec] outline-none"
-            >
-                {machines.map(m => (
-                    <option key={m.id} value={m.id}>
-                        {getMachineTitle(m)}
-                        {m.metadata?.workspaceRoot ? ` — ${m.metadata.workspaceRoot}` : ''}
-                    </option>
-                ))}
-                {machines.length === 0 && (
-                    <option value="">{machinesLoading ? t('loading') : t('misc.noMachines')}</option>
-                )}
-            </select>
+            <div className="flex-1">
+                <OptionPicker
+                    value={machineId ?? ''}
+                    onChange={(v) => setMachineId(v || null)}
+                    disabled={machinesLoading}
+                    loading={machinesLoading}
+                    emptyMessage={machinesLoading ? t('loading') : t('misc.noMachines')}
+                    options={machines.map(m => ({
+                        value: m.id,
+                        label: getMachineTitle(m),
+                        description: m.metadata?.workspaceRoot,
+                    }))}
+                    className="!px-0 !py-0"
+                />
+            </div>
         </div>
     )
 

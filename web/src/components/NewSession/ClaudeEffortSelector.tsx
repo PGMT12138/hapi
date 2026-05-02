@@ -1,6 +1,13 @@
 import type { AgentType, ClaudeEffort } from './types'
-import { CLAUDE_EFFORT_OPTIONS } from './types'
 import { useTranslation } from '@/lib/use-translation'
+import { OptionPicker } from '@/components/ui/OptionPicker'
+
+const EFFORT_OPTIONS: { value: ClaudeEffort; label: string; description: string }[] = [
+    { value: 'auto', label: 'Auto', description: 'Automatically select based on task' },
+    { value: 'medium', label: 'Medium', description: 'Balanced speed and reasoning' },
+    { value: 'high', label: 'High', description: 'Deep thinking, slower responses' },
+    { value: 'max', label: 'Max', description: 'Maximum reasoning capability' },
+]
 
 export function ClaudeEffortSelector(props: {
     agent: AgentType
@@ -15,23 +22,13 @@ export function ClaudeEffortSelector(props: {
     }
 
     return (
-        <div className="flex flex-col gap-1.5 px-3 py-3">
-            <label className="text-xs font-medium text-[var(--app-hint)]">
-                {t('newSession.effort')}{' '}
-                <span className="font-normal">({t('newSession.model.optional')})</span>
-            </label>
-            <select
-                value={props.effort}
-                onChange={(e) => props.onEffortChange(e.target.value as ClaudeEffort)}
-                disabled={props.isDisabled}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-[var(--app-link)] disabled:opacity-50"
-            >
-                {CLAUDE_EFFORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
-        </div>
+        <OptionPicker
+            label={t('newSession.effort')}
+            optional
+            options={EFFORT_OPTIONS}
+            value={props.effort}
+            onChange={props.onEffortChange}
+            disabled={props.isDisabled}
+        />
     )
 }

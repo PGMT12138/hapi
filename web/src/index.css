@@ -50,28 +50,27 @@
 
 [data-theme="dark"] {
     color-scheme: dark;
-    /* Primary colors - deeper dark palette */
-    --app-bg: #0a0a0c;
-    --app-fg: #e8e8ec;
-    --app-hint: #6e6e7a;
+    --app-bg: #050506;
+    --app-fg: #e0e0e4;
+    --app-hint: #5a5a66;
     --app-link: #a0a0ff;
-    --app-button: #e8e8ec;
-    --app-button-text: #0a0a0c;
-    --app-banner-bg: #16161a;
-    --app-banner-text: #e8e8ec;
-    --app-secondary-bg: #1a1a1f;
+    --app-button: #e0e0e4;
+    --app-button-text: #050506;
+    --app-banner-bg: #0e0e10;
+    --app-banner-text: #e0e0e4;
+    --app-secondary-bg: #111114;
 
-    --app-border: #2d2d34;
-    --app-divider: #1a1a1e;
-    --app-subtle-bg: #141418;
-    --app-code-bg: #111115;
-    --app-inline-code-bg: #1f1f24;
+    --app-border: #1f1f24;
+    --app-divider: #111114;
+    --app-subtle-bg: #0c0c0e;
+    --app-code-bg: #09090b;
+    --app-inline-code-bg: #151518;
 
     /* Diff colors (dark) */
-    --app-diff-added-bg: #0a1f14;
-    --app-diff-added-text: #b8c9be;
-    --app-diff-removed-bg: #241018;
-    --app-diff-removed-text: #c9b8be;
+    --app-diff-added-bg: #071510;
+    --app-diff-added-text: #a8b8ae;
+    --app-diff-removed-bg: #1a0c12;
+    --app-diff-removed-text: #b8a8ae;
 
     /* Git status colors (dark) */
     --app-git-staged-color: #4ade80;

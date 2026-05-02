@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { ApiClient } from '@/api/client'
 import { useModelConfigPresets } from '@/hooks/queries/useModelConfigPresets'
 import { useModelConfigPresetActions } from '@/hooks/mutations/useModelConfigPresetActions'
+import { OptionPicker } from '@/components/ui/OptionPicker'
 
 const ENV_FIELDS = [
     { key: 'ANTHROPIC_AUTH_TOKEN', label: 'Auth Token', span: 2 },
@@ -220,17 +221,16 @@ export function ApiKeySection(props: EnvSectionProps) {
 
             {!useGlobal && (
                 <div className="flex flex-col gap-2 pt-1">
-                    <select
+                    <OptionPicker
                         value={selectedPresetId}
-                        onChange={(e) => handleSelectPreset(e.target.value)}
+                        onChange={handleSelectPreset}
                         disabled={isDisabled}
-                        className="px-3 py-2 text-sm rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-[var(--app-link)] disabled:opacity-50"
-                    >
-                        <option value="">-- 选择预设 --</option>
-                        {presets.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
+                        options={[
+                            { value: '', label: '-- 选择预设 --' },
+                            ...presets.map((p) => ({ value: p.id, label: p.name })),
+                        ]}
+                        className="!px-0 !py-0"
+                    />
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                         {ENV_FIELDS.map((field) => (
                             <div key={field.key} className={`${field.span === 2 ? 'col-span-2' : 'col-span-1'} flex flex-col gap-0.5`}>

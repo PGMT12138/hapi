@@ -1,5 +1,14 @@
 import type { AgentType } from './types'
 import { useTranslation } from '@/lib/use-translation'
+import { OptionPicker } from '@/components/ui/OptionPicker'
+
+const AGENT_OPTIONS: { value: AgentType; label: string; description: string }[] = [
+    { value: 'claude', label: 'Claude', description: 'Anthropic Claude Code' },
+    { value: 'codex', label: 'Codex', description: 'OpenAI Codex CLI' },
+    { value: 'gemini', label: 'Gemini', description: 'Google Gemini CLI' },
+    { value: 'cursor', label: 'Cursor', description: 'Cursor Agent' },
+    { value: 'opencode', label: 'OpenCode', description: 'OpenCode Agent' },
+]
 
 export function AgentSelector(props: {
     agent: AgentType
@@ -9,29 +18,12 @@ export function AgentSelector(props: {
     const { t } = useTranslation()
 
     return (
-        <div className="flex flex-col gap-1.5 px-3 py-3">
-            <label className="text-xs font-medium text-[var(--app-hint)]">
-                {t('newSession.agent')}
-            </label>
-            <div className="flex flex-wrap gap-x-3 gap-y-2">
-                {(['claude', 'codex', 'cursor', 'gemini', 'opencode'] as const).map((agentType) => (
-                    <label
-                        key={agentType}
-                        className="flex items-center gap-1.5 cursor-pointer"
-                    >
-                        <input
-                            type="radio"
-                            name="agent"
-                            value={agentType}
-                            checked={props.agent === agentType}
-                            onChange={() => props.onAgentChange(agentType)}
-                            disabled={props.isDisabled}
-                            className="accent-[var(--app-link)]"
-                        />
-                        <span className="text-sm capitalize">{agentType}</span>
-                    </label>
-                ))}
-            </div>
-        </div>
+        <OptionPicker
+            label={t('newSession.agent')}
+            options={AGENT_OPTIONS}
+            value={props.agent}
+            onChange={props.onAgentChange}
+            disabled={props.isDisabled}
+        />
     )
 }
