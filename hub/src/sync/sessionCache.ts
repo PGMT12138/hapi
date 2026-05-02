@@ -458,6 +458,30 @@ export class SessionCache {
         this.refreshSession(sessionId)
     }
 
+    updateContextWindow(
+        sessionId: string,
+        namespace: string,
+        contextWindow: { totalInputTokens: number; totalOutputTokens: number; contextWindowSize: number }
+    ): void {
+        const session = this.sessions.get(sessionId)
+        if (!session || session.namespace !== namespace) return
+
+        const currentMetadata = session.metadata ?? { path: '', host: '' }
+        const newMetadata = { ...currentMetadata, contextWindow }
+
+        const result = this.store.sessions.updateSessionMetadata(
+            sessionId,
+            newMetadata,
+            session.metadataVersion,
+            session.namespace,
+            { touchUpdatedAt: false }
+        )
+
+        if (result.result === 'error' || result.result === 'version-mismatch') return
+
+        this.refreshSession(sessionId)
+    }
+
     async deleteSession(sessionId: string): Promise<void> {
         const session = this.sessions.get(sessionId)
         if (!session) {

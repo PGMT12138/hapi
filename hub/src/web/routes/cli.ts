@@ -28,6 +28,17 @@ const getMessagesQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(200).optional()
 })
 
+const contextUpdateSchema = z.object({
+    sid: z.string().min(1),
+    data: z.object({
+        context_window: z.object({
+            total_input_tokens: z.number(),
+            total_output_tokens: z.number(),
+            context_window_size: z.number()
+        }).optional()
+    }).passthrough()
+})
+
 type CliEnv = {
     Variables: {
         namespace: string
@@ -183,6 +194,34 @@ export function createCliRoutes(getSyncEngine: () => SyncEngine | null): Hono<Cl
             return c.json({ error: resolved.error }, resolved.status)
         }
         return c.json({ machine: resolved.machine })
+    })
+
+    app.post('/sessions/context', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ ok: false }, 503)
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = contextUpdateSchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ ok: false }, 200)
+        }
+
+        const { sid, data } = parsed.data
+        const cw = data.context_window
+        if (!cw) {
+            return c.json({ ok: true })
+        }
+
+        const namespace = c.get('namespace')
+        engine.updateSessionContextWindow(sid, namespace, {
+            totalInputTokens: cw.total_input_tokens,
+            totalOutputTokens: cw.total_output_tokens,
+            contextWindowSize: cw.context_window_size
+        })
+
+        return c.json({ ok: true })
     })
 
     return app

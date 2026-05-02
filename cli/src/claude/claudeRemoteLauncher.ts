@@ -347,6 +347,21 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                             logger.debug('[remote]: Session reset');
                             session.clearSessionId();
                         },
+                        onModelUsage: (modelUsage) => {
+                            const firstEntry = Object.values(modelUsage).find(v => v && typeof v === 'object') as Record<string, unknown> | undefined
+                            if (!firstEntry) return
+                            const contextWindow = typeof firstEntry.contextWindow === 'number' ? firstEntry.contextWindow : undefined
+                            if (contextWindow === undefined) return
+                            session.client.updateMetadata((meta) => ({
+                                ...meta,
+                                contextWindow: {
+                                    totalInputTokens: typeof firstEntry.inputTokens === 'number' ? firstEntry.inputTokens : 0,
+                                    totalOutputTokens: typeof firstEntry.outputTokens === 'number' ? firstEntry.outputTokens : 0,
+                                    cacheReadInputTokens: typeof firstEntry.cacheReadInputTokens === 'number' ? firstEntry.cacheReadInputTokens : undefined,
+                                    contextWindowSize: contextWindow,
+                                }
+                            }))
+                        },
                         onReady: () => {
                             logger.debug(
                                 `[claudeRemoteLauncher][async-debug] onReady callback ` +

@@ -46,7 +46,12 @@ export const MetadataSchema = z.object({
     archivedBy: z.string().optional(),
     archiveReason: z.string().optional(),
     flavor: z.string().nullish(),
-    worktree: WorktreeMetadataSchema.optional()
+    worktree: WorktreeMetadataSchema.optional(),
+    contextWindow: z.object({
+        totalInputTokens: z.number(),
+        totalOutputTokens: z.number(),
+        contextWindowSize: z.number()
+    }).optional()
 })
 
 export type Metadata = z.infer<typeof MetadataSchema>

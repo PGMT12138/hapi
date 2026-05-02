@@ -8,6 +8,7 @@ import { extractSDKMetadataAsync } from '@/claude/sdk/metadataExtractor';
 import { parseSpecialCommand } from '@/parsers/specialCommands';
 import { getEnvironmentInfo } from '@/ui/doctor';
 import { startHappyServer } from '@/claude/utils/startHappyServer';
+import { ensureStatusLineScript, injectStatusLineSettings } from '@/claude/utils/statusLineHook';
 import { startHookServer } from '@/claude/utils/startHookServer';
 import { generateHookSettingsFile, cleanupHookSettingsFile } from '@/modules/common/hooks/generateHookSettings';
 import { registerKillSessionHandler } from './registerKillSessionHandler';
@@ -20,6 +21,7 @@ import { formatMessageWithAttachments } from '@/utils/attachmentFormatter';
 import { normalizeClaudeSessionModel } from './model';
 import { normalizeClaudeSessionEffort } from './effort';
 import { getInvokedCwd } from '@/utils/invokedCwd';
+import { configuration } from '@/configuration';
 
 export interface StartOptions {
     model?: string
@@ -60,6 +62,18 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         effort: initialEffort ?? undefined
     });
     logger.debug(`Session created: ${sessionInfo.id}`);
+
+    // Set up statusLine hook to capture context window data from Claude Code
+    const statusLineScript = ensureStatusLineScript();
+    if (statusLineScript) {
+        const extraEnv: Record<string, string> = {
+            HAPI_SESSION_ID: sessionInfo.id,
+            HAPI_HUB_URL: configuration.apiUrl,
+            HAPI_API_TOKEN: configuration.cliApiToken,
+        };
+        options.claudeEnvVars = { ...(options.claudeEnvVars ?? {}), ...extraEnv };
+        injectStatusLineSettings(workingDirectory, statusLineScript);
+    }
 
     // Extract SDK metadata in background and update session when ready
     extractSDKMetadataAsync(async (sdkMetadata) => {

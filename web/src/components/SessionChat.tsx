@@ -254,6 +254,20 @@ export function SessionChat(props: {
         () => reduceChatBlocks(normalizedMessages, props.session.agentState),
         [normalizedMessages, props.session.agentState]
     )
+
+    // Use real context window from session metadata (reported by CLI via result modelUsage)
+    // when the message-based context_window is not available
+    const metadataContext = useMemo(() => {
+        const meta = props.session.metadata as Record<string, unknown> | undefined
+        const cw = meta?.contextWindow
+        if (typeof cw !== 'object' || cw === null) return { contextWindowSize: undefined, contextSize: undefined, cacheRead: undefined }
+        const data = cw as Record<string, unknown>
+        return {
+            contextWindowSize: typeof data.contextWindowSize === 'number' ? data.contextWindowSize : undefined,
+            contextSize: typeof data.totalInputTokens === 'number' ? data.totalInputTokens : undefined,
+            cacheRead: typeof data.cacheReadInputTokens === 'number' ? data.cacheReadInputTokens : undefined,
+        }
+    }, [props.session.metadata])
     const reconciled = useMemo(
         () => reconcileChatBlocks(reduced.blocks, blocksByIdRef.current),
         [reduced.blocks]
@@ -457,9 +471,9 @@ export function SessionChat(props: {
                         thinking={props.session.thinking}
                         agentState={props.session.agentState}
                         backgroundTaskCount={props.session.backgroundTaskCount}
-                        contextSize={reduced.latestUsage?.contextSize}
-                        contextCacheRead={reduced.latestUsage?.cacheRead}
-                        contextWindow={reduced.latestUsage?.contextWindow}
+                        contextSize={reduced.latestUsage?.contextSize ?? metadataContext.contextSize}
+                        contextCacheRead={reduced.latestUsage?.cacheRead ?? metadataContext.cacheRead}
+                        contextWindow={reduced.latestUsage?.contextWindow ?? metadataContext.contextWindowSize}
                         controlledByUser={controlledByUser}
                         onCollaborationModeChange={
                             codexCollaborationModeSupported && props.session.active && !controlledByUser

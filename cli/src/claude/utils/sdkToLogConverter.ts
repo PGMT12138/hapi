@@ -236,8 +236,7 @@ export class SDKToLogConverter {
 
             case 'result': {
                 // Result messages are not converted to log messages
-                // They're SDK-specific messages that indicate session completion
-                // Not part of the actual conversation log
+                // Context window data is extracted in claudeRemote.ts instead
                 break
             }
 

@@ -344,6 +344,14 @@ export class SyncEngine {
         await this.sessionCache.renameSession(sessionId, name)
     }
 
+    updateSessionContextWindow(
+        sessionId: string,
+        namespace: string,
+        contextWindow: { totalInputTokens: number; totalOutputTokens: number; contextWindowSize: number }
+    ): void {
+        this.sessionCache.updateContextWindow(sessionId, namespace, contextWindow)
+    }
+
     async deleteSession(sessionId: string): Promise<void> {
         await this.sessionCache.deleteSession(sessionId)
     }

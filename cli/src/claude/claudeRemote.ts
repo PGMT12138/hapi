@@ -35,7 +35,8 @@ export async function claudeRemote(opts: {
     onThinkingChange?: (thinking: boolean) => void,
     onMessage: (message: SDKMessage) => void,
     onCompletionEvent?: (message: string) => void,
-    onSessionReset?: () => void
+    onSessionReset?: () => void,
+    onModelUsage?: (modelUsage: Record<string, unknown>) => void,
 }) {
     const debugPrefix = '[claudeRemote][async-debug]';
 
@@ -258,6 +259,13 @@ export async function claudeRemote(opts: {
             if (message.type === 'result') {
                 resultSeq += 1;
                 updateThinking(false);
+
+                // Extract model usage data (context window size, token counts)
+                const resultAny = message as Record<string, unknown>
+                if (resultAny.modelUsage && typeof resultAny.modelUsage === 'object') {
+                    opts.onModelUsage?.(resultAny.modelUsage as Record<string, unknown>)
+                }
+
                 logger.debug(
                     `${debugPrefix} result #${resultSeq} received; scheduling next user message ` +
                     `(nextInFlight=${nextMessageFetchInFlight}, inputEnded=${inputEnded})`
