@@ -9,6 +9,7 @@ import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
 import { getAssistantCopyText } from '@/components/AssistantChat/messages/assistantCopyText'
 import { getConversationMessageAnchorId } from '@/chat/outline'
 import { formatTimestamp, formatDuration } from '@/chat/presentation'
+import { formatModelName } from '@hapi/protocol'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -46,6 +47,10 @@ export function HappyAssistantMessage() {
     const durationMs = useAssistantState(({ message }) => {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.durationMs
+    })
+    const modelName = useAssistantState(({ message }) => {
+        const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
+        return formatModelName(custom?.model)
     })
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
@@ -86,6 +91,9 @@ export function HappyAssistantMessage() {
             )}
             {createdAt && (
                 <div className="mt-0.5 text-[10px] text-[var(--app-hint)]">
+                    {modelName && (
+                        <span className="mr-1.5 opacity-70">{modelName}</span>
+                    )}
                     {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
                     {durationMs != null && ` (${formatDuration(durationMs)})`}
                 </div>

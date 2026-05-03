@@ -17,6 +17,7 @@ export type HappyChatMessageMetadata = {
     source?: CliOutputBlock['source']
     attachments?: AttachmentMetadata[]
     durationMs?: number
+    model?: string
 }
 
 function buildDurationMap(blocks: readonly ChatBlock[]): Map<string, number> {
@@ -64,7 +65,8 @@ function toThreadMessageLike(block: ChatBlock, durationMap: Map<string, number>)
             metadata: {
                 custom: {
                     kind: 'assistant',
-                    durationMs: durationMap.get(block.id)
+                    durationMs: durationMap.get(block.id),
+                    model: block.model
                 } satisfies HappyChatMessageMetadata
             }
         }
@@ -80,7 +82,8 @@ function toThreadMessageLike(block: ChatBlock, durationMap: Map<string, number>)
             metadata: {
                 custom: {
                     kind: 'assistant',
-                    durationMs: durationMap.get(block.id)
+                    durationMs: durationMap.get(block.id),
+                    model: block.model
                 } satisfies HappyChatMessageMetadata
             }
         }

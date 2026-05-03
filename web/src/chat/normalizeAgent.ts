@@ -143,6 +143,8 @@ function normalizeAssistantOutput(
     const inputTokens = usage ? asNumber(usage.input_tokens) : null
     const outputTokens = usage ? asNumber(usage.output_tokens) : null
 
+    const model = asString(message.model) ?? undefined
+
     return {
         id: messageId,
         localId,
@@ -151,6 +153,7 @@ function normalizeAssistantOutput(
         isSidechain,
         content: blocks,
         meta,
+        model,
         usage: inputTokens !== null && outputTokens !== null ? {
             input_tokens: inputTokens,
             output_tokens: outputTokens,

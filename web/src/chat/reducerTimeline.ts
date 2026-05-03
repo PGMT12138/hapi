@@ -148,6 +148,7 @@ export function reduceTimeline(
                         localId: msg.localId,
                         createdAt: msg.createdAt,
                         text: c.text,
+                        model: msg.model,
                         meta: msg.meta
                     })
                     continue
@@ -160,6 +161,7 @@ export function reduceTimeline(
                         localId: msg.localId,
                         createdAt: msg.createdAt,
                         text: c.text,
+                        model: msg.model,
                         meta: msg.meta
                     })
                     continue

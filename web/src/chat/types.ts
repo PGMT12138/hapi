@@ -85,6 +85,7 @@ export type NormalizedMessage = ({
     isSidechain: boolean
     meta?: unknown
     usage?: UsageData
+    model?: string
     status?: MessageStatus
     originalText?: string
 }
@@ -133,6 +134,7 @@ export type AgentTextBlock = {
     localId: string | null
     createdAt: number
     text: string
+    model?: string
     meta?: unknown
 }
 
@@ -142,6 +144,7 @@ export type AgentReasoningBlock = {
     localId: string | null
     createdAt: number
     text: string
+    model?: string
     meta?: unknown
 }
 

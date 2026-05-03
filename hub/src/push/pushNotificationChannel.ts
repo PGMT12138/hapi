@@ -35,9 +35,11 @@ export class PushNotificationChannel implements NotificationChannel {
             }
         }
 
+        await this.pushService.sendToNamespace(session.namespace, payload)
+
         const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
-            const delivered = await this.sseManager.sendToast(session.namespace, {
+            await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
                 data: {
                     title: payload.title,
@@ -46,12 +48,7 @@ export class PushNotificationChannel implements NotificationChannel {
                     url
                 }
             })
-            if (delivered > 0) {
-                return
-            }
         }
-
-        await this.pushService.sendToNamespace(session.namespace, payload)
     }
 
     async sendReady(session: Session): Promise<void> {
@@ -73,9 +70,11 @@ export class PushNotificationChannel implements NotificationChannel {
             }
         }
 
+        await this.pushService.sendToNamespace(session.namespace, payload)
+
         const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
-            const delivered = await this.sseManager.sendToast(session.namespace, {
+            await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
                 data: {
                     title: payload.title,
@@ -84,12 +83,7 @@ export class PushNotificationChannel implements NotificationChannel {
                     url
                 }
             })
-            if (delivered > 0) {
-                return
-            }
         }
-
-        await this.pushService.sendToNamespace(session.namespace, payload)
     }
 
     async sendTaskNotification(session: Session, notification: TaskNotification): Promise<void> {
@@ -115,9 +109,11 @@ export class PushNotificationChannel implements NotificationChannel {
             }
         }
 
+        await this.pushService.sendToNamespace(session.namespace, payload)
+
         const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
-            const delivered = await this.sseManager.sendToast(session.namespace, {
+            await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
                 data: {
                     title: payload.title,
@@ -126,12 +122,41 @@ export class PushNotificationChannel implements NotificationChannel {
                     url
                 }
             })
-            if (delivered > 0) {
-                return
+        }
+    }
+
+    async sendSessionCompletion(session: Session, _reason: string): Promise<void> {
+        if (!session.active) {
+            return
+        }
+
+        const agentName = getAgentName(session)
+        const name = getSessionName(session)
+
+        const payload: PushPayload = {
+            title: 'Session completed',
+            body: `${agentName} · ${name}`,
+            data: {
+                type: 'session-completion',
+                sessionId: session.id,
+                url: this.buildSessionPath(session.id)
             }
         }
 
         await this.pushService.sendToNamespace(session.namespace, payload)
+
+        const url = payload.data?.url ?? this.buildSessionPath(session.id)
+        if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
+            await this.sseManager.sendToast(session.namespace, {
+                type: 'toast',
+                data: {
+                    title: payload.title,
+                    body: payload.body,
+                    sessionId: session.id,
+                    url
+                }
+            })
+        }
     }
 
     private buildSessionPath(sessionId: string): string {

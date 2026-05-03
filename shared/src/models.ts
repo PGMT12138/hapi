@@ -32,3 +32,46 @@ export function getClaudeModelLabel(model: string): string | null {
 
     return CLAUDE_MODEL_LABELS[trimmedModel as ClaudeModelPreset] ?? null
 }
+
+export function formatModelName(model: string | null | undefined): string | null {
+    if (!model) return null
+    const trimmed = model.trim()
+    if (!trimmed) return null
+
+    // Check known presets first (e.g., "sonnet", "opus")
+    const presetLabel = CLAUDE_MODEL_LABELS[trimmed as ClaudeModelPreset]
+    if (presetLabel) return presetLabel
+
+    const lower = trimmed.toLowerCase()
+
+    // Gemini models
+    for (const [key, label] of Object.entries(GEMINI_MODEL_LABELS)) {
+        if (lower.startsWith(key.toLowerCase())) return label
+    }
+
+    // Claude API model IDs: claude-sonnet-4-20250514, claude-opus-4-7, etc.
+    if (lower.startsWith('claude-')) {
+        const withoutPrefix = lower.slice('claude-'.length)
+        // Extract family (sonnet, opus, haiku) and version
+        const familyMatch = withoutPrefix.match(/^(sonnet|opus|haiku)-?(\d+(?:\.\d+)*)/)
+        if (familyMatch) {
+            const family = familyMatch[1]
+            const version = familyMatch[2]
+            const familyLabel = family.charAt(0).toUpperCase() + family.slice(1)
+            return version ? `${familyLabel} ${version}` : familyLabel
+        }
+    }
+
+    // Codex models
+    if (lower.includes('codex')) {
+        return trimmed.includes('mini') ? 'Codex Mini' : 'Codex'
+    }
+
+    // OpenAI models
+    if (lower.startsWith('gpt-')) {
+        return trimmed
+    }
+
+    // Fallback: return as-is, trimmed
+    return trimmed
+}
