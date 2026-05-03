@@ -203,6 +203,7 @@ export function reduceTimeline(
                         name: c.name,
                         input: c.input,
                         description: c.description,
+                        model: msg.model,
                         permission
                     })
 
@@ -268,6 +269,7 @@ export function reduceTimeline(
                         name: permissionEntry?.toolName ?? 'Tool',
                         input: permissionEntry?.input ?? null,
                         description: null,
+                        model: msg.model,
                         permission
                     })
 

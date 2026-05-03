@@ -133,7 +133,7 @@ function toThreadMessageLike(block: ChatBlock, durationMap: Map<string, number>)
             artifact: toolBlock
         }],
         metadata: {
-            custom: { kind: 'tool', toolCallId: toolBlock.id } satisfies HappyChatMessageMetadata
+            custom: { kind: 'tool', toolCallId: toolBlock.id, model: toolBlock.model } satisfies HappyChatMessageMetadata
         }
     }
 }

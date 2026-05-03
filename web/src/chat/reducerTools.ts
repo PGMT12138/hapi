@@ -62,6 +62,7 @@ export function ensureToolBlock(
         input: unknown
         description: string | null
         permission?: ToolPermission
+        model?: string
     }
 ): ToolCallBlock {
     const existing = toolBlocksById.get(id)
@@ -119,6 +120,7 @@ export function ensureToolBlock(
         createdAt: seed.createdAt,
         tool,
         children: [],
+        model: seed.model,
         meta: seed.meta
     }
 

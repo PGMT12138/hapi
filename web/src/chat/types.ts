@@ -173,6 +173,7 @@ export type ToolCallBlock = {
     createdAt: number
     tool: ChatToolCall
     children: ChatBlock[]
+    model?: string
     meta?: unknown
 }
 

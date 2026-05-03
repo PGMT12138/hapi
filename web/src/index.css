@@ -46,8 +46,8 @@
     --app-badge-error-border: rgba(239, 68, 68, 0.3);
 
     /* User bubble colors (light) */
-    --app-user-bubble-bg: #e5e6eb4f;
-    --app-user-bubble-border: #c8ccd4;
+    --app-user-bubble-bg: #d5dbfb3d;
+    --app-user-bubble-border: transparent;
 
     --app-font-scale: 1;
 }
