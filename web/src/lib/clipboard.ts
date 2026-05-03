@@ -6,7 +6,8 @@ function copyWithExecCommand(text: string): boolean {
     // Find the best container: prefer the active element's root (e.g. inside a Dialog),
     // fall back to body. This avoids issues with Radix Dialog marking body as inert.
     const active = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const container = active?.closest('[role="dialog"]') ?? active?.parentElement ?? document.body
+    const dialogContainer = active?.closest('[role="dialog"]') ?? null
+    const container = dialogContainer ?? document.body
 
     const textarea = document.createElement('textarea')
     textarea.value = text
