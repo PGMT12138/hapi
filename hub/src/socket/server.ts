@@ -69,6 +69,19 @@ export function createSocketServer(deps: SocketServerDeps): {
             if (!origin || allowAllOrigins || corsOrigins.includes(origin)) {
                 return
             }
+            // Allow same-origin requests behind reverse proxies (origin host matches Host header)
+            try {
+                const originUrl = new URL(origin)
+                const requestHost = req.headers.get('host')
+                if (requestHost) {
+                    // Exact match (with port)
+                    if (originUrl.host === requestHost) return
+                    // Hostname-only match (nginx $host may strip port)
+                    if (originUrl.hostname === requestHost.split(':')[0]) return
+                }
+            } catch {
+                // Invalid origin URL, fall through to reject
+            }
             throw 'Origin not allowed'
         }
     })
