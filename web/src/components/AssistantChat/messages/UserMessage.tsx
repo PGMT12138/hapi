@@ -49,7 +49,7 @@ export function HappyUserMessage() {
     const canRetry = status === 'failed' && typeof localId === 'string' && Boolean(ctx.onRetryMessage)
     const onRetry = canRetry ? () => ctx.onRetryMessage!(localId) : undefined
 
-    const userBubbleClass = `inline-block text-left max-w-[92%] align-top rounded-xl bg-[var(--app-secondary-bg)] dark:bg-transparent border border-[var(--app-border)] dark:border-[var(--app-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm dark:shadow-none`
+    const userBubbleClass = `inline-block text-left max-w-[92%] align-top rounded-xl bg-[var(--app-user-bubble-bg)] border border-[var(--app-user-bubble-border)] px-3 py-2 text-[var(--app-fg)] shadow-sm`
 
     if (isCliOutput) {
         return (

@@ -45,6 +45,10 @@
     --app-badge-error-text: #b91c1c;
     --app-badge-error-border: rgba(239, 68, 68, 0.3);
 
+    /* User bubble colors (light) */
+    --app-user-bubble-bg: #e5e6eb4f;
+    --app-user-bubble-border: #c8ccd4;
+
     --app-font-scale: 1;
 }
 
@@ -89,6 +93,10 @@
     --app-badge-error-bg: rgba(248, 113, 113, 0.15);
     --app-badge-error-text: #fca5a5;
     --app-badge-error-border: rgba(248, 113, 113, 0.3);
+
+    /* User bubble colors (dark) */
+    --app-user-bubble-bg: #25262759;
+    --app-user-bubble-border: #2a2b33;
 }
 
 html {
