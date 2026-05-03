@@ -312,6 +312,8 @@ export default {
   'prompts.selectDescription': '选择一个提示词追加到输入框',
   'prompts.loading': '加载中…',
   'prompts.emptyList': '暂无提示词。前往 设置 → 提示词 添加。',
+  'prompts.use': '使用',
+  'prompts.copy': '复制',
 
   // Model Presets
   'modelPresets.title': '模型管理',

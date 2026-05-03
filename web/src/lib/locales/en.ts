@@ -310,6 +310,8 @@ export default {
   'prompts.selectDescription': 'Choose a prompt to append to the composer',
   'prompts.loading': 'Loading…',
   'prompts.emptyList': 'No prompts yet. Add some in Settings → Prompts.',
+  'prompts.use': 'Use',
+  'prompts.copy': 'Copy',
 
   // Model Presets
   'modelPresets.title': 'Model Management',
