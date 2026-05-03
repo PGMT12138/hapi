@@ -3,6 +3,11 @@ function copyWithExecCommand(text: string): boolean {
         return false
     }
 
+    // Find the best container: prefer the active element's root (e.g. inside a Dialog),
+    // fall back to body. This avoids issues with Radix Dialog marking body as inert.
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const container = active?.closest('[role="dialog"]') ?? active?.parentElement ?? document.body
+
     const textarea = document.createElement('textarea')
     textarea.value = text
     textarea.setAttribute('readonly', 'true')
@@ -14,13 +19,11 @@ function copyWithExecCommand(text: string): boolean {
     textarea.style.padding = '0'
     textarea.style.border = '0'
     textarea.style.opacity = '0'
-    textarea.style.pointerEvents = 'none'
 
-    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const selection = document.getSelection()
     const previousRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
 
-    document.body.appendChild(textarea)
+    container.appendChild(textarea)
     textarea.focus()
     textarea.select()
     textarea.setSelectionRange(0, textarea.value.length)
@@ -31,14 +34,14 @@ function copyWithExecCommand(text: string): boolean {
     } catch {
         copied = false
     } finally {
-        document.body.removeChild(textarea)
+        container.removeChild(textarea)
         if (selection) {
             selection.removeAllRanges()
             if (previousRange) {
                 selection.addRange(previousRange)
             }
         }
-        activeElement?.focus()
+        active?.focus()
     }
 
     return copied

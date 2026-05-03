@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAppContext } from '@/lib/app-context'
 import { usePrompts } from '@/hooks/queries/usePrompts'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useTranslation } from '@/lib/use-translation'
 
 type Props = {
@@ -20,6 +21,7 @@ function PromptDetailDialog({
     onClose: () => void
 }) {
     const { t } = useTranslation()
+    const { copied, copy } = useCopyToClipboard()
     return (
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent className="max-w-xl">
@@ -42,10 +44,10 @@ function PromptDetailDialog({
                         {t('prompts.cancel')}
                     </button>
                     <button
-                        onClick={() => navigator.clipboard.writeText(prompt.content)}
+                        onClick={() => copy(prompt.content)}
                         className="rounded-lg border border-[var(--app-divider)] px-3 py-1.5 text-sm text-[var(--app-hint)] hover:bg-[var(--app-hover)]"
                     >
-                        {t('prompts.copy')}
+                        {copied ? '✓' : t('prompts.copy')}
                     </button>
                     <button
                         onClick={onUse}
@@ -63,6 +65,7 @@ export function PromptPickerDialog({ open, onOpenChange, onSelect }: Props) {
     const { api } = useAppContext()
     const { prompts, isLoading } = usePrompts(api)
     const { t } = useTranslation()
+    const { copy } = useCopyToClipboard()
     const [detailPrompt, setDetailPrompt] = useState<{ name: string; content: string } | null>(null)
 
     return (
@@ -98,7 +101,7 @@ export function PromptPickerDialog({ open, onOpenChange, onSelect }: Props) {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation()
-                                                    navigator.clipboard.writeText(prompt.content)
+                                                    copy(prompt.content)
                                                 }}
                                                 title={t('prompts.copy')}
                                                 className="rounded-lg p-1.5 text-[var(--app-hint)] hover:bg-[var(--app-hover)] active:scale-95"

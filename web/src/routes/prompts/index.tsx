@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from '@/lib/use-translation'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useAppContext } from '@/lib/app-context'
 import { usePrompts } from '@/hooks/queries/usePrompts'
 import { usePromptActions } from '@/hooks/mutations/usePromptActions'
@@ -112,6 +113,7 @@ export default function PromptsPage() {
     const actions = usePromptActions(api)
     const { t } = useTranslation()
     const [editTarget, setEditTarget] = useState<{ id?: string; name: string; content: string } | null>(null)
+    const { copy } = useCopyToClipboard()
 
     const isCreating = editTarget?.id === undefined && editTarget !== null
     const isEditing = editTarget?.id !== undefined && editTarget !== null
@@ -154,7 +156,7 @@ export default function PromptsPage() {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                navigator.clipboard.writeText(prompt.content)
+                                                copy(prompt.content)
                                             }}
                                             title={t('prompts.copy')}
                                             className="rounded-lg p-1.5 text-[var(--app-hint)] hover:bg-[var(--app-hover)] active:scale-95"
