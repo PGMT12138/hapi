@@ -5,6 +5,7 @@ import { dirname } from 'node:path'
 import { MachineStore } from './machineStore'
 import { MessageStore } from './messageStore'
 import { ModelConfigPresetStore } from './modelConfigPresetStore'
+import { PromptStore } from './promptStore'
 import { PushStore } from './pushStore'
 import { SessionStore } from './sessionStore'
 import { UserStore } from './userStore'
@@ -14,6 +15,7 @@ export type {
     StoredMessage,
     StoredModelConfigPreset,
     StoredPushSubscription,
+    StoredPrompt,
     StoredSession,
     StoredUser,
     VersionedUpdateResult
@@ -21,18 +23,20 @@ export type {
 export { MachineStore } from './machineStore'
 export { MessageStore } from './messageStore'
 export { ModelConfigPresetStore } from './modelConfigPresetStore'
+export { PromptStore } from './promptStore'
 export { PushStore } from './pushStore'
 export { SessionStore } from './sessionStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 9
+const SCHEMA_VERSION: number = 10
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
     'messages',
     'users',
     'push_subscriptions',
-    'model_config_presets'
+    'model_config_presets',
+    'prompts'
 ] as const
 
 export class Store {
@@ -45,6 +49,7 @@ export class Store {
     readonly users: UserStore
     readonly push: PushStore
     readonly modelConfigPresets: ModelConfigPresetStore
+    readonly prompts: PromptStore
 
     constructor(dbPath: string) {
         this.dbPath = dbPath
@@ -87,6 +92,7 @@ export class Store {
         this.users = new UserStore(this.db)
         this.push = new PushStore(this.db)
         this.modelConfigPresets = new ModelConfigPresetStore(this.db)
+        this.prompts = new PromptStore(this.db)
     }
 
     private initSchema(): void {
@@ -104,6 +110,7 @@ export class Store {
             6: () => this.migrateFromV6ToV7(),
             7: () => this.migrateFromV7ToV8(),
             8: () => this.migrateFromV8ToV9(),
+            9: () => this.migrateFromV9ToV10(),
         })
 
         if (currentVersion === 0) {
@@ -238,6 +245,17 @@ export class Store {
                 UNIQUE(namespace, name)
             );
             CREATE INDEX IF NOT EXISTS idx_model_config_presets_namespace ON model_config_presets(namespace);
+
+            CREATE TABLE IF NOT EXISTS prompts (
+                id TEXT PRIMARY KEY,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(namespace, name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_prompts_namespace ON prompts(namespace);
         `)
     }
 
@@ -454,6 +472,21 @@ export class Store {
                 UNIQUE(namespace, name)
             );
             CREATE INDEX IF NOT EXISTS idx_model_config_presets_namespace ON model_config_presets(namespace);
+        `)
+    }
+
+    private migrateFromV9ToV10(): void {
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS prompts (
+                id TEXT PRIMARY KEY,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(namespace, name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_prompts_namespace ON prompts(namespace);
         `)
     }
 

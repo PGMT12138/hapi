@@ -71,6 +71,15 @@ export type StoredModelConfigPreset = {
     updatedAt: number
 }
 
+export type StoredPrompt = {
+    id: string
+    namespace: string
+    name: string
+    content: string
+    createdAt: number
+    updatedAt: number
+}
+
 export type VersionedUpdateResult<T> =
     | { result: 'success'; version: number; value: T }
     | { result: 'version-mismatch'; version: number; value: T }

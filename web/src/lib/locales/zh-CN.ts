@@ -296,6 +296,23 @@ export default {
   'settings.about.appVersion': '应用版本',
   'settings.about.protocolVersion': '协议版本',
 
+  // Prompts
+  'prompts.title': '提示词',
+  'prompts.nav': '提示词',
+  'prompts.empty': '暂无提示词',
+  'prompts.add': '添加提示词',
+  'prompts.name': '名称',
+  'prompts.namePlaceholder': '提示词名称',
+  'prompts.contentPlaceholder': '提示词内容',
+  'prompts.save': '保存',
+  'prompts.delete': '删除',
+  'prompts.cancel': '取消',
+  'prompts.insert': '插入提示词',
+  'prompts.selectTitle': '选择提示词',
+  'prompts.selectDescription': '选择一个提示词追加到输入框',
+  'prompts.loading': '加载中…',
+  'prompts.emptyList': '暂无提示词。前往 设置 → 提示词 添加。',
+
   // Model Presets
   'modelPresets.title': '模型管理',
   'modelPresets.nav': '模型管理',

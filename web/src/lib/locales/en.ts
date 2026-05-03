@@ -294,6 +294,23 @@ export default {
   'settings.about.appVersion': 'App Version',
   'settings.about.protocolVersion': 'Protocol Version',
 
+  // Prompts
+  'prompts.title': 'Prompts',
+  'prompts.nav': 'Prompts',
+  'prompts.empty': 'No prompts yet',
+  'prompts.add': 'Add Prompt',
+  'prompts.name': 'Name',
+  'prompts.namePlaceholder': 'Prompt name',
+  'prompts.contentPlaceholder': 'Prompt content',
+  'prompts.save': 'Save',
+  'prompts.delete': 'Delete',
+  'prompts.cancel': 'Cancel',
+  'prompts.insert': 'Insert prompt',
+  'prompts.selectTitle': 'Select a Prompt',
+  'prompts.selectDescription': 'Choose a prompt to append to the composer',
+  'prompts.loading': 'Loading…',
+  'prompts.emptyList': 'No prompts yet. Add some in Settings → Prompts.',
+
   // Model Presets
   'modelPresets.title': 'Model Management',
   'modelPresets.nav': 'Model Management',

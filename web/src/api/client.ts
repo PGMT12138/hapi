@@ -14,6 +14,9 @@ import type {
     CodexModelsResponse,
     ModelConfigPreset,
     ModelConfigPresetsResponse,
+    Prompt,
+    PromptsResponse,
+    PromptResponse,
     PermissionMode,
     PushSubscriptionPayload,
     PushUnsubscribePayload,
@@ -534,6 +537,34 @@ export class ApiClient {
 
     async deleteModelConfigPreset(id: string): Promise<{ ok: boolean }> {
         return await this.request(`/api/model-config-presets/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        })
+    }
+
+    // Prompts
+
+    async getPrompts(): Promise<PromptsResponse> {
+        return await this.request<PromptsResponse>('/api/prompts')
+    }
+
+    async createPrompt(name: string, content: string): Promise<PromptResponse> {
+        return await this.request<PromptResponse>('/api/prompts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, content }),
+        })
+    }
+
+    async updatePrompt(id: string, data: { name?: string; content?: string }): Promise<PromptResponse> {
+        return await this.request<PromptResponse>(`/api/prompts/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+    }
+
+    async deletePrompt(id: string): Promise<{ ok: boolean }> {
+        return await this.request(`/api/prompts/${encodeURIComponent(id)}`, {
             method: 'DELETE'
         })
     }

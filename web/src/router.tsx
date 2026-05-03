@@ -39,6 +39,7 @@ import FilePage from '@/routes/sessions/file'
 import TerminalPage from '@/routes/sessions/terminal'
 import SettingsPage from '@/routes/settings'
 import ModelPresetsPage from '@/routes/model-presets'
+import PromptsPage from '@/routes/prompts'
 
 function BackIcon(props: { className?: string }) {
     return (
@@ -677,6 +678,12 @@ const modelPresetsRoute = createRoute({
     component: ModelPresetsPage,
 })
 
+const promptsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/prompts',
+    component: PromptsPage,
+})
+
 export const routeTree = rootRoute.addChildren([
     indexRoute,
     sessionsRoute.addChildren([
@@ -691,6 +698,7 @@ export const routeTree = rootRoute.addChildren([
     browseRoute,
     settingsRoute,
     modelPresetsRoute,
+    promptsRoute,
 ])
 
 type RouterHistory = Parameters<typeof createRouter>[0]['history']

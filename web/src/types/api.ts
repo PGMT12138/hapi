@@ -261,3 +261,19 @@ export type ModelConfigPreset = {
 export type ModelConfigPresetsResponse = {
     presets: ModelConfigPreset[]
 }
+
+export type Prompt = {
+    id: string
+    name: string
+    content: string
+    createdAt: number
+    updatedAt: number
+}
+
+export type PromptsResponse = {
+    prompts: Prompt[]
+}
+
+export type PromptResponse = {
+    prompt: Prompt
+}

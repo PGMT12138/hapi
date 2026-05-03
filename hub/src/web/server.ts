@@ -20,6 +20,7 @@ import { createCliRoutes } from './routes/cli'
 import { createPushRoutes } from './routes/push'
 import { createVoiceRoutes } from './routes/voice'
 import { createModelConfigPresetRoutes } from './routes/modelConfigPresets'
+import { createPromptRoutes } from './routes/prompts'
 import { createContextReportRoutes } from './routes/contextReport'
 import type { SSEManager } from '../sse/sseManager'
 import type { VisibilityTracker } from '../visibility/visibilityTracker'
@@ -101,6 +102,7 @@ function createWebApp(options: {
     app.route('/api', createPushRoutes(options.store, options.vapidPublicKey))
     app.route('/api', createVoiceRoutes())
     app.route('/api', createModelConfigPresetRoutes(options.store))
+    app.route('/api', createPromptRoutes(options.store))
 
     // Skip static serving in relay mode, show helpful message on root
     if (options.relayMode) {

@@ -27,6 +27,7 @@ import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { StatusBar } from '@/components/AssistantChat/StatusBar'
 import { ComposerButtons } from '@/components/AssistantChat/ComposerButtons'
+import { PromptPickerDialog } from '@/components/PromptPickerDialog'
 import { AttachmentItem } from '@/components/AssistantChat/AttachmentItem'
 import { useTranslation } from '@/lib/use-translation'
 import { getModelOptionsForFlavor, getNextModelForFlavor } from './modelOptions'
@@ -148,6 +149,7 @@ export function HappyComposer(props: {
     const [isAborting, setIsAborting] = useState(false)
     const [isSwitching, setIsSwitching] = useState(false)
     const [showContinueHint, setShowContinueHint] = useState(false)
+    const [promptPickerOpen, setPromptPickerOpen] = useState(false)
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const prevControlledByUser = useRef(controlledByUser)
@@ -747,6 +749,7 @@ export function HappyComposer(props: {
     ])
 
     return (
+        <>
         <div className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}>
             <div className="mx-auto w-full max-w-content">
                 <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
@@ -815,10 +818,21 @@ export function HappyComposer(props: {
                             onVoiceToggle={onVoiceToggle ?? (() => {})}
                             onVoiceMicToggle={onVoiceMicToggle}
                             onSend={handleSend}
+                            onPromptPicker={() => setPromptPickerOpen(true)}
                         />
                     </div>
                 </ComposerPrimitive.Root>
             </div>
         </div>
+        <PromptPickerDialog
+            open={promptPickerOpen}
+            onOpenChange={setPromptPickerOpen}
+            onSelect={(content) => {
+                const current = composerText ?? ''
+                const separator = current.trim() ? '\n' : ''
+                api.composer().setText(current.trimEnd() + separator + content)
+            }}
+        />
+        </>
     )
 }
