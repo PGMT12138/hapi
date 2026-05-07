@@ -100,24 +100,51 @@ function formatAskUserQuestionAnswers(answers: Record<string, string[]> | Record
         : `User answered:\n${body}`;
 }
 
+/**
+ * Build updated input for AskUserQuestion tool.
+ * The Claude Code SDK expects answers as Record<string, string> where:
+ *   - key = question text (e.g. "Which color do you prefer?")
+ *   - value = selected option label (e.g. "B) Blue"), comma-separated for multiSelect
+ * The web UI sends answers as Record<string, string[]> where:
+ *   - key = question index as string (e.g. "0")
+ *   - value = array of selected option labels
+ */
 function buildAskUserQuestionUpdatedInput(input: unknown, answers: Record<string, string[]> | Record<string, { answers: string[] }>): Record<string, unknown> {
-    // Normalize to flat format for AskUserQuestion
-    const flatAnswers: Record<string, string[]> = {};
+    // Normalize to flat format: Record<string, string[]>
+    const indexedAnswers: Record<string, string[]> = {};
     for (const [key, value] of Object.entries(answers)) {
         if (Array.isArray(value)) {
-            flatAnswers[key] = value;
+            indexedAnswers[key] = value;
         } else if (value && typeof value === 'object' && 'answers' in value) {
-            flatAnswers[key] = value.answers;
+            indexedAnswers[key] = value.answers;
         }
     }
 
+    // Convert indexed answers to question-text-keyed answers (SDK format)
+    const sdkAnswers: Record<string, string> = {};
+    const questions = (() => {
+        if (!isObject(input)) return null;
+        const raw = (input as Record<string, unknown>).questions;
+        if (!Array.isArray(raw)) return null;
+        return raw;
+    })();
+
+    for (const [idxStr, labels] of Object.entries(indexedAnswers)) {
+        const idx = Number.parseInt(idxStr, 10);
+        const question = questions && Number.isFinite(idx) ? questions[idx] : null;
+        const questionText = question && typeof question === 'object' && 'question' in question
+            ? String((question as Record<string, unknown>).question)
+            : idxStr;
+        sdkAnswers[questionText] = labels.join(', ');
+    }
+
     if (!isObject(input)) {
-        return { answers: flatAnswers };
+        return { answers: sdkAnswers };
     }
 
     return {
         ...input,
-        answers: flatAnswers
+        answers: sdkAnswers
     };
 }
 
