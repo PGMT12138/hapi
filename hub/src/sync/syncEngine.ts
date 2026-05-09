@@ -347,7 +347,19 @@ export class SyncEngine {
     updateSessionContextWindow(
         sessionId: string,
         namespace: string,
-        contextWindow: { totalInputTokens: number; totalOutputTokens: number; contextWindowSize: number }
+        contextWindow: {
+            totalInputTokens: number
+            totalOutputTokens: number
+            contextWindowSize: number
+            usedPercentage?: number
+            remainingPercentage?: number
+            currentUsage?: {
+                inputTokens: number
+                outputTokens: number
+                cacheCreationInputTokens?: number
+                cacheReadInputTokens?: number
+            }
+        }
     ): void {
         this.sessionCache.updateContextWindow(sessionId, namespace, contextWindow)
     }

@@ -336,7 +336,10 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                             session.onSessionFound(sessionId);
                         },
                         onThinkingChange: session.onThinkingChange,
-                        claudeEnvVars: session.claudeEnvVars,
+                        claudeEnvVars: {
+                            ...session.claudeEnvVars,
+                            ...(session.sessionId ? { HAPI_SESSION_ID: session.sessionId } : {}),
+                        },
                         claudeArgs: session.claudeArgs,
                         onMessage,
                         onCompletionEvent: (message: string) => {
@@ -352,13 +355,20 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                             if (!firstEntry) return
                             const contextWindow = typeof firstEntry.contextWindow === 'number' ? firstEntry.contextWindow : undefined
                             if (contextWindow === undefined) return
+                            const inputTokens = typeof firstEntry.inputTokens === 'number' ? firstEntry.inputTokens : 0
+                            const outputTokens = typeof firstEntry.outputTokens === 'number' ? firstEntry.outputTokens : 0
+                            const usedPercentage = Math.round((inputTokens / contextWindow) * 100)
+                            const remainingPercentage = 100 - usedPercentage
                             session.client.updateMetadata((meta) => ({
                                 ...meta,
                                 contextWindow: {
-                                    totalInputTokens: typeof firstEntry.inputTokens === 'number' ? firstEntry.inputTokens : 0,
-                                    totalOutputTokens: typeof firstEntry.outputTokens === 'number' ? firstEntry.outputTokens : 0,
+                                    ...meta.contextWindow,
+                                    totalInputTokens: inputTokens,
+                                    totalOutputTokens: outputTokens,
                                     cacheReadInputTokens: typeof firstEntry.cacheReadInputTokens === 'number' ? firstEntry.cacheReadInputTokens : undefined,
                                     contextWindowSize: contextWindow,
+                                    usedPercentage,
+                                    remainingPercentage,
                                 }
                             }))
                         },

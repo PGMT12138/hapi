@@ -461,7 +461,19 @@ export class SessionCache {
     updateContextWindow(
         sessionId: string,
         namespace: string,
-        contextWindow: { totalInputTokens: number; totalOutputTokens: number; contextWindowSize: number }
+        contextWindow: {
+            totalInputTokens: number
+            totalOutputTokens: number
+            contextWindowSize: number
+            usedPercentage?: number
+            remainingPercentage?: number
+            currentUsage?: {
+                inputTokens: number
+                outputTokens: number
+                cacheCreationInputTokens?: number
+                cacheReadInputTokens?: number
+            }
+        }
     ): void {
         const session = this.sessions.get(sessionId)
         if (!session || session.namespace !== namespace) return
@@ -477,9 +489,25 @@ export class SessionCache {
             { touchUpdatedAt: false }
         )
 
-        if (result.result === 'error' || result.result === 'version-mismatch') return
+        if (result.result === 'success') {
+            this.refreshSession(sessionId)
+            return
+        }
 
-        this.refreshSession(sessionId)
+        // On version mismatch, retry with the fresh metadata from DB
+        if (result.result === 'version-mismatch' && result.value) {
+            const freshMetadata = (result.value ?? {}) as Record<string, unknown>
+            const retryResult = this.store.sessions.updateSessionMetadata(
+                sessionId,
+                { ...freshMetadata, contextWindow },
+                result.version,
+                session.namespace,
+                { touchUpdatedAt: false }
+            )
+            if (retryResult.result === 'success') {
+                this.refreshSession(sessionId)
+            }
+        }
     }
 
     async deleteSession(sessionId: string): Promise<void> {

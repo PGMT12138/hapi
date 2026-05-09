@@ -50,7 +50,15 @@ export const MetadataSchema = z.object({
     contextWindow: z.object({
         totalInputTokens: z.number(),
         totalOutputTokens: z.number(),
-        contextWindowSize: z.number()
+        contextWindowSize: z.number(),
+        usedPercentage: z.number().optional(),
+        remainingPercentage: z.number().optional(),
+        currentUsage: z.object({
+            inputTokens: z.number(),
+            outputTokens: z.number(),
+            cacheCreationInputTokens: z.number().optional(),
+            cacheReadInputTokens: z.number().optional(),
+        }).optional(),
     }).optional()
 })
 

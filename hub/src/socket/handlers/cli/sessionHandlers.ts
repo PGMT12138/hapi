@@ -163,11 +163,35 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             return
         }
 
-        const { sid, metadata, expectedVersion } = parsed.data
+        const { sid, expectedVersion } = parsed.data
+        let { metadata } = parsed.data
         const sessionAccess = resolveSessionAccess(sid)
         if (!sessionAccess.ok) {
             cb({ result: 'error', reason: sessionAccess.reason })
             return
+        }
+
+        // Preserve contextWindow fields (usedPercentage, remainingPercentage)
+        // that may have been set by onModelUsage but are not in the incoming metadata
+        const existingSession = sessionAccess.value
+        if (metadata && typeof metadata === 'object' && existingSession) {
+            const metaObj = metadata as Record<string, unknown>
+            const incomingCW = metaObj.contextWindow as Record<string, unknown> | undefined
+            if (incomingCW) {
+                const existing = existingSession.metadata as Record<string, unknown> | undefined
+                const existingCW = existing?.contextWindow as Record<string, unknown> | undefined
+                if (existingCW) {
+                    if (incomingCW.usedPercentage === undefined && existingCW.usedPercentage !== undefined) {
+                        incomingCW.usedPercentage = existingCW.usedPercentage
+                    }
+                    if (incomingCW.remainingPercentage === undefined && existingCW.remainingPercentage !== undefined) {
+                        incomingCW.remainingPercentage = existingCW.remainingPercentage
+                    }
+                    if (incomingCW.currentUsage === undefined && existingCW.currentUsage !== undefined) {
+                        incomingCW.currentUsage = existingCW.currentUsage
+                    }
+                }
+            }
         }
 
         const result = store.sessions.updateSessionMetadata(
