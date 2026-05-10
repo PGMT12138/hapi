@@ -347,6 +347,42 @@ export default {
 
   // Misc
   'misc.noMachines': 'No machines available',
+
+  // Slash commands - Claude
+  'slash.claude.clear': 'Clear conversation history and free up context',
+  'slash.claude.compact': 'Clear conversation history but keep a summary in context',
+  'slash.claude.context': 'Visualize current context usage as a colored grid',
+  'slash.claude.cost': 'Show the total cost and duration of the current session',
+  'slash.claude.doctor': 'Diagnose and verify your Claude Code installation and settings',
+  'slash.claude.plan': 'View or open the current session plan',
+  'slash.claude.stats': 'Show your Claude Code usage statistics and activity',
+  'slash.claude.status': 'Show Claude Code status including version, model, account, and API connectivity',
+
+  // Slash commands - Codex
+  'slash.codex.clear': 'Clear current Codex thread context',
+  'slash.codex.compact': 'Compact current Codex thread context',
+  'slash.codex.help': 'Show supported HAPI Codex slash commands',
+  'slash.codex.plan': 'Enable plan mode; use /plan off to return to default',
+  'slash.codex.default': 'Return Codex collaboration mode to default',
+  'slash.codex.execute': 'Return Codex collaboration mode to default',
+  'slash.codex.status': 'Show current Codex session config',
+  'slash.codex.model': 'Show or set Codex model, e.g. /model gpt-5.5',
+  'slash.codex.reasoning': 'Show or set reasoning effort',
+  'slash.codex.effort': 'Alias for /reasoning',
+  'slash.codex.permissions': 'Show or set permission mode',
+  'slash.codex.permission': 'Alias for /permissions',
+
+  // Slash commands - Gemini
+  'slash.gemini.about': 'Show version info',
+  'slash.gemini.clear': 'Clear the screen and conversation history',
+  'slash.gemini.compress': 'Compress the context by replacing it with a summary',
+  'slash.gemini.stats': 'Check session stats',
+
+  // Slash commands - generic
+  'slash.customCommand': 'Custom command',
+  'slash.group.builtin': 'Built-in Commands',
+  'slash.group.user': 'User Commands',
+  'slash.group.project': 'Project Commands',
   'misc.machine': 'Machine',
   'misc.collaborationMode': 'Collaboration Mode',
   'misc.permissionMode': 'Permission Mode',

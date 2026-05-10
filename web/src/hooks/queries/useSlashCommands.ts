@@ -5,6 +5,8 @@ import type { SlashCommand } from '@/types/api'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import { queryKeys } from '@/lib/query-keys'
 import { getBuiltinSlashCommands, mergeSlashCommands } from '@/lib/codexSlashCommands'
+import { useTranslation } from '@/lib/use-translation'
+import { pluginCommandZhCN } from '@/lib/locales/plugin-command-translations'
 
 function levenshteinDistance(a: string, b: string): number {
     if (a.length === 0) return b.length
@@ -32,6 +34,7 @@ export function useSlashCommands(
     error: string | null
     getSuggestions: (query: string) => Promise<Suggestion[]>
 } {
+    const { t, locale } = useTranslation()
     const resolvedSessionId = sessionId ?? 'unknown'
 
     // Fetch user-defined commands from the CLI (requires active session)
@@ -63,20 +66,34 @@ export function useSlashCommands(
         return builtin
     }, [agentType, query.data])
 
+    const getDescription = useCallback((cmd: SlashCommand): string | undefined => {
+        if (cmd.source === 'builtin') {
+            return t(`slash.${agentType}.${cmd.name}`)
+        }
+        // Plugin/user/project commands: look up Chinese translation when locale is zh-CN
+        if (locale === 'zh-CN') {
+            const zhDesc = pluginCommandZhCN[cmd.name]
+            if (zhDesc) return zhDesc
+        }
+        return cmd.description ?? t('slash.customCommand')
+    }, [t, agentType, locale])
+
+    const toSuggestion = useCallback((cmd: SlashCommand): Suggestion => ({
+        key: `/${cmd.name}`,
+        text: `/${cmd.name}`,
+        label: `/${cmd.name}`,
+        description: getDescription(cmd),
+        content: cmd.content,
+        source: cmd.source
+    }), [getDescription])
+
     const getSuggestions = useCallback(async (queryText: string): Promise<Suggestion[]> => {
         const searchTerm = queryText.startsWith('/')
             ? queryText.slice(1).toLowerCase()
             : queryText.toLowerCase()
 
         if (!searchTerm) {
-            return commands.map(cmd => ({
-                key: `/${cmd.name}`,
-                text: `/${cmd.name}`,
-                label: `/${cmd.name}`,
-                description: cmd.description ?? (cmd.source === 'builtin' ? undefined : 'Custom command'),
-                content: cmd.content,
-                source: cmd.source
-            }))
+            return commands.map(toSuggestion)
         }
 
         const maxDistance = Math.max(2, Math.floor(searchTerm.length / 2))
@@ -95,15 +112,8 @@ export function useSlashCommands(
             })
             .filter(item => item.score < Infinity)
             .sort((a, b) => a.score - b.score)
-            .map(({ cmd }) => ({
-                key: `/${cmd.name}`,
-                text: `/${cmd.name}`,
-                label: `/${cmd.name}`,
-                description: cmd.description ?? (cmd.source === 'builtin' ? undefined : 'Custom command'),
-                content: cmd.content,
-                source: cmd.source
-            }))
-    }, [commands])
+            .map(({ cmd }) => toSuggestion(cmd))
+    }, [commands, toSuggestion])
 
     return {
         commands,

@@ -349,6 +349,42 @@ export default {
 
   // Misc
   'misc.noMachines': '无可用机器',
+
+  // Slash commands - Claude
+  'slash.claude.clear': '清除对话历史并释放上下文',
+  'slash.claude.compact': '清除对话历史但保留摘要',
+  'slash.claude.context': '以彩色网格可视化当前上下文使用情况',
+  'slash.claude.cost': '显示当前会话的总费用和时长',
+  'slash.claude.doctor': '诊断并验证 Claude Code 安装和设置',
+  'slash.claude.plan': '查看或打开当前会话计划',
+  'slash.claude.stats': '显示 Claude Code 使用统计和活动',
+  'slash.claude.status': '显示 Claude Code 状态，包括版本、模型、账户和 API 连接',
+
+  // Slash commands - Codex
+  'slash.codex.clear': '清除当前 Codex 线程上下文',
+  'slash.codex.compact': '压缩当前 Codex 线程上下文',
+  'slash.codex.help': '显示 HAPI 支持的 Codex 斜杠命令',
+  'slash.codex.plan': '启用计划模式；使用 /plan off 返回默认',
+  'slash.codex.default': '将 Codex 协作模式恢复为默认',
+  'slash.codex.execute': '将 Codex 协作模式恢复为默认',
+  'slash.codex.status': '显示当前 Codex 会话配置',
+  'slash.codex.model': '显示或设置 Codex 模型，如 /model gpt-5.5',
+  'slash.codex.reasoning': '显示或设置推理强度',
+  'slash.codex.effort': '/reasoning 的别名',
+  'slash.codex.permissions': '显示或设置权限模式',
+  'slash.codex.permission': '/permissions 的别名',
+
+  // Slash commands - Gemini
+  'slash.gemini.about': '显示版本信息',
+  'slash.gemini.clear': '清除屏幕和对话历史',
+  'slash.gemini.compress': '用摘要替换上下文以压缩',
+  'slash.gemini.stats': '查看会话统计',
+
+  // Slash commands - generic
+  'slash.customCommand': '自定义命令',
+  'slash.group.builtin': '内置命令',
+  'slash.group.user': '用户命令',
+  'slash.group.project': '项目命令',
   'misc.machine': '机器',
   'misc.collaborationMode': '协作模式',
   'misc.permissionMode': '权限模式',

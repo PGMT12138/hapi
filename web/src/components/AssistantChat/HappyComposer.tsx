@@ -767,11 +767,12 @@ export function HappyComposer(props: {
         if (showSlashMenu && slashMenuCommands.length > 0) {
             return (
                 <div className="absolute bottom-[100%] mb-2 w-full">
-                    <FloatingOverlay>
+                    <FloatingOverlay maxHeight={480}>
                         <Autocomplete
                             suggestions={slashMenuCommands}
                             selectedIndex={slashMenuSelectedIndex}
                             onSelect={handleSlashMenuSelect}
+                            query="/"
                         />
                     </FloatingOverlay>
                 </div>
@@ -786,6 +787,7 @@ export function HappyComposer(props: {
                             suggestions={suggestions}
                             selectedIndex={selectedIndex}
                             onSelect={(index) => handleSuggestionSelect(index)}
+                            query={activeWord ?? undefined}
                         />
                     </FloatingOverlay>
                 </div>
