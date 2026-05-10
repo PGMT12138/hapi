@@ -262,7 +262,8 @@ export function SessionChat(props: {
         const data = cw as Record<string, unknown>
         const usedPercentage = typeof data.usedPercentage === 'number' ? data.usedPercentage : undefined
         const contextWindowSize = typeof data.contextWindowSize === 'number' ? data.contextWindowSize : undefined
-        return { usedPercentage, contextWindowSize }
+        const usedTokens = typeof data.totalInputTokens === 'number' ? data.totalInputTokens : undefined
+        return { usedPercentage, contextWindowSize, usedTokens }
     }, [props.session.metadata])
     const reconciled = useMemo(
         () => reconcileChatBlocks(reduced.blocks, blocksByIdRef.current),
@@ -469,6 +470,7 @@ export function SessionChat(props: {
                         backgroundTaskCount={props.session.backgroundTaskCount}
                         usedPercentage={metadataContext.usedPercentage}
                         contextWindowSize={metadataContext.contextWindowSize}
+                        usedTokens={metadataContext.usedTokens}
                         controlledByUser={controlledByUser}
                         onCollaborationModeChange={
                             codexCollaborationModeSupported && props.session.active && !controlledByUser

@@ -124,6 +124,7 @@ export function StatusBar(props: {
     backgroundTaskCount?: number
     usedPercentage?: number | null
     contextWindowSize?: number | null
+    usedTokens?: number | null
     model?: string | null
     modelReasoningEffort?: string | null
     permissionMode?: PermissionMode
@@ -140,21 +141,29 @@ export function StatusBar(props: {
     const contextLabel = useMemo(() => {
         if (props.usedPercentage == null) return null
         const percentageRemaining = Math.max(0, 100 - props.usedPercentage)
-        const percent = Math.round(percentageRemaining)
         const color = percentageRemaining <= 5
             ? 'text-red-500'
             : percentageRemaining <= 10
                 ? 'text-amber-500'
                 : 'text-[var(--app-hint)]'
-        const used = Math.round(props.usedPercentage)
-        const sizeLabel = props.contextWindowSize
-            ? ` · ${Math.round(props.contextWindowSize / 1000)}k`
-            : ''
-        return {
-            text: `ctx ${used}% · ${t('misc.percentLeft', { percent })}${sizeLabel}`,
-            color
+
+        const formatTokens = (tokens: number) => {
+            if (tokens >= 1000) {
+                const k = tokens / 1000
+                return k >= 100 ? `${Math.round(k)}k` : `${k.toFixed(1)}k`
+            }
+            return String(tokens)
         }
-    }, [props.usedPercentage, props.contextWindowSize, t])
+
+        const used = props.usedTokens != null ? formatTokens(props.usedTokens) : `${Math.round(props.usedPercentage)}%`
+        const size = props.contextWindowSize ? formatTokens(props.contextWindowSize) : ''
+        const percent = Math.round(props.usedPercentage)
+        const text = size
+            ? `${used} / ${size} (${percent}%)`
+            : `${used} (${percent}%)`
+
+        return { text, color }
+    }, [props.usedPercentage, props.contextWindowSize, props.usedTokens])
 
     const permissionMode = props.permissionMode
     const displayPermissionMode = permissionMode

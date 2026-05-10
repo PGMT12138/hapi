@@ -56,6 +56,7 @@ export function HappyComposer(props: {
     backgroundTaskCount?: number
     usedPercentage?: number | null
     contextWindowSize?: number | null
+    usedTokens?: number | null
     controlledByUser?: boolean
     agentFlavor?: string | null
     availableModelOptions?: Array<{ value: string | null; label: string }>
@@ -91,6 +92,7 @@ export function HappyComposer(props: {
         backgroundTaskCount,
         usedPercentage,
         contextWindowSize,
+        usedTokens,
         controlledByUser = false,
         agentFlavor,
         availableModelOptions,
@@ -148,6 +150,9 @@ export function HappyComposer(props: {
     const [isSwitching, setIsSwitching] = useState(false)
     const [showContinueHint, setShowContinueHint] = useState(false)
     const [promptPickerOpen, setPromptPickerOpen] = useState(false)
+    const [showSlashMenu, setShowSlashMenu] = useState(false)
+    const [slashMenuCommands, setSlashMenuCommands] = useState<Suggestion[]>([])
+    const [slashMenuSelectedIndex, setSlashMenuSelectedIndex] = useState(0)
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const prevControlledByUser = useRef(controlledByUser)
@@ -195,6 +200,38 @@ export function HappyComposer(props: {
             platformHaptic.notification('error')
         }
     }, [platformHaptic])
+
+    const handleSlashMenuToggle = useCallback(async () => {
+        if (showSlashMenu) {
+            setShowSlashMenu(false)
+            return
+        }
+        const allCommands = await autocompleteSuggestions('/')
+        setSlashMenuCommands(allCommands)
+        setSlashMenuSelectedIndex(0)
+        setShowSlashMenu(true)
+        setShowSettings(false)
+    }, [showSlashMenu, autocompleteSuggestions])
+
+    const handleSlashMenuSelect = useCallback((index: number) => {
+        const cmd = slashMenuCommands[index]
+        if (!cmd) return
+
+        const newText = composerText.trimEnd() + (composerText.trim() ? ' ' : '') + cmd.text + ' '
+        api.composer().setText(newText)
+        setInputState({
+            text: newText,
+            selection: { start: newText.length, end: newText.length }
+        })
+        setShowSlashMenu(false)
+
+        setTimeout(() => {
+            const el = textareaRef.current
+            if (!el) return
+            el.setSelectionRange(newText.length, newText.length)
+            try { el.focus({ preventScroll: true }) } catch { el.focus() }
+        }, 0)
+    }, [slashMenuCommands, composerText, api])
 
     const handleSuggestionSelect = useCallback((index: number) => {
         const suggestion = suggestions[index]
@@ -304,6 +341,30 @@ export function HappyComposer(props: {
         // Shift+Enter inserts a newline (standard behavior)
         if (key === 'Enter' && e.shiftKey) {
             return // let default textarea behavior handle newline
+        }
+
+        // Slash menu keyboard navigation
+        if (showSlashMenu && slashMenuCommands.length > 0) {
+            if (key === 'ArrowUp') {
+                e.preventDefault()
+                setSlashMenuSelectedIndex(prev => prev > 0 ? prev - 1 : slashMenuCommands.length - 1)
+                return
+            }
+            if (key === 'ArrowDown') {
+                e.preventDefault()
+                setSlashMenuSelectedIndex(prev => prev < slashMenuCommands.length - 1 ? prev + 1 : 0)
+                return
+            }
+            if (key === 'Enter') {
+                e.preventDefault()
+                handleSlashMenuSelect(slashMenuSelectedIndex)
+                return
+            }
+            if (key === 'Escape') {
+                e.preventDefault()
+                setShowSlashMenu(false)
+                return
+            }
         }
 
         // Enter with suggestions visible: select the suggestion
@@ -428,6 +489,7 @@ export function HappyComposer(props: {
     const handleSettingsToggle = useCallback(() => {
         haptic('light')
         setShowSettings(prev => !prev)
+        setShowSlashMenu(false)
     }, [haptic])
 
     const handleSubmit = useCallback((event?: ReactFormEvent<HTMLFormElement>) => {
@@ -702,6 +764,20 @@ export function HappyComposer(props: {
             )
         }
 
+        if (showSlashMenu && slashMenuCommands.length > 0) {
+            return (
+                <div className="absolute bottom-[100%] mb-2 w-full">
+                    <FloatingOverlay>
+                        <Autocomplete
+                            suggestions={slashMenuCommands}
+                            selectedIndex={slashMenuSelectedIndex}
+                            onSelect={handleSlashMenuSelect}
+                        />
+                    </FloatingOverlay>
+                </div>
+            )
+        }
+
         if (suggestions.length > 0) {
             return (
                 <div className="absolute bottom-[100%] mb-2 w-full">
@@ -743,6 +819,10 @@ export function HappyComposer(props: {
         handleModelReasoningEffortChange,
         handleEffortChange,
         handleSuggestionSelect,
+        showSlashMenu,
+        slashMenuCommands,
+        slashMenuSelectedIndex,
+        handleSlashMenuSelect,
         t
     ])
 
@@ -760,6 +840,7 @@ export function HappyComposer(props: {
                         backgroundTaskCount={backgroundTaskCount}
                         usedPercentage={usedPercentage}
                         contextWindowSize={contextWindowSize}
+                        usedTokens={usedTokens}
                         model={model}
                         modelReasoningEffort={modelReasoningEffort}
                         permissionMode={permissionMode}
@@ -816,6 +897,8 @@ export function HappyComposer(props: {
                             onVoiceMicToggle={onVoiceMicToggle}
                             onSend={handleSend}
                             onPromptPicker={() => setPromptPickerOpen(true)}
+                            onSlashMenu={handleSlashMenuToggle}
+                            showSlashMenu={showSlashMenu}
                         />
                     </div>
                 </ComposerPrimitive.Root>

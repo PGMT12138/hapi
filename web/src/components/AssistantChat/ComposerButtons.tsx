@@ -320,6 +320,8 @@ export function ComposerButtons(props: {
     onVoiceMicToggle?: () => void
     onSend: () => void
     onPromptPicker?: () => void
+    onSlashMenu?: () => void
+    showSlashMenu?: boolean
 }) {
     const { t } = useTranslation()
     const isVoiceConnected = props.voiceStatus === 'connected'
@@ -350,6 +352,22 @@ export function ComposerButtons(props: {
                             <polyline points="14 2 14 8 20 8" />
                             <line x1="16" y1="13" x2="8" y2="13" />
                             <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                    </button>
+                ) : null}
+
+                {props.onSlashMenu ? (
+                    <button
+                        type="button"
+                        aria-label="Slash commands"
+                        title="Slash commands"
+                        disabled={props.controlsDisabled}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50 ${props.showSlashMenu ? 'bg-[var(--app-bg)] text-[var(--app-fg)]' : ''}`}
+                        onClick={props.onSlashMenu}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="17" y1="5" x2="7" y2="19" />
                         </svg>
                     </button>
                 ) : null}
