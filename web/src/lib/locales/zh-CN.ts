@@ -288,6 +288,7 @@ export default {
   'settings.display.appearance.light': '浅色',
   'settings.display.fontSize': '字体大小',
   'settings.display.terminalFontSize': '终端字体大小',
+  'settings.display.systemDetected': '系统检测到',
   'settings.voice.title': '语音助手',
   'settings.voice.language': '语音语言',
   'settings.voice.autoDetect': '自动检测',

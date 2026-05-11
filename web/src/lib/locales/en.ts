@@ -286,6 +286,7 @@ export default {
   'settings.display.appearance.light': 'Light',
   'settings.display.fontSize': 'Font Size',
   'settings.display.terminalFontSize': 'Terminal Font Size',
+  'settings.display.systemDetected': 'System detected',
   'settings.voice.title': 'Voice Assistant',
   'settings.voice.language': 'Voice Language',
   'settings.voice.autoDetect': 'Auto-detect',

@@ -3,7 +3,10 @@
 @config "../tailwind.config.ts";
 
 :root {
-    color-scheme: light dark;
+    color-scheme: light;
+
+    /* Hidden probe for reliable system dark-mode detection in WebView */
+    --app-system-theme-probe: light;
     --app-bg: #ffffff;
     --app-fg: #111827;
     --app-hint: #6b7280;
@@ -50,6 +53,12 @@
     --app-user-bubble-border: transparent;
 
     --app-font-scale: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --app-system-theme-probe: dark;
+    }
 }
 
 [data-theme="dark"] {

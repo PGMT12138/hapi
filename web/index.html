@@ -50,9 +50,29 @@
             })()
         </script>
         <script>
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.setAttribute('data-theme', 'dark')
-            }
+            (function () {
+                try {
+                    var theme = null;
+                    // 1. Native bridge: Android WebView apps expose HapiBridge.getSystemTheme()
+                    if (window.HapiBridge && window.HapiBridge.getSystemTheme) {
+                        var bt = window.HapiBridge.getSystemTheme();
+                        if (bt === 'dark' || bt === 'light') theme = bt;
+                    }
+                    // 2. URL parameter: ?systemTheme=light|dark
+                    if (!theme) {
+                        var p = new URLSearchParams(window.location.search);
+                        var ut = p.get('systemTheme');
+                        if (ut === 'dark' || ut === 'light') theme = ut;
+                    }
+                    // 3. Fallback: matchMedia (may misreport in WebView with force-dark)
+                    if (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        theme = 'dark';
+                    }
+                    if (theme === 'dark' || theme === 'light') {
+                        document.documentElement.setAttribute('data-theme', theme);
+                    }
+                } catch (e) { /* ignore */ }
+            })()
         </script>
 
         <title>HAPI</title>

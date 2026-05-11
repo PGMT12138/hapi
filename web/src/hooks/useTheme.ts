@@ -55,6 +55,52 @@ export function getAppearanceOptions(): ReadonlyArray<{ value: AppearancePrefere
     ]
 }
 
+function getBridgeTheme(): ColorScheme | null {
+    // Android WebView apps can expose a JS bridge with getSystemTheme()
+    // to pass the real system theme, bypassing WebView force-dark misreporting
+    const bridge = (globalThis as Record<string, unknown>).HapiBridge as
+        | { getSystemTheme?: () => string }
+        | undefined
+    if (bridge?.getSystemTheme) {
+        const theme = bridge.getSystemTheme()
+        if (theme === 'dark' || theme === 'light') return theme
+    }
+    return null
+}
+
+function getUrlTheme(): ColorScheme | null {
+    if (typeof window === 'undefined') return null
+    const params = new URLSearchParams(window.location.search)
+    const theme = params.get('systemTheme')
+    if (theme === 'dark' || theme === 'light') return theme
+    return null
+}
+
+function getSystemColorScheme(): ColorScheme {
+    // 1. Native bridge: Android WebView apps provide the real system theme
+    const bridgeTheme = getBridgeTheme()
+    if (bridgeTheme) return bridgeTheme
+
+    // 2. URL parameter: alternative way for WebView wrappers to pass theme
+    const urlTheme = getUrlTheme()
+    if (urlTheme) return urlTheme
+
+    // 3. CSS custom property set by @media (prefers-color-scheme)
+    if (typeof document !== 'undefined') {
+        const probe = getComputedStyle(document.documentElement)
+            .getPropertyValue('--app-system-theme-probe')
+            .trim()
+        if (probe === 'dark' || probe === 'light') return probe
+    }
+
+    // 4. matchMedia fallback
+    if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+
+    return 'light'
+}
+
 function getColorScheme(): ColorScheme {
     const pref = getStoredAppearance()
     if (pref === 'dark' || pref === 'light') return pref
@@ -65,12 +111,7 @@ function getColorScheme(): ColorScheme {
         return tg.colorScheme === 'dark' ? 'dark' : 'light'
     }
 
-    // Fallback to system preference for browser environment
-    if (typeof window !== 'undefined' && window.matchMedia) {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-
-    return 'light'
+    return getSystemColorScheme()
 }
 
 function isIOS(): boolean {
@@ -80,7 +121,6 @@ function isIOS(): boolean {
 function applyTheme(scheme: ColorScheme): void {
     const isDark = scheme === 'dark'
     document.documentElement.setAttribute('data-theme', scheme)
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
     document.documentElement.style.background = isDark ? '#050506' : '#ffffff'
     document.body.style.background = isDark ? '#050506' : '#ffffff'
     document.body.style.color = isDark ? '#e0e0e4' : '#111827'
@@ -171,10 +211,36 @@ export function initializeTheme(): void {
         if (tg?.onEvent) {
             // Telegram theme changes
             tg.onEvent('themeChanged', updateScheme)
-        } else if (typeof window !== 'undefined' && window.matchMedia) {
+        }
+
+        if (typeof window !== 'undefined' && window.matchMedia) {
             // Browser system preference changes
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
             mediaQuery.addEventListener('change', updateScheme)
+        }
+
+        // Android WebView bridge: native app pushes real theme changes
+        if (typeof window !== 'undefined') {
+            ;(globalThis as Record<string, unknown>).__hapiOnSystemThemeChange = (theme: string) => {
+                if (theme === 'dark' || theme === 'light') {
+                    const newScheme = getStoredAppearance() === 'system' ? theme : getColorScheme()
+                    if (newScheme !== currentScheme) {
+                        currentScheme = newScheme
+                        applyTheme(newScheme)
+                        listeners.forEach((cb) => cb())
+                    }
+                }
+            }
+        }
+
+        // WebView fallback: poll every 3s since matchMedia 'change' event
+        // may not fire in some WebView environments (e.g. Android System WebView)
+        if (typeof window !== 'undefined') {
+            setInterval(() => {
+                if (getStoredAppearance() === 'system') {
+                    updateScheme()
+                }
+            }, 3000)
         }
 
         // Cross-tab appearance sync: update theme when another tab changes localStorage

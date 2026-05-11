@@ -5,7 +5,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { getElevenLabsSupportedLanguages, getLanguageDisplayName, type Language } from '@/lib/languages'
 import { getFontScaleOptions, useFontScale, type FontScale } from '@/hooks/useFontScale'
 import { getTerminalFontSizeOptions, useTerminalFontSize, type TerminalFontSize } from '@/hooks/useTerminalFontSize'
-import { useAppearance, getAppearanceOptions, type AppearancePreference } from '@/hooks/useTheme'
+import { useAppearance, getAppearanceOptions, type AppearancePreference, useTheme } from '@/hooks/useTheme'
 import { PROTOCOL_VERSION } from '@hapi/protocol'
 
 const locales: { value: Locale; nativeLabel: string }[] = [
@@ -89,6 +89,7 @@ export default function SettingsPage() {
     const { fontScale, setFontScale } = useFontScale()
     const { terminalFontSize, setTerminalFontSize } = useTerminalFontSize()
     const { appearance, setAppearance } = useAppearance()
+    const { colorScheme } = useTheme()
 
     // Voice language state - read from localStorage
     const [voiceLanguage, setVoiceLanguage] = useState<string | null>(() => {
@@ -303,6 +304,11 @@ export default function SettingsPage() {
                                 </div>
                             )}
                         </div>
+                        {appearance === 'system' && (
+                            <div className="px-3 py-2 text-xs text-[var(--app-hint)]">
+                                {t('settings.display.systemDetected')}: {colorScheme === 'dark' ? t('settings.display.appearance.dark') : t('settings.display.appearance.light')}
+                            </div>
+                        )}
                         <div ref={fontContainerRef} className="relative">
                             <button
                                 type="button"
