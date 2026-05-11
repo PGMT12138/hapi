@@ -156,6 +156,15 @@ Common types, Zod schemas, Socket.IO event types, and utilities shared across al
 - `GET /api/sessions/:id/messages` - Get messages (paginated)
 - `POST /api/sessions/:id/messages` - Send message
 
+## Hub Restart Procedure
+
+**精准重启 hub，避免会话中断：**
+1. 只杀 hub 进程，不要杀 runner 进程（runner 负责管理正在运行的 agent 会话）
+2. 杀掉 hub 的同时立即启动新 hub，减少服务中断时间
+3. **不要用** `lsof -ti:3006 | xargs kill`，该端口上同时有 hub、runner、claude 三个进程，会全部杀掉导致会话中断
+4. 不要用 `grep`/`pgrep` 匹配命令行自动提取 PID，会匹配到含 shell snapshot 路径的无关 bash 进程
+5. 正确做法：先手动 `ps aux | grep 'bun run dev:hub'` 找到 hub PID（只取命令列为 `bun run dev:hub` 的那行，排除含 snapshot 路径的 bash 进程），再执行 `kill <PID> && sleep 1 && nohup bun run dev:hub > nohup.out 2>&1 &`
+
 ## Critical Thinking Guidelines
 
 1. Fix root cause (not band-aid).
