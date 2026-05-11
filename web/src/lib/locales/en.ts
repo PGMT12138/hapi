@@ -74,6 +74,22 @@ export default {
   'session.outline.empty': 'No outline items in loaded messages',
   'session.outline.kind.user': 'User',
 
+  // Context panel
+  'session.context.open': 'Context',
+  'session.context.close': 'Close context panel',
+  'session.context.title': 'Context Usage',
+  'session.context.noData': 'No context data available. Send /context to get data.',
+  'session.context.model': 'Model',
+  'session.context.tokens': 'Tokens',
+  'session.context.ofTotal': '/ {total}',
+  'session.context.category': 'Usage by Category',
+  'session.context.mcpTools': 'MCP Tools',
+  'session.context.customAgents': 'Custom Agents',
+  'session.context.memoryFiles': 'Memory Files',
+  'session.context.skills': 'Skills',
+  'session.context.noParsedData': 'Failed to parse data, showing raw output',
+  'session.context.used': 'Used',
+
   // Session actions
   'session.action.rename': 'Rename',
   'session.action.archive': 'Archive',

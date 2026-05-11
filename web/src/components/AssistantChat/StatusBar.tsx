@@ -8,6 +8,7 @@ import type { PermissionModeTone } from '@hapi/protocol'
 import { useMemo } from 'react'
 import type { AgentState, CodexCollaborationMode, PermissionMode } from '@/types/api'
 import type { ConversationStatus } from '@/realtime/types'
+import { formatTokens } from '@/lib/formatTokens'
 import { useTranslation } from '@/lib/use-translation'
 
 // Vibing messages for thinking state
@@ -146,18 +147,6 @@ export function StatusBar(props: {
             : percentageRemaining <= 10
                 ? 'text-amber-500'
                 : 'text-[var(--app-hint)]'
-
-        const formatTokens = (tokens: number) => {
-            if (tokens >= 1_000_000) {
-                const m = tokens / 1_000_000
-                return `${m.toFixed(1).replace(/\.0$/, '')}m`
-            }
-            if (tokens >= 1000) {
-                const k = tokens / 1000
-                return k >= 100 ? `${Math.round(k)}k` : `${k.toFixed(1).replace(/\.0$/, '')}k`
-            }
-            return String(tokens)
-        }
 
         const used = props.usedTokens != null ? formatTokens(props.usedTokens) : `${Math.round(props.usedPercentage)}%`
         const size = props.contextWindowSize ? formatTokens(props.contextWindowSize) : ''

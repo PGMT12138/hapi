@@ -74,6 +74,22 @@ export default {
   'session.outline.empty': '已加载消息中暂无大纲项',
   'session.outline.kind.user': '用户',
 
+  // Context panel
+  'session.context.open': '上下文',
+  'session.context.close': '关闭上下文面板',
+  'session.context.title': '上下文使用情况',
+  'session.context.noData': '暂无上下文数据。发送 /context 获取数据。',
+  'session.context.model': '模型',
+  'session.context.tokens': 'Token 用量',
+  'session.context.ofTotal': '/ {total}',
+  'session.context.category': '分类用量',
+  'session.context.mcpTools': 'MCP 工具',
+  'session.context.customAgents': '自定义 Agent',
+  'session.context.memoryFiles': '记忆文件',
+  'session.context.skills': '技能',
+  'session.context.noParsedData': '数据解析失败，显示原始输出',
+  'session.context.used': '已用',
+
   // Session actions
   'session.action.rename': '重命名',
   'session.action.archive': '归档',

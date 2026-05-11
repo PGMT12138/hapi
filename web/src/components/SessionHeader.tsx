@@ -67,6 +67,26 @@ function OutlineIcon(props: { className?: string }) {
     )
 }
 
+function ContextIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    )
+}
+
 function MoreVerticalIcon(props: { className?: string }) {
     return (
         <svg
@@ -89,6 +109,7 @@ export function SessionHeader(props: {
     onBack: () => void
     onViewFiles?: () => void
     onOpenOutline?: () => void
+    onOpenContextPanel?: () => void
     api: ApiClient | null
     onSessionDeleted?: () => void
 }) {
@@ -196,6 +217,18 @@ export function SessionHeader(props: {
                             aria-label={t('session.outline.open')}
                         >
                             <OutlineIcon />
+                        </button>
+                    ) : null}
+
+                    {props.onOpenContextPanel ? (
+                        <button
+                            type="button"
+                            onClick={props.onOpenContextPanel}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                            title={t('session.context.open')}
+                            aria-label={t('session.context.open')}
+                        >
+                            <ContextIcon />
                         </button>
                     ) : null}
 
