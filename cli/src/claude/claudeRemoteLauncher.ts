@@ -350,14 +350,22 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                             logger.debug('[remote]: Session reset');
                             session.clearSessionId();
                         },
-                        onModelUsage: (modelUsage) => {
+                        onModelUsage: (() => {
+                            let prevInputTokens: number | undefined
+                            return (modelUsage: Record<string, unknown>) => {
+                            logger.debug(`[remote] modelUsage raw: ${JSON.stringify(modelUsage)}`);
                             const firstEntry = Object.values(modelUsage).find(v => v && typeof v === 'object') as Record<string, unknown> | undefined
                             if (!firstEntry) return
                             const contextWindow = typeof firstEntry.contextWindow === 'number' ? firstEntry.contextWindow : undefined
                             if (contextWindow === undefined) return
                             const inputTokens = typeof firstEntry.inputTokens === 'number' ? firstEntry.inputTokens : 0
                             const outputTokens = typeof firstEntry.outputTokens === 'number' ? firstEntry.outputTokens : 0
-                            const usedPercentage = Math.round((inputTokens / contextWindow) * 100)
+                            // SDK reports cumulative totals across API calls; use delta for per-call usage
+                            const perCallTokens = prevInputTokens !== undefined && inputTokens > prevInputTokens
+                                ? inputTokens - prevInputTokens
+                                : inputTokens
+                            prevInputTokens = inputTokens
+                            const usedPercentage = Math.min(100, Math.round((perCallTokens / contextWindow) * 100))
                             const remainingPercentage = 100 - usedPercentage
                             session.client.updateMetadata((meta) => ({
                                 ...meta,
@@ -371,7 +379,8 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                                     remainingPercentage,
                                 }
                             }))
-                        },
+                            }
+                        })(),
                         onReady: () => {
                             logger.debug(
                                 `[claudeRemoteLauncher][async-debug] onReady callback ` +
