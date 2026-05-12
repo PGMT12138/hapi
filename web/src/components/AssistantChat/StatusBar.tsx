@@ -163,21 +163,25 @@ export function StatusBar(props: {
             const percent = parsed.tokensPercentage
             const { color, bgColor } = getContextUsageStyle(percent)
 
-            // Extract Free space tokens value from category section
+            // Extract Free space tokens and percentage from category section
             let freeTokens: string | null = null
+            let freePercent: string | null = null
             for (const section of parsed.sections) {
                 for (const row of section.rows) {
                     if (row[0] === 'Free space') {
                         freeTokens = row[1] ?? null
+                        freePercent = row[2] ?? null
                         break
                     }
                 }
                 if (freeTokens) break
             }
 
-            const text = `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
+            const text = freeTokens
+                ? `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%) / ${freeTokens} (${freePercent ?? ''})`
+                : `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
 
-            return { text, freeText: freeTokens ? `F ${freeTokens}` : null, color, bgColor, isFetching: false }
+            return { text, freeText: null, color, bgColor, isFetching: false }
         }
 
         if (props.usedPercentage == null) return null
