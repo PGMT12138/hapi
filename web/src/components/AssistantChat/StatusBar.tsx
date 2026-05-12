@@ -155,7 +155,7 @@ export function StatusBar(props: {
 
     const contextLabel = useMemo(() => {
         if (props.contextFetching) {
-            return { text: t('session.context.fetching'), color: 'text-[#007AFF]', bgColor: 'bg-[var(--app-subtle-bg)]', autocompactPercent: null, isFetching: true }
+            return { text: t('session.context.fetching'), freeText: null, color: 'text-[#007AFF]', bgColor: 'bg-[var(--app-subtle-bg)]', isFetching: true }
         }
 
         const parsed = props.parsedContext
@@ -163,21 +163,21 @@ export function StatusBar(props: {
             const percent = parsed.tokensPercentage
             const { color, bgColor } = getContextUsageStyle(percent)
 
-            const text = `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
-
-            // Extract Autocompact buffer percentage from category section
-            let autocompactPercent: string | null = null
+            // Extract Free space tokens value from category section
+            let freeTokens: string | null = null
             for (const section of parsed.sections) {
                 for (const row of section.rows) {
-                    if (row[0] === 'Autocompact buffer') {
-                        autocompactPercent = row[2] ?? null
+                    if (row[0] === 'Free space') {
+                        freeTokens = row[1] ?? null
                         break
                     }
                 }
-                if (autocompactPercent) break
+                if (freeTokens) break
             }
 
-            return { text, color, bgColor, autocompactPercent, isFetching: false }
+            const text = `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
+
+            return { text, freeText: freeTokens ? `F ${freeTokens}` : null, color, bgColor, isFetching: false }
         }
 
         if (props.usedPercentage == null) return null
@@ -190,7 +190,7 @@ export function StatusBar(props: {
             ? `${used} / ${size} (${percent}%)`
             : `${used} (${percent}%)`
 
-        return { text, color, bgColor, autocompactPercent: null, isFetching: false }
+        return { text, freeText: null, color, bgColor, isFetching: false }
     }, [props.contextFetching, props.parsedContext, props.usedPercentage, props.contextWindowSize, props.usedTokens, t])
 
     const permissionMode = props.permissionMode
@@ -236,9 +236,9 @@ export function StatusBar(props: {
                         <span className={`text-[11px] font-medium ${contextLabel.color}`}>
                             {contextLabel.text}
                         </span>
-                        {contextLabel.autocompactPercent ? (
-                            <span className="text-[10px] text-[var(--app-hint)]">
-                                buffer {contextLabel.autocompactPercent}
+                        {contextLabel.freeText ? (
+                            <span className={`text-[11px] font-medium ${contextLabel.color}`}>
+                                {contextLabel.freeText}
                             </span>
                         ) : null}
                     </button>
