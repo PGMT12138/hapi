@@ -10,6 +10,8 @@ import { getAssistantCopyText } from '@/components/AssistantChat/messages/assist
 import { getConversationMessageAnchorId } from '@/chat/outline'
 import { formatTimestamp, formatDuration } from '@/chat/presentation'
 import { formatModelName } from '@hapi/protocol'
+import { formatTokens } from '@/lib/formatTokens'
+import { useTokenDelta } from '@/components/SessionChat'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -52,6 +54,14 @@ export function HappyAssistantMessage() {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return formatModelName(custom?.model)
     })
+    // Extract block ID from message ID (format: "assistant:<blockId>")
+    const blockId = useAssistantState(({ message }) => {
+        if (message.role !== 'assistant') return undefined
+        const id = message.id
+        const prefix = 'assistant:'
+        return id.startsWith(prefix) ? id.slice(prefix.length) : undefined
+    })
+    const tokenDelta = useTokenDelta(blockId)
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
         : 'px-1 min-w-0 max-w-full overflow-x-hidden'
@@ -96,6 +106,9 @@ export function HappyAssistantMessage() {
                     )}
                     {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
                     {durationMs != null && ` (${formatDuration(durationMs)})`}
+                    {tokenDelta != null && (
+                        <span className="ml-1.5 text-[var(--app-accent)]">+{formatTokens(tokenDelta)}</span>
+                    )}
                 </div>
             )}
         </MessagePrimitive.Root>

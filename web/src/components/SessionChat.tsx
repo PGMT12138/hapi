@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import type { ApiClient } from '@/api/client'
@@ -16,7 +16,7 @@ import { normalizeDecryptedMessage } from '@/chat/normalize'
 import { reduceChatBlocks } from '@/chat/reducer'
 import { reconcileChatBlocks } from '@/chat/reconcile'
 import { buildConversationOutline } from '@/chat/outline'
-import { extractContextCommandOutput } from '@/chat/contextOutput'
+import { extractContextCommandOutput, computeTokenDeltasFromHistory } from '@/chat/contextOutput'
 import { isQueuedForInvocation } from '@/lib/messages'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
@@ -45,6 +45,14 @@ function getOutlineTitle(session: Session): string {
         return session.metadata.path
     }
     return session.id.slice(0, 8)
+}
+
+const TokenDeltaContext = createContext<Map<string, number>>(new Map())
+
+export function useTokenDelta(blockId: string | undefined): number | undefined {
+    const deltas = useContext(TokenDeltaContext)
+    if (!blockId) return undefined
+    return deltas.get(blockId)
 }
 
 export function SessionChat(props: {
@@ -317,6 +325,12 @@ export function SessionChat(props: {
         }
     }, [contextCommandOutput])
 
+    // Compute token deltas from full block history (survives page refresh)
+    const tokenDeltas = useMemo(
+        () => computeTokenDeltasFromHistory(reconciled.blocks),
+        [reconciled.blocks]
+    )
+
     const CONTEXT_USAGE_RE = /^## Context Usage/m
 
     const displayBlocks = useMemo(() => {
@@ -468,6 +482,7 @@ export function SessionChat(props: {
                 </div>
             ) : null}
 
+            <TokenDeltaContext.Provider value={tokenDeltas}>
             <AssistantRuntimeProvider runtime={runtime}>
                 <div className="relative flex min-h-0 flex-1 flex-col">
                     <HappyThread
@@ -559,6 +574,7 @@ export function SessionChat(props: {
                     />
                 </div>
             </AssistantRuntimeProvider>
+            </TokenDeltaContext.Provider>
 
             {/* Voice session component - renders nothing but initializes ElevenLabs */}
             {voice && (

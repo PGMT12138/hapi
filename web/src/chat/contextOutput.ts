@@ -60,6 +60,12 @@ function parseSections(text: string): ContextSection[] {
     return sections
 }
 
+export function parseTokenValue(s: string): number {
+    if (s.endsWith('m')) return Math.round(parseFloat(s) * 1_000_000)
+    if (s.endsWith('k')) return Math.round(parseFloat(s) * 1000)
+    return parseInt(s, 10)
+}
+
 function parseContextText(text: string): ParsedContextData | null {
     const modelMatch = MODEL_REGEX.exec(text)
     const tokensMatch = TOKENS_REGEX.exec(text)
@@ -91,4 +97,56 @@ export function extractContextCommandOutput(
         }
     }
     return null
+}
+
+export function computeTokenDeltasFromHistory(
+    blocks: readonly ChatBlock[]
+): Map<string, number> {
+    const deltas = new Map<string, number>()
+
+    // Collect all context output blocks with their token counts
+    const contextOutputs: { index: number; tokensUsed: number }[] = []
+    for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i]
+        if (block.kind !== 'agent-text' && block.kind !== 'agent-reasoning') continue
+        if (block.kind !== 'agent-text') continue
+        if (!CONTEXT_USAGE_HEADER.test(block.text)) continue
+        const parsed = parseContextText(block.text)
+        if (!parsed) continue
+        contextOutputs.push({ index: i, tokensUsed: parseTokenValue(parsed.tokensUsed) })
+    }
+
+    if (contextOutputs.length < 2) return deltas
+
+    // Compute delta from each consecutive pair of context outputs
+    for (let ci = 1; ci < contextOutputs.length; ci++) {
+        const prev = contextOutputs[ci - 1]
+        const curr = contextOutputs[ci]
+        const delta = curr.tokensUsed - prev.tokensUsed
+        if (delta <= 0) continue
+
+        // Find the last user message before the current context output
+        let lastUserIdx = -1
+        for (let j = curr.index - 1; j >= 0; j--) {
+            if (blocks[j].kind === 'user-text') {
+                lastUserIdx = j
+                break
+            }
+        }
+        if (lastUserIdx < 0) continue
+
+        // Assign delta to the first assistant block after that user message
+        for (let j = lastUserIdx + 1; j < curr.index; j++) {
+            const block = blocks[j]
+            if (
+                (block.kind === 'agent-text' || block.kind === 'agent-reasoning')
+                && !(block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text))
+            ) {
+                deltas.set(block.id, delta)
+                break
+            }
+        }
+    }
+
+    return deltas
 }
