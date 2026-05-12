@@ -18,7 +18,8 @@ export class SessionCache {
 
     constructor(
         private readonly store: Store,
-        private readonly publisher: EventPublisher
+        private readonly publisher: EventPublisher,
+        private readonly onThinkingEnd?: (sessionId: string) => void
     ) {
     }
 
@@ -194,6 +195,9 @@ export class SessionCache {
         session.activeAt = Math.max(session.activeAt, t)
         session.thinking = requestedThinking || preserveQueuedThinking
         session.thinkingAt = t
+        if (wasThinking && !session.thinking) {
+            this.onThinkingEnd?.(session.id)
+        }
         if (requestedThinking || pendingThinkingUntil <= hubNow) {
             this.pendingThinkingUntilBySessionId.delete(session.id)
         }

@@ -142,6 +142,7 @@ export class MessageService {
             localId?: string | null
             attachments?: AttachmentMetadata[]
             sentFrom?: 'telegram-bot' | 'webapp'
+            ephemeral?: boolean
         }
     ): Promise<void> {
         const sentFrom = payload.sentFrom ?? 'webapp'
@@ -156,6 +157,31 @@ export class MessageService {
             meta: {
                 sentFrom
             }
+        }
+
+        if (payload.ephemeral) {
+            const ephemeralId = `eph-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+            const now = Date.now()
+
+            const update = {
+                id: ephemeralId,
+                seq: null,
+                createdAt: now,
+                body: {
+                    t: 'new-message' as const,
+                    sid: sessionId,
+                    message: {
+                        id: ephemeralId,
+                        seq: null,
+                        createdAt: now,
+                        localId: payload.localId ?? null,
+                        content
+                    }
+                }
+            }
+            this.io.of('/cli').to(`session:${sessionId}`).emit('update', update)
+            // No SSE broadcast — ephemeral messages should be invisible to web clients
+            return
         }
 
         const msg = this.store.messages.addMessage(sessionId, content, payload.localId ?? undefined)

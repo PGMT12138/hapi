@@ -61,7 +61,22 @@ export class SyncEngine {
         sseManager: SSEManager
     ) {
         this.eventPublisher = new EventPublisher(sseManager, (event) => this.resolveNamespace(event))
-        this.sessionCache = new SessionCache(store, this.eventPublisher)
+        const contextSentFor = new Set<string>()
+        this.sessionCache = new SessionCache(store, this.eventPublisher, (sessionId) => {
+            if (contextSentFor.has(sessionId)) {
+                contextSentFor.delete(sessionId)
+                return
+            }
+
+            contextSentFor.add(sessionId)
+            this.messageService.sendMessage(sessionId, {
+                text: '/context',
+                ephemeral: true
+            }).catch((err) => {
+                contextSentFor.delete(sessionId)
+                console.error('[SyncEngine] Failed to send auto-context:', err)
+            })
+        })
         this.machineCache = new MachineCache(store, this.eventPublisher)
         this.messageService = new MessageService(
             store,
@@ -302,10 +317,13 @@ export class SyncEngine {
                 previewUrl?: string
             }>
             sentFrom?: 'telegram-bot' | 'webapp'
+            ephemeral?: boolean
         }
     ): Promise<void> {
         await this.messageService.sendMessage(sessionId, payload)
-        this.sessionCache.markMessageQueued(sessionId)
+        if (!payload.ephemeral) {
+            this.sessionCache.markMessageQueued(sessionId)
+        }
     }
 
     async approvePermission(

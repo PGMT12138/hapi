@@ -161,7 +161,6 @@ export function SessionChat(props: {
     const prevThinkingRef = useRef(props.session.thinking)
 
     useEffect(() => {
-        // Detect transition: thinking → not thinking
         if (prevThinkingRef.current && !props.session.thinking) {
             voiceHooks.onReady(props.session.id)
         }
@@ -278,19 +277,27 @@ export function SessionChat(props: {
         blocksByIdRef.current = reconciled.byId
     }, [reconciled.byId])
 
-    const outlineItems = useMemo(
-        () => buildConversationOutline(reconciled.blocks),
+    const contextCommandOutput = useMemo(
+        () => extractContextCommandOutput(reconciled.blocks),
         [reconciled.blocks]
+    )
+
+    const CONTEXT_USAGE_RE = /^## Context Usage/m
+
+    const displayBlocks = useMemo(() => {
+        return reconciled.blocks.filter(
+            (block) => block.kind !== 'agent-text' || !CONTEXT_USAGE_RE.test(block.text)
+        )
+    }, [reconciled.blocks])
+
+    const outlineItems = useMemo(
+        () => buildConversationOutline(displayBlocks),
+        [displayBlocks]
     )
 
     const outlineTitle = useMemo(
         () => getOutlineTitle(props.session),
         [props.session]
-    )
-
-    const contextCommandOutput = useMemo(
-        () => extractContextCommandOutput(reconciled.blocks),
-        [reconciled.blocks]
     )
 
     const handleOpenOutline = useCallback(() => {
@@ -395,7 +402,7 @@ export function SessionChat(props: {
 
     const runtime = useHappyRuntime({
         session: props.session,
-        blocks: reconciled.blocks,
+        blocks: displayBlocks,
         isSending: props.isSending,
         onSendMessage: handleSend,
         onAbort: handleAbort,

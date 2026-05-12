@@ -15,7 +15,8 @@ const querySchema = z.object({
 const sendMessageBodySchema = z.object({
     text: z.string(),
     localId: z.string().min(1).optional(),
-    attachments: z.array(AttachmentMetadataSchema).optional()
+    attachments: z.array(AttachmentMetadataSchema).optional(),
+    ephemeral: z.boolean().optional()
 })
 
 export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
@@ -78,7 +79,8 @@ export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             text: parsed.data.text,
             localId: parsed.data.localId,
             attachments: parsed.data.attachments,
-            sentFrom: 'webapp'
+            sentFrom: 'webapp',
+            ephemeral: parsed.data.ephemeral ?? false
         })
         return c.json({ ok: true })
     })

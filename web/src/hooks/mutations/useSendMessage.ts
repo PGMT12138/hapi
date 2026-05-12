@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ApiClient } from '@/api/client'
 import type { AttachmentMetadata, DecryptedMessage } from '@/types/api'
 import { makeClientSideId } from '@/lib/messages'
@@ -73,6 +73,7 @@ export function useSendMessage(
     options?: UseSendMessageOptions
 ): {
     sendMessage: (text: string, attachments?: AttachmentMetadata[]) => void
+    sendEphemeralMessage: (text: string) => void
     retryMessage: (localId: string) => void
     isSending: boolean
 } {
@@ -185,8 +186,16 @@ export function useSendMessage(
         })
     }
 
+    const sendEphemeralMessage = useCallback((text: string) => {
+        if (!api || !sessionId) return
+        api.sendMessage(sessionId, text, null, undefined, true).catch((err) => {
+            console.error('Failed to send ephemeral message:', err)
+        })
+    }, [api, sessionId])
+
     return {
         sendMessage,
+        sendEphemeralMessage,
         retryMessage,
         isSending: mutation.isPending || isResolving,
     }

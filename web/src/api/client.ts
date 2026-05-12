@@ -300,13 +300,14 @@ export class ApiClient {
         return response.sessionId
     }
 
-    async sendMessage(sessionId: string, text: string, localId?: string | null, attachments?: AttachmentMetadata[]): Promise<void> {
+    async sendMessage(sessionId: string, text: string, localId?: string | null, attachments?: AttachmentMetadata[], ephemeral?: boolean): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
             method: 'POST',
             body: JSON.stringify({
                 text,
                 localId: localId ?? undefined,
-                attachments: attachments ?? undefined
+                attachments: attachments ?? undefined,
+                ephemeral: ephemeral ?? undefined
             })
         })
     }

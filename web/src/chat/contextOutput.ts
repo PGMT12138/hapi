@@ -25,7 +25,7 @@ export type ContextCommandOutput = {
 }
 
 const MODEL_REGEX = /\*\*Model:\*\*\s*(.+)/
-const TOKENS_REGEX = /\*\*Tokens:\*\*\s*([\d.]+k?)\s*\/\s*([\d.]+k?)\s*\((\d+)%\)/
+const TOKENS_REGEX = /\*\*Tokens:\*\*\s*([\d.]+[km]?)\s*\/\s*([\d.]+[km]?)\s*\((\d+)%\)/
 const SECTION_HEADER_REGEX = /^### (.+)$/m
 
 function parseMarkdownTable(text: string): { headers: string[]; rows: string[][] } | null {
