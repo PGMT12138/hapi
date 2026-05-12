@@ -20,6 +20,7 @@ import { extractContextCommandOutput } from '@/chat/contextOutput'
 import { isQueuedForInvocation } from '@/lib/messages'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
+import { ContextPanel } from '@/components/ContextPanel'
 import { QueuedMessagesBar } from '@/components/AssistantChat/QueuedMessagesBar'
 import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createAttachmentAdapter } from '@/lib/attachmentAdapter'
@@ -297,11 +298,6 @@ export function SessionChat(props: {
         setOutlineOpen(true)
     }, [])
 
-    const handleOpenContextPanel = useCallback(() => {
-        setOutlineOpen(false)
-        setContextPanelOpen(true)
-    }, [])
-
     // Permission mode change handler
     const handlePermissionModeChange = useCallback(async (mode: PermissionMode) => {
         try {
@@ -414,7 +410,6 @@ export function SessionChat(props: {
                 onBack={props.onBack}
                 onViewFiles={props.session.metadata?.path ? handleViewFiles : undefined}
                 onOpenOutline={handleOpenOutline}
-                onOpenContextPanel={handleOpenContextPanel}
                 api={props.api}
                 onSessionDeleted={props.onBack}
             />
@@ -457,9 +452,6 @@ export function SessionChat(props: {
                         outlineTitle={outlineTitle}
                         outlineItems={outlineItems}
                         onOutlineOpenChange={setOutlineOpen}
-                        contextPanelOpen={contextPanelOpen}
-                        contextCommandOutput={contextCommandOutput}
-                        onContextPanelOpenChange={setContextPanelOpen}
                     />
 
                     {codexCollaborationModeSupported && codexModelsState.error ? (
@@ -493,6 +485,8 @@ export function SessionChat(props: {
                         usedPercentage={metadataContext.usedPercentage}
                         contextWindowSize={metadataContext.contextWindowSize}
                         usedTokens={metadataContext.usedTokens}
+                        parsedContext={contextCommandOutput?.parsed ?? null}
+                        onContextClick={() => setContextPanelOpen(true)}
                         controlledByUser={controlledByUser}
                         onCollaborationModeChange={
                             codexCollaborationModeSupported && props.session.active && !controlledByUser
@@ -531,6 +525,13 @@ export function SessionChat(props: {
                     onStatusChange={voice.setStatus}
                 />
             )}
+
+            {contextPanelOpen ? (
+                <ContextPanel
+                    contextCommandOutput={contextCommandOutput}
+                    onClose={() => setContextPanelOpen(false)}
+                />
+            ) : null}
         </div>
     )
 }

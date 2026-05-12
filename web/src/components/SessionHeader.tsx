@@ -109,7 +109,6 @@ export function SessionHeader(props: {
     onBack: () => void
     onViewFiles?: () => void
     onOpenOutline?: () => void
-    onOpenContextPanel?: () => void
     api: ApiClient | null
     onSessionDeleted?: () => void
 }) {
@@ -217,18 +216,6 @@ export function SessionHeader(props: {
                             aria-label={t('session.outline.open')}
                         >
                             <OutlineIcon />
-                        </button>
-                    ) : null}
-
-                    {props.onOpenContextPanel ? (
-                        <button
-                            type="button"
-                            onClick={props.onOpenContextPanel}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                            title={t('session.context.open')}
-                            aria-label={t('session.context.open')}
-                        >
-                            <ContextIcon />
                         </button>
                     ) : null}
 

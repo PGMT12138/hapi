@@ -83,12 +83,20 @@ export default {
   'session.context.tokens': 'Token 用量',
   'session.context.ofTotal': '/ {total}',
   'session.context.category': '分类用量',
-  'session.context.mcpTools': 'MCP 工具',
-  'session.context.customAgents': '自定义 Agent',
-  'session.context.memoryFiles': '记忆文件',
-  'session.context.skills': '技能',
+  'session.context.mcpTools': 'MCP 工具 — 外部服务集成工具',
+  'session.context.customAgents': '自定义 Agent — 专用子代理',
+  'session.context.memoryFiles': '记忆文件 — 跨会话持久化配置',
+  'session.context.skills': '技能 — 可调用的能力扩展',
   'session.context.noParsedData': '数据解析失败，显示原始输出',
   'session.context.used': '已用',
+  'session.context.itemCount': '{count} 项',
+
+  // Context panel - category row translations
+  'session.context.row.System prompt': '系统提示词 — 定义 Agent 行为和角色',
+  'session.context.row.System tools': '系统工具 — 内置基础工具集',
+  'session.context.row.Messages': '消息 — 对话历史记录',
+  'session.context.row.Free space': '可用空间 — 剩余上下文容量',
+  'session.context.row.Autocompact buffer': '自动压缩缓冲区 — 防丢失预留',
 
   // Session actions
   'session.action.rename': '重命名',

@@ -3,10 +3,8 @@ import { ThreadPrimitive } from '@assistant-ui/react'
 import type { ApiClient } from '@/api/client'
 import type { SessionMetadataSummary } from '@/types/api'
 import type { ConversationOutlineItem } from '@/chat/outline'
-import type { ContextCommandOutput } from '@/chat/contextOutput'
 import { getConversationMessageAnchorId } from '@/chat/outline'
 import { HappyChatProvider } from '@/components/AssistantChat/context'
-import { ContextPanel } from '@/components/ContextPanel'
 import { HappyAssistantMessage } from '@/components/AssistantChat/messages/AssistantMessage'
 import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessage'
 import { HappySystemMessage } from '@/components/AssistantChat/messages/SystemMessage'
@@ -179,9 +177,6 @@ export function HappyThread(props: {
     outlineItems: readonly ConversationOutlineItem[]
     onOutlineOpenChange: (open: boolean) => void
     onOutlineItemClick?: (item: ConversationOutlineItem) => void
-    contextPanelOpen: boolean
-    contextCommandOutput: ContextCommandOutput | null
-    onContextPanelOpenChange: (open: boolean) => void
 }) {
     const { t } = useTranslation()
     const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -467,20 +462,6 @@ export function HappyThread(props: {
                             onLoadMore={handleLoadMore}
                             onSelect={handleOutlineSelect}
                             onClose={() => props.onOutlineOpenChange(false)}
-                        />
-                    </>
-                ) : null}
-                {props.contextPanelOpen ? (
-                    <>
-                        <button
-                            type="button"
-                            className="absolute inset-0 z-20 bg-black/20"
-                            aria-label={t('session.context.close')}
-                            onClick={() => props.onContextPanelOpenChange(false)}
-                        />
-                        <ContextPanel
-                            contextCommandOutput={props.contextCommandOutput}
-                            onClose={() => props.onContextPanelOpenChange(false)}
                         />
                     </>
                 ) : null}

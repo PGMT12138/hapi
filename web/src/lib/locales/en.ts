@@ -83,12 +83,20 @@ export default {
   'session.context.tokens': 'Tokens',
   'session.context.ofTotal': '/ {total}',
   'session.context.category': 'Usage by Category',
-  'session.context.mcpTools': 'MCP Tools',
-  'session.context.customAgents': 'Custom Agents',
-  'session.context.memoryFiles': 'Memory Files',
-  'session.context.skills': 'Skills',
+  'session.context.mcpTools': 'MCP Tools — External service integrations',
+  'session.context.customAgents': 'Custom Agents — Specialized sub-agents',
+  'session.context.memoryFiles': 'Memory Files — Cross-session persisted config',
+  'session.context.skills': 'Skills — Invocable capability extensions',
   'session.context.noParsedData': 'Failed to parse data, showing raw output',
   'session.context.used': 'Used',
+  'session.context.itemCount': '{count} items',
+
+  // Context panel - category row translations
+  'session.context.row.System prompt': 'System prompt — Defines agent behavior and role',
+  'session.context.row.System tools': 'System tools — Built-in base toolset',
+  'session.context.row.Messages': 'Messages — Conversation history',
+  'session.context.row.Free space': 'Free space — Remaining context capacity',
+  'session.context.row.Autocompact buffer': 'Autocompact buffer — Loss prevention reserve',
 
   // Session actions
   'session.action.rename': 'Rename',

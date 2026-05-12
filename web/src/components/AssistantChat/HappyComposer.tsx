@@ -32,6 +32,7 @@ import { AttachmentItem } from '@/components/AssistantChat/AttachmentItem'
 import { useTranslation } from '@/lib/use-translation'
 import { getModelOptionsForFlavor, getNextModelForFlavor } from './modelOptions'
 import { getClaudeComposerEffortOptions } from './claudeEffortOptions'
+import type { ParsedContextData } from '@/chat/contextOutput'
 import { getCodexComposerReasoningEffortOptions } from './codexReasoningEffortOptions'
 
 export interface TextInputState {
@@ -57,6 +58,8 @@ export function HappyComposer(props: {
     usedPercentage?: number | null
     contextWindowSize?: number | null
     usedTokens?: number | null
+    parsedContext?: ParsedContextData | null
+    onContextClick?: () => void
     controlledByUser?: boolean
     agentFlavor?: string | null
     availableModelOptions?: Array<{ value: string | null; label: string }>
@@ -93,6 +96,8 @@ export function HappyComposer(props: {
         usedPercentage,
         contextWindowSize,
         usedTokens,
+        parsedContext,
+        onContextClick,
         controlledByUser = false,
         agentFlavor,
         availableModelOptions,
@@ -843,6 +848,8 @@ export function HappyComposer(props: {
                         usedPercentage={usedPercentage}
                         contextWindowSize={contextWindowSize}
                         usedTokens={usedTokens}
+                        parsedContext={parsedContext}
+                        onContextClick={onContextClick}
                         model={model}
                         modelReasoningEffort={modelReasoningEffort}
                         permissionMode={permissionMode}

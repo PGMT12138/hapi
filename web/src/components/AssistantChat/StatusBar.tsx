@@ -8,6 +8,7 @@ import type { PermissionModeTone } from '@hapi/protocol'
 import { useMemo } from 'react'
 import type { AgentState, CodexCollaborationMode, PermissionMode } from '@/types/api'
 import type { ConversationStatus } from '@/realtime/types'
+import type { ParsedContextData } from '@/chat/contextOutput'
 import { formatTokens } from '@/lib/formatTokens'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -132,6 +133,8 @@ export function StatusBar(props: {
     collaborationMode?: CodexCollaborationMode
     agentFlavor?: string | null
     voiceStatus?: ConversationStatus
+    parsedContext?: ParsedContextData | null
+    onContextClick?: () => void
 }) {
     const { t } = useTranslation()
     const connectionStatus = useMemo(
@@ -140,6 +143,33 @@ export function StatusBar(props: {
     )
 
     const contextLabel = useMemo(() => {
+        const parsed = props.parsedContext
+        if (parsed) {
+            const percent = parsed.tokensPercentage
+            const remaining = Math.max(0, 100 - percent)
+            const color = remaining <= 5
+                ? 'text-red-500'
+                : remaining <= 10
+                    ? 'text-amber-500'
+                    : 'text-[var(--app-hint)]'
+
+            const text = `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
+
+            // Extract Autocompact buffer percentage from category section
+            let autocompactPercent: string | null = null
+            for (const section of parsed.sections) {
+                for (const row of section.rows) {
+                    if (row[0] === 'Autocompact buffer') {
+                        autocompactPercent = row[2] ?? null
+                        break
+                    }
+                }
+                if (autocompactPercent) break
+            }
+
+            return { text, color, autocompactPercent }
+        }
+
         if (props.usedPercentage == null) return null
         const percentageRemaining = Math.max(0, 100 - props.usedPercentage)
         const color = percentageRemaining <= 5
@@ -156,7 +186,7 @@ export function StatusBar(props: {
             : `${used} (${percent}%)`
 
         return { text, color }
-    }, [props.usedPercentage, props.contextWindowSize, props.usedTokens])
+    }, [props.parsedContext, props.usedPercentage, props.contextWindowSize, props.usedTokens])
 
     const permissionMode = props.permissionMode
     const displayPermissionMode = permissionMode
@@ -193,9 +223,20 @@ export function StatusBar(props: {
                     </span>
                 </div>
                 {contextLabel ? (
-                    <span className={`text-[10px] ${contextLabel.color}`}>
-                        {contextLabel.text}
-                    </span>
+                    <button
+                        type="button"
+                        onClick={props.onContextClick}
+                        className="flex items-baseline gap-2 text-left"
+                    >
+                        <span className={`text-[10px] ${contextLabel.color}`}>
+                            {contextLabel.text}
+                        </span>
+                        {contextLabel.autocompactPercent ? (
+                            <span className="text-[10px] text-[var(--app-hint)]">
+                                buffer {contextLabel.autocompactPercent}
+                            </span>
+                        ) : null}
+                    </button>
                 ) : null}
             </div>
 

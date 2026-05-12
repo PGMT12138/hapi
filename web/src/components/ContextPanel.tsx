@@ -32,6 +32,12 @@ function SectionTable(props: { section: ContextSection; translationKey: string; 
     const [open, setOpen] = useState(props.defaultOpen)
     const title = t(props.translationKey)
 
+    const translateRowName = (name: string): string => {
+        const key = `session.context.row.${name}`
+        const translated = t(key)
+        return translated === key ? name : translated
+    }
+
     return (
         <div className="rounded-md border border-[var(--app-border)]">
             <button
@@ -41,30 +47,29 @@ function SectionTable(props: { section: ContextSection; translationKey: string; 
             >
                 <span>{title}</span>
                 <span className="text-[10px] text-[var(--app-hint)]">
-                    {props.section.rows.length} 项
+                    {t('session.context.itemCount', { count: props.section.rows.length })}
                     <span className="ml-1">{open ? '▲' : '▼'}</span>
                 </span>
             </button>
             {open && props.section.rows.length > 0 && (
                 <div className="border-t border-[var(--app-border)]">
                     <table className="w-full text-[11px]">
-                        <thead>
-                            <tr className="border-b border-[var(--app-border)] bg-[var(--app-subtle-bg)]">
-                                {props.section.headers.map((h, i) => (
-                                    <th key={h} className={`px-3 py-1.5 text-left font-medium text-[var(--app-hint)] ${i > 0 ? 'w-24' : ''}`}>
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
                         <tbody>
                             {props.section.rows.map((row, ri) => (
                                 <tr key={ri} className="border-b border-[var(--app-border)] last:border-b-0">
-                                    {row.map((cell, ci) => (
-                                        <td key={ci} className={`px-3 py-1.5 text-[var(--app-fg)] ${ci === 0 ? 'font-mono text-[10px] truncate max-w-[180px]' : 'text-[var(--app-hint)]'}`}>
-                                            {cell}
-                                        </td>
-                                    ))}
+                                    {row.map((cell, ci) => {
+                                        const isLast = ci === row.length - 1
+                                        const isFirst = ci === 0
+                                        const isMiddle = !isFirst && !isLast
+                                        const hasLongMiddle = props.section.title === 'Memory Files'
+                                        return (
+                                            <td key={ci} className={`px-3 py-1.5 text-[var(--app-fg)] ${isFirst ? (hasLongMiddle ? 'whitespace-nowrap w-16' : 'break-all') : ''} ${isMiddle ? (hasLongMiddle ? 'break-all min-w-0' : 'whitespace-nowrap') : ''} ${isLast ? 'whitespace-nowrap w-16 text-right' : ''}`}>
+                                                <div className={isFirst ? 'text-xs font-medium' : 'font-mono text-[10px] text-[var(--app-hint)]'}>
+                                                    {isFirst ? translateRowName(cell) : cell}
+                                                </div>
+                                            </td>
+                                        )
+                                    })}
                                 </tr>
                             ))}
                         </tbody>
@@ -135,9 +140,11 @@ export function ContextPanel(props: ContextPanelProps) {
     const { t } = useTranslation()
 
     return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={props.onClose}>
         <aside
-            className="absolute inset-y-0 right-0 z-30 flex w-full max-w-[24rem] flex-col border-l border-[var(--app-border)] bg-[var(--app-bg)] shadow-2xl sm:w-[24rem]"
+            className="flex w-[90vw] max-w-[36rem] max-h-[80vh] flex-col rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)] shadow-2xl"
             aria-label={t('session.context.title')}
+            onClick={(e) => e.stopPropagation()}
         >
             <div className="flex items-start gap-3 border-b border-[var(--app-border)] p-3">
                 <div className="min-w-0 flex-1">
@@ -164,5 +171,6 @@ export function ContextPanel(props: ContextPanelProps) {
                 )}
             </div>
         </aside>
+        </div>
     )
 }
