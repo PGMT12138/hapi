@@ -12,6 +12,7 @@ import type { Server } from 'socket.io'
 import type { Store } from '../store'
 import type { RpcRegistry } from '../socket/rpcRegistry'
 import type { SSEManager } from '../sse/sseManager'
+import { extractMessageEventType } from '../notifications/eventParsing'
 import { EventPublisher, type SyncEventListener } from './eventPublisher'
 import { MachineCache, type Machine } from './machineCache'
 import { MessageService } from './messageService'
@@ -53,6 +54,7 @@ export class SyncEngine {
     private readonly messageService: MessageService
     private readonly rpcGateway: RpcGateway
     private inactivityTimer: NodeJS.Timeout | null = null
+    private readonly ephemeralContextSessions = new Set<string>()
 
     constructor(
         store: Store,
@@ -69,11 +71,13 @@ export class SyncEngine {
             }
 
             contextSentFor.add(sessionId)
+            this.ephemeralContextSessions.add(sessionId)
             this.messageService.sendMessage(sessionId, {
                 text: '/context',
                 ephemeral: true
             }).catch((err) => {
                 contextSentFor.delete(sessionId)
+                this.ephemeralContextSessions.delete(sessionId)
                 console.error('[SyncEngine] Failed to send auto-context:', err)
             })
         })
@@ -223,6 +227,15 @@ export class SyncEngine {
         if (event.type === 'message-received' && event.sessionId) {
             if (!this.getSession(event.sessionId)) {
                 this.sessionCache.refreshSession(event.sessionId)
+            }
+
+            // Suppress ready notifications triggered by ephemeral /context responses
+            if (this.ephemeralContextSessions.has(event.sessionId)) {
+                const eventType = extractMessageEventType(event)
+                if (eventType === 'ready') {
+                    this.ephemeralContextSessions.delete(event.sessionId)
+                    return
+                }
             }
         }
 

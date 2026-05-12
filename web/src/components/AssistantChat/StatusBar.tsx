@@ -31,6 +31,16 @@ const VIBING_MESSAGES = [
     "Wibbling", "Wizarding", "Working", "Wrangling"
 ]
 
+// Stepped context usage colors: changes every 10% starting from 50%
+function getContextUsageStyle(usedPercent: number): { color: string; bgColor: string } {
+    if (usedPercent >= 90) return { color: 'text-red-500', bgColor: 'bg-red-500/15' }
+    if (usedPercent >= 80) return { color: 'text-red-500', bgColor: 'bg-red-500/10' }
+    if (usedPercent >= 70) return { color: 'text-amber-500', bgColor: 'bg-orange-500/10' }
+    if (usedPercent >= 60) return { color: 'text-amber-600', bgColor: 'bg-amber-500/10' }
+    if (usedPercent >= 50) return { color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
+    return { color: 'text-[var(--app-hint)]', bgColor: 'bg-[var(--app-subtle-bg)]' }
+}
+
 const PERMISSION_TONE_CLASSES: Record<PermissionModeTone, string> = {
     neutral: 'text-[var(--app-hint)]',
     info: 'text-blue-500',
@@ -134,6 +144,7 @@ export function StatusBar(props: {
     agentFlavor?: string | null
     voiceStatus?: ConversationStatus
     parsedContext?: ParsedContextData | null
+    contextFetching?: boolean
     onContextClick?: () => void
 }) {
     const { t } = useTranslation()
@@ -143,15 +154,14 @@ export function StatusBar(props: {
     )
 
     const contextLabel = useMemo(() => {
+        if (props.contextFetching) {
+            return { text: t('session.context.fetching'), color: 'text-[#007AFF]', bgColor: 'bg-[var(--app-subtle-bg)]', autocompactPercent: null, isFetching: true }
+        }
+
         const parsed = props.parsedContext
         if (parsed) {
             const percent = parsed.tokensPercentage
-            const remaining = Math.max(0, 100 - percent)
-            const color = remaining <= 5
-                ? 'text-red-500'
-                : remaining <= 10
-                    ? 'text-amber-500'
-                    : 'text-[var(--app-hint)]'
+            const { color, bgColor } = getContextUsageStyle(percent)
 
             const text = `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
 
@@ -167,16 +177,11 @@ export function StatusBar(props: {
                 if (autocompactPercent) break
             }
 
-            return { text, color, autocompactPercent }
+            return { text, color, bgColor, autocompactPercent, isFetching: false }
         }
 
         if (props.usedPercentage == null) return null
-        const percentageRemaining = Math.max(0, 100 - props.usedPercentage)
-        const color = percentageRemaining <= 5
-            ? 'text-red-500'
-            : percentageRemaining <= 10
-                ? 'text-amber-500'
-                : 'text-[var(--app-hint)]'
+        const { color, bgColor } = getContextUsageStyle(Math.round(props.usedPercentage))
 
         const used = props.usedTokens != null ? formatTokens(props.usedTokens) : `${Math.round(props.usedPercentage)}%`
         const size = props.contextWindowSize ? formatTokens(props.contextWindowSize) : ''
@@ -185,8 +190,8 @@ export function StatusBar(props: {
             ? `${used} / ${size} (${percent}%)`
             : `${used} (${percent}%)`
 
-        return { text, color }
-    }, [props.parsedContext, props.usedPercentage, props.contextWindowSize, props.usedTokens])
+        return { text, color, bgColor, autocompactPercent: null, isFetching: false }
+    }, [props.contextFetching, props.parsedContext, props.usedPercentage, props.contextWindowSize, props.usedTokens, t])
 
     const permissionMode = props.permissionMode
     const displayPermissionMode = permissionMode
@@ -226,9 +231,9 @@ export function StatusBar(props: {
                     <button
                         type="button"
                         onClick={props.onContextClick}
-                        className="flex items-baseline gap-2 text-left"
+                        className={`flex items-center gap-2 rounded-md px-2 py-0.5 text-left transition-colors ${contextLabel.bgColor}${contextLabel.isFetching ? ' animate-pulse' : ''}`}
                     >
-                        <span className={`text-[10px] ${contextLabel.color}`}>
+                        <span className={`text-[11px] font-medium ${contextLabel.color}`}>
                             {contextLabel.text}
                         </span>
                         {contextLabel.autocompactPercent ? (

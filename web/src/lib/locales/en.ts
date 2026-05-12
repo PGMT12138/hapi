@@ -88,6 +88,7 @@ export default {
   'session.context.memoryFiles': 'Memory Files — Cross-session persisted config',
   'session.context.skills': 'Skills — Invocable capability extensions',
   'session.context.noParsedData': 'Failed to parse data, showing raw output',
+  'session.context.fetching': 'Fetching context...',
   'session.context.used': 'Used',
   'session.context.itemCount': '{count} items',
 

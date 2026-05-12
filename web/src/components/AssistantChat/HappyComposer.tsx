@@ -59,6 +59,7 @@ export function HappyComposer(props: {
     contextWindowSize?: number | null
     usedTokens?: number | null
     parsedContext?: ParsedContextData | null
+    contextFetching?: boolean
     onContextClick?: () => void
     controlledByUser?: boolean
     agentFlavor?: string | null
@@ -97,6 +98,7 @@ export function HappyComposer(props: {
         contextWindowSize,
         usedTokens,
         parsedContext,
+        contextFetching,
         onContextClick,
         controlledByUser = false,
         agentFlavor,
@@ -849,6 +851,7 @@ export function HappyComposer(props: {
                         contextWindowSize={contextWindowSize}
                         usedTokens={usedTokens}
                         parsedContext={parsedContext}
+                        contextFetching={contextFetching}
                         onContextClick={onContextClick}
                         model={model}
                         modelReasoningEffort={modelReasoningEffort}

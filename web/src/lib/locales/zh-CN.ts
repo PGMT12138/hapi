@@ -88,6 +88,7 @@ export default {
   'session.context.memoryFiles': '记忆文件 — 跨会话持久化配置',
   'session.context.skills': '技能 — 可调用的能力扩展',
   'session.context.noParsedData': '数据解析失败，显示原始输出',
+  'session.context.fetching': '获取上下文中...',
   'session.context.used': '已用',
   'session.context.itemCount': '{count} 项',
 

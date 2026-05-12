@@ -78,6 +78,11 @@ export function SessionChat(props: {
     const [forceScrollToken, setForceScrollToken] = useState(0)
     const [outlineOpen, setOutlineOpen] = useState(false)
     const [contextPanelOpen, setContextPanelOpen] = useState(false)
+    const [contextFetching, setContextFetching] = useState(false)
+    const contextFetchingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const contextFetchingStartRef = useRef(0)
+    const fetchingBaselineCreatedAtRef = useRef(0)
+    const contextReceivedForCycleRef = useRef(false)
     const agentFlavor = props.session.metadata?.flavor ?? null
     const controlledByUser = props.session.agentState?.controlledByUser === true
     const codexCollaborationModeSupported = agentFlavor === 'codex' && !controlledByUser
@@ -163,6 +168,17 @@ export function SessionChat(props: {
     useEffect(() => {
         if (prevThinkingRef.current && !props.session.thinking) {
             voiceHooks.onReady(props.session.id)
+            // Skip if we already received context for this cycle
+            // (happens when /context processing triggers another thinking→false)
+            if (contextReceivedForCycleRef.current) {
+                contextReceivedForCycleRef.current = false
+            } else {
+                fetchingBaselineCreatedAtRef.current = contextCommandOutputRef.current?.createdAt ?? 0
+                contextFetchingStartRef.current = Date.now()
+                setContextFetching(true)
+                if (contextFetchingTimeoutRef.current) clearTimeout(contextFetchingTimeoutRef.current)
+                contextFetchingTimeoutRef.current = setTimeout(() => setContextFetching(false), 30_000)
+            }
         }
 
         prevThinkingRef.current = props.session.thinking
@@ -281,6 +297,25 @@ export function SessionChat(props: {
         () => extractContextCommandOutput(reconciled.blocks),
         [reconciled.blocks]
     )
+    const contextCommandOutputRef = useRef(contextCommandOutput)
+    contextCommandOutputRef.current = contextCommandOutput
+
+    useEffect(() => {
+        if (
+            contextCommandOutput
+            && contextFetchingStartRef.current > 0
+            && contextCommandOutput.createdAt > fetchingBaselineCreatedAtRef.current
+        ) {
+            contextReceivedForCycleRef.current = true
+            const elapsed = Date.now() - contextFetchingStartRef.current
+            const remaining = Math.max(0, 1500 - elapsed)
+            if (contextFetchingTimeoutRef.current) clearTimeout(contextFetchingTimeoutRef.current)
+            contextFetchingTimeoutRef.current = setTimeout(() => {
+                setContextFetching(false)
+                contextFetchingStartRef.current = 0
+            }, remaining)
+        }
+    }, [contextCommandOutput])
 
     const CONTEXT_USAGE_RE = /^## Context Usage/m
 
@@ -493,6 +528,7 @@ export function SessionChat(props: {
                         contextWindowSize={metadataContext.contextWindowSize}
                         usedTokens={metadataContext.usedTokens}
                         parsedContext={contextCommandOutput?.parsed ?? null}
+                        contextFetching={contextFetching}
                         onContextClick={() => setContextPanelOpen(true)}
                         controlledByUser={controlledByUser}
                         onCollaborationModeChange={
