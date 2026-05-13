@@ -127,9 +127,9 @@ export function HappyAssistantMessage() {
                         <span className="ml-1.5 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">+{formatTokens(tokenDelta)}</span>
                     )}
                     {showPending && (
-                        <span className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">
-                            <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 px-1 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-hint)] text-[10px]">
+                            <svg className="h-2.5 w-2.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                             </svg>
                             计算中
