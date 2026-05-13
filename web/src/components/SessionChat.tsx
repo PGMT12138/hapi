@@ -16,7 +16,7 @@ import { normalizeDecryptedMessage } from '@/chat/normalize'
 import { reduceChatBlocks } from '@/chat/reducer'
 import { reconcileChatBlocks } from '@/chat/reconcile'
 import { buildConversationOutline } from '@/chat/outline'
-import { extractContextCommandOutput, computeTokenDeltasFromHistory, computePendingTokenBlocks } from '@/chat/contextOutput'
+import { extractContextCommandOutput, computeContextGrowth, computeTokenDeltasFromHistory, computePendingTokenBlocks } from '@/chat/contextOutput'
 import { isQueuedForInvocation } from '@/lib/messages'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
@@ -338,6 +338,12 @@ export function SessionChat(props: {
         [reconciled.blocks]
     )
 
+    // Compute context growth (delta between last two context outputs)
+    const contextGrowth = useMemo(
+        () => computeContextGrowth(reconciled.blocks),
+        [reconciled.blocks]
+    )
+
     // Compute pending blocks (assistant blocks after last context output)
     const pendingTokenBlocks = useMemo(
         () => computePendingTokenBlocks(reconciled.blocks),
@@ -603,6 +609,7 @@ export function SessionChat(props: {
             {contextPanelOpen ? (
                 <ContextPanel
                     contextCommandOutput={contextCommandOutput}
+                    contextGrowth={contextGrowth}
                     onClose={() => setContextPanelOpen(false)}
                     onRefresh={() => handleSend('/context')}
                 />

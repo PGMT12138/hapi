@@ -99,6 +99,32 @@ export function extractContextCommandOutput(
     return null
 }
 
+export type ContextGrowth = {
+    tokenDelta: number
+    percentageDelta: number
+}
+
+export function computeContextGrowth(
+    blocks: readonly ChatBlock[]
+): ContextGrowth | null {
+    const outputs: { tokensUsed: number; percentage: number }[] = []
+    for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i]
+        if (block.kind !== 'agent-text') continue
+        if (!CONTEXT_USAGE_HEADER.test(block.text)) continue
+        const parsed = parseContextText(block.text)
+        if (!parsed) continue
+        outputs.push({ tokensUsed: parseTokenValue(parsed.tokensUsed), percentage: parsed.tokensPercentage })
+    }
+    if (outputs.length < 2) return null
+    const prev = outputs[outputs.length - 2]
+    const curr = outputs[outputs.length - 1]
+    return {
+        tokenDelta: curr.tokensUsed - prev.tokensUsed,
+        percentageDelta: curr.percentage - prev.percentage,
+    }
+}
+
 export function computeTokenDeltasFromHistory(
     blocks: readonly ChatBlock[]
 ): Map<string, number> {

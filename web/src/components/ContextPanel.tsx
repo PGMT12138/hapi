@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import type { ContextCommandOutput, ContextSection } from '@/chat/contextOutput'
+import type { ContextCommandOutput, ContextGrowth, ContextSection } from '@/chat/contextOutput'
 import { useTranslation } from '@/lib/use-translation'
 import { CloseIcon } from '@/components/icons'
 import { formatTimestamp } from '@/chat/presentation'
+import { formatTokens } from '@/lib/formatTokens'
 
 interface ContextPanelProps {
     contextCommandOutput: ContextCommandOutput | null
+    contextGrowth: ContextGrowth | null
     onClose: () => void
     onRefresh?: () => void
 }
@@ -147,7 +149,7 @@ function SectionTable(props: { section: ContextSection; translationKey: string; 
     )
 }
 
-function ParsedContext({ output, onRefresh }: { output: ContextCommandOutput; onRefresh?: () => void }) {
+function ParsedContext({ output, contextGrowth, onRefresh }: { output: ContextCommandOutput; contextGrowth: ContextGrowth | null; onRefresh?: () => void }) {
     const { t } = useTranslation()
     const parsed = output.parsed
 
@@ -204,15 +206,27 @@ function ParsedContext({ output, onRefresh }: { output: ContextCommandOutput; on
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--app-hint)]">
                         {t('session.context.used')}
                     </span>
-                    <div>
+                    <div className="flex items-baseline gap-1">
                         <span className={`font-mono text-[22px] font-bold ${tokenColor}`}>{parsed.tokensUsed}</span>
+                        {contextGrowth && contextGrowth.tokenDelta !== 0 && (
+                            <span className={`font-mono text-[12px] font-medium ${contextGrowth.tokenDelta > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {contextGrowth.tokenDelta > 0 ? '+' : ''}{formatTokens(contextGrowth.tokenDelta)}
+                            </span>
+                        )}
                         <span className="font-mono text-[13px] text-[var(--app-hint)]"> / {parsed.tokensTotal}</span>
                     </div>
                 </div>
                 <ProgressBar percentage={parsed.tokensPercentage} />
                 <div className="mt-1.5 flex justify-between">
                     <span className="font-mono text-[11px] text-[var(--app-hint)]">0</span>
-                    <span className={`text-[13px] font-semibold ${tokenColor}`}>{parsed.tokensPercentage}%</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className={`text-[13px] font-semibold ${tokenColor}`}>{parsed.tokensPercentage}%</span>
+                        {contextGrowth && contextGrowth.percentageDelta !== 0 && (
+                            <span className={`font-mono text-[11px] font-medium ${contextGrowth.percentageDelta > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {contextGrowth.percentageDelta > 0 ? '+' : ''}{contextGrowth.percentageDelta}%
+                            </span>
+                        )}
+                    </div>
                     <span className="font-mono text-[11px] text-[var(--app-hint)]">{parsed.tokensTotal}</span>
                 </div>
             </div>
@@ -310,7 +324,7 @@ export function ContextPanel(props: ContextPanelProps) {
                             {t('session.context.noData')}
                         </div>
                     ) : (
-                        <ParsedContext output={props.contextCommandOutput} onRefresh={props.onRefresh} />
+                        <ParsedContext output={props.contextCommandOutput} contextGrowth={props.contextGrowth} onRefresh={props.onRefresh} />
                     )}
                 </div>
             </aside>
