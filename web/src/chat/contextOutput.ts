@@ -150,3 +150,43 @@ export function computeTokenDeltasFromHistory(
 
     return deltas
 }
+
+export function computePendingTokenBlocks(
+    blocks: readonly ChatBlock[]
+): Set<string> {
+    const pending = new Set<string>()
+
+    // Find the index of the last context output block
+    let lastContextIdx = -1
+    for (let i = blocks.length - 1; i >= 0; i--) {
+        const block = blocks[i]
+        if (block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text)) {
+            lastContextIdx = i
+            break
+        }
+    }
+
+    // Find the last user message after the last context output
+    let lastUserIdx = -1
+    const start = lastContextIdx + 1
+    for (let i = blocks.length - 1; i >= start; i--) {
+        if (blocks[i].kind === 'user-text') {
+            lastUserIdx = i
+            break
+        }
+    }
+    if (lastUserIdx < 0) return pending
+
+    // All assistant blocks after the last user message are "pending" context output
+    for (let j = lastUserIdx + 1; j < blocks.length; j++) {
+        const block = blocks[j]
+        if (
+            (block.kind === 'agent-text' || block.kind === 'agent-reasoning')
+            && !(block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text))
+        ) {
+            pending.add(block.id)
+        }
+    }
+
+    return pending
+}

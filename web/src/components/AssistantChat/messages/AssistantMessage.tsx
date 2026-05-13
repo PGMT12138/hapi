@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { MessagePrimitive, useAssistantState } from '@assistant-ui/react'
 import { MarkdownText } from '@/components/assistant-ui/markdown-text'
 import { Reasoning, ReasoningGroup } from '@/components/assistant-ui/reasoning'
@@ -11,7 +12,7 @@ import { getConversationMessageAnchorId } from '@/chat/outline'
 import { formatTimestamp, formatDuration } from '@/chat/presentation'
 import { formatModelName } from '@hapi/protocol'
 import { formatTokens } from '@/lib/formatTokens'
-import { useTokenDelta } from '@/components/SessionChat'
+import { useTokenDelta, useTokenDeltaPending } from '@/components/SessionChat'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -62,6 +63,22 @@ export function HappyAssistantMessage() {
         return id.startsWith(prefix) ? id.slice(prefix.length) : undefined
     })
     const tokenDelta = useTokenDelta(blockId)
+    const isPending = useTokenDeltaPending(blockId)
+
+    // Auto-hide pending indicator after timeout
+    const [pendingExpired, setPendingExpired] = useState(false)
+    useEffect(() => {
+        if (!isPending || tokenDelta != null) {
+            setPendingExpired(false)
+            return
+        }
+        setPendingExpired(false)
+        const timer = setTimeout(() => setPendingExpired(true), 30000)
+        return () => clearTimeout(timer)
+    }, [isPending, tokenDelta])
+
+    const showPending = isPending && tokenDelta == null && !pendingExpired
+
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
         : 'px-1 min-w-0 max-w-full overflow-x-hidden'
@@ -108,6 +125,15 @@ export function HappyAssistantMessage() {
                     {durationMs != null && ` (${formatDuration(durationMs)})`}
                     {tokenDelta != null && (
                         <span className="ml-1.5 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">+{formatTokens(tokenDelta)}</span>
+                    )}
+                    {showPending && (
+                        <span className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">
+                            <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            计算中
+                        </span>
                     )}
                 </div>
             )}

@@ -16,7 +16,7 @@ import { normalizeDecryptedMessage } from '@/chat/normalize'
 import { reduceChatBlocks } from '@/chat/reducer'
 import { reconcileChatBlocks } from '@/chat/reconcile'
 import { buildConversationOutline } from '@/chat/outline'
-import { extractContextCommandOutput, computeTokenDeltasFromHistory } from '@/chat/contextOutput'
+import { extractContextCommandOutput, computeTokenDeltasFromHistory, computePendingTokenBlocks } from '@/chat/contextOutput'
 import { isQueuedForInvocation } from '@/lib/messages'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
@@ -48,11 +48,18 @@ function getOutlineTitle(session: Session): string {
 }
 
 const TokenDeltaContext = createContext<Map<string, number>>(new Map())
+const PendingTokenDeltaContext = createContext<Set<string>>(new Set())
 
 export function useTokenDelta(blockId: string | undefined): number | undefined {
     const deltas = useContext(TokenDeltaContext)
     if (!blockId) return undefined
     return deltas.get(blockId)
+}
+
+export function useTokenDeltaPending(blockId: string | undefined): boolean {
+    const pending = useContext(PendingTokenDeltaContext)
+    if (!blockId) return false
+    return pending.has(blockId)
 }
 
 export function SessionChat(props: {
@@ -331,6 +338,12 @@ export function SessionChat(props: {
         [reconciled.blocks]
     )
 
+    // Compute pending blocks (assistant blocks after last context output)
+    const pendingTokenBlocks = useMemo(
+        () => computePendingTokenBlocks(reconciled.blocks),
+        [reconciled.blocks]
+    )
+
     const CONTEXT_USAGE_RE = /^## Context Usage/m
 
     const displayBlocks = useMemo(() => {
@@ -483,6 +496,7 @@ export function SessionChat(props: {
             ) : null}
 
             <TokenDeltaContext.Provider value={tokenDeltas}>
+            <PendingTokenDeltaContext.Provider value={pendingTokenBlocks}>
             <AssistantRuntimeProvider runtime={runtime}>
                 <div className="relative flex min-h-0 flex-1 flex-col">
                     <HappyThread
@@ -574,6 +588,7 @@ export function SessionChat(props: {
                     />
                 </div>
             </AssistantRuntimeProvider>
+            </PendingTokenDeltaContext.Provider>
             </TokenDeltaContext.Provider>
 
             {/* Voice session component - renders nothing but initializes ElevenLabs */}
