@@ -83,6 +83,8 @@ export default {
   'session.context.tokens': 'Tokens',
   'session.context.ofTotal': '/ {total}',
   'session.context.category': 'Usage by Category',
+  'session.context.categoryCN': 'Usage by Category',
+  'session.context.categoryEN': 'Estimated usage by category',
   'session.context.mcpTools': 'MCP Tools — External service integrations',
   'session.context.customAgents': 'Custom Agents — Specialized sub-agents',
   'session.context.memoryFiles': 'Memory Files — Cross-session persisted config',

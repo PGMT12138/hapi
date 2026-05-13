@@ -604,6 +604,7 @@ export function SessionChat(props: {
                 <ContextPanel
                     contextCommandOutput={contextCommandOutput}
                     onClose={() => setContextPanelOpen(false)}
+                    onRefresh={() => handleSend('/context')}
                 />
             ) : null}
         </div>
