@@ -82,7 +82,7 @@ export function HappyUserMessage() {
                     </div>
                 )}
             </MessagePrimitive.Root>
-            <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[10px] text-[var(--app-hint)]">
+            <div className="mt-0.5 flex items-center justify-end gap-1.5 text-[11px] text-[var(--app-fg)] opacity-50">
                 {createdAt && (
                     <span>
                         {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}

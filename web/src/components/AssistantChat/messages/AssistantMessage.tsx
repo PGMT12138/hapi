@@ -100,14 +100,14 @@ export function HappyAssistantMessage() {
                 </div>
             )}
             {createdAt && (
-                <div className="mt-0.5 text-[10px] text-[var(--app-hint)]">
+                <div className="mt-0.5 text-[11px] text-[var(--app-fg)] opacity-50">
                     {modelName && (
-                        <span className="mr-1.5 opacity-70">{modelName}</span>
+                        <span className="mr-1.5 font-medium">{modelName}</span>
                     )}
                     {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
                     {durationMs != null && ` (${formatDuration(durationMs)})`}
                     {tokenDelta != null && (
-                        <span className="ml-1.5 text-[var(--app-accent)]">+{formatTokens(tokenDelta)}</span>
+                        <span className="ml-1.5 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">+{formatTokens(tokenDelta)}</span>
                     )}
                 </div>
             )}
