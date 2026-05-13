@@ -108,7 +108,6 @@ export function computeTokenDeltasFromHistory(
     const contextOutputs: { index: number; tokensUsed: number }[] = []
     for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i]
-        if (block.kind !== 'agent-text' && block.kind !== 'agent-reasoning') continue
         if (block.kind !== 'agent-text') continue
         if (!CONTEXT_USAGE_HEADER.test(block.text)) continue
         const parsed = parseContextText(block.text)
@@ -135,7 +134,9 @@ export function computeTokenDeltasFromHistory(
         }
         if (lastUserIdx < 0) continue
 
-        // Assign delta to the first assistant block after that user message
+        // Assign delta to ALL assistant blocks in the range (both reasoning and text).
+        // assistant-ui merges consecutive assistant messages, keeping the first block's ID.
+        // By assigning to all blocks, the delta is found regardless of which ID survives.
         for (let j = lastUserIdx + 1; j < curr.index; j++) {
             const block = blocks[j]
             if (
@@ -143,7 +144,6 @@ export function computeTokenDeltasFromHistory(
                 && !(block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text))
             ) {
                 deltas.set(block.id, delta)
-                break
             }
         }
     }
