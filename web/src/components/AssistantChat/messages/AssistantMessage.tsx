@@ -25,6 +25,20 @@ const MESSAGE_PART_COMPONENTS = {
     tools: TOOL_COMPONENTS
 } as const
 
+function PendingDots() {
+    return (
+        <span className="ml-1.5 inline-flex items-center gap-[3px] px-2 py-0.5 rounded-md bg-[var(--app-subtle-bg)]">
+            {[0, 1, 2].map(i => (
+                <span
+                    key={i}
+                    className="h-1 w-1 rounded-full bg-[var(--app-hint)] animate-[bounce-dot_1.2s_ease-in-out_infinite]"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                />
+            ))}
+        </span>
+    )
+}
+
 export function HappyAssistantMessage() {
     const { copied, copy } = useCopyToClipboard()
     const messageId = useAssistantState(({ message }) => message.id)
@@ -126,15 +140,7 @@ export function HappyAssistantMessage() {
                     {tokenDelta != null && (
                         <span className="ml-1.5 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">+{formatTokens(tokenDelta)}</span>
                     )}
-                    {showPending && (
-                        <span className="ml-1.5 inline-flex items-center gap-0.5 px-1 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-hint)] text-[10px]">
-                            <svg className="h-2.5 w-2.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            计算中
-                        </span>
-                    )}
+                    {showPending && <PendingDots />}
                 </div>
             )}
         </MessagePrimitive.Root>
