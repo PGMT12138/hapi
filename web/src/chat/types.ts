@@ -121,6 +121,7 @@ export type UserTextBlock = {
     id: string
     localId: string | null
     createdAt: number
+    invokedAt?: number | null
     text: string
     attachments?: AttachmentMetadata[]
     status?: MessageStatus
@@ -133,8 +134,11 @@ export type AgentTextBlock = {
     id: string
     localId: string | null
     createdAt: number
+    invokedAt?: number | null
     text: string
     model?: string
+    usage?: UsageData
+    durationMs?: number
     meta?: unknown
 }
 
@@ -143,6 +147,7 @@ export type AgentReasoningBlock = {
     id: string
     localId: string | null
     createdAt: number
+    invokedAt?: number | null
     text: string
     model?: string
     meta?: unknown
@@ -153,8 +158,12 @@ export type CliOutputBlock = {
     id: string
     localId: string | null
     createdAt: number
+    invokedAt?: number | null
     text: string
     source: 'user' | 'assistant'
+    usage?: UsageData
+    durationMs?: number
+    model?: string
     meta?: unknown
 }
 
@@ -162,6 +171,7 @@ export type AgentEventBlock = {
     kind: 'agent-event'
     id: string
     createdAt: number
+    invokedAt?: number | null
     event: AgentEvent
     meta?: unknown
 }
@@ -171,9 +181,12 @@ export type ToolCallBlock = {
     id: string
     localId: string | null
     createdAt: number
+    invokedAt?: number | null
     tool: ChatToolCall
     children: ChatBlock[]
     model?: string
+    usage?: UsageData
+    durationMs?: number
     meta?: unknown
 }
 

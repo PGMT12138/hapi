@@ -10,6 +10,7 @@ import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessag
 import { HappySystemMessage } from '@/components/AssistantChat/messages/SystemMessage'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/Spinner'
+import { useTerminalToolDisplayMode } from '@/hooks/useTerminalToolDisplayMode'
 import { useTranslation } from '@/lib/use-translation'
 import { CloseIcon } from '@/components/icons'
 import { formatTimestamp } from '@/chat/presentation'
@@ -179,6 +180,7 @@ export function HappyThread(props: {
     onOutlineItemClick?: (item: ConversationOutlineItem) => void
 }) {
     const { t } = useTranslation()
+    const { terminalToolDisplayMode } = useTerminalToolDisplayMode()
     const viewportRef = useRef<HTMLDivElement | null>(null)
     const topSentinelRef = useRef<HTMLDivElement | null>(null)
     const loadLockRef = useRef(false)
@@ -381,14 +383,26 @@ export function HappyThread(props: {
 
     const showSkeleton = props.isLoadingMessages && props.rawMessagesCount === 0 && props.pendingCount === 0
 
+    const loadOlderPreservingScroll = useCallback(async (): Promise<boolean> => {
+        if (isLoadingMessagesRef.current || !hasMoreMessagesRef.current || isLoadingMoreRef.current || loadLockRef.current) {
+            return false
+        }
+        handleLoadMore()
+        return true
+    }, [handleLoadMore])
+
     return (
         <HappyChatProvider value={{
             api: props.api,
             sessionId: props.sessionId,
             metadata: props.metadata,
+            terminalToolDisplayMode,
             disabled: props.disabled,
             onRefresh: props.onRefresh,
-            onRetryMessage: props.onRetryMessage
+            onRetryMessage: props.onRetryMessage,
+            hasMoreMessages: props.hasMoreMessages,
+            isLoadingMoreMessages: props.isLoadingMoreMessages,
+            loadOlderMessagesPreservingScroll: loadOlderPreservingScroll
         }}>
             <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col relative">
                 <ThreadPrimitive.Viewport asChild autoScroll={autoScrollEnabled}>

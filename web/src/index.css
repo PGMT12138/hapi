@@ -51,6 +51,10 @@
     /* User bubble colors (light) */
     --app-user-bubble-bg: #d5dbfb3d;
     --app-user-bubble-border: transparent;
+    --app-chat-user-bg: #f2f4f6;
+    --app-chat-user-surface-bg: var(--app-user-bubble-bg);
+    --app-tool-card-bg: #f2f4f6;
+    --app-tool-group-bg: var(--app-tool-card-bg);
 
     --app-font-scale: 1;
 }
@@ -106,6 +110,10 @@
     /* User bubble colors (dark) */
     --app-user-bubble-bg: #25262759;
     --app-user-bubble-border: #2a2b33;
+    --app-chat-user-bg: #2b2f34;
+    --app-chat-user-surface-bg: var(--app-user-bubble-bg);
+    --app-tool-card-bg: #2b2f34;
+    --app-tool-group-bg: var(--app-tool-card-bg);
 }
 
 html {
