@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ContextCommandOutput, ContextGrowth, ContextSection } from '@/chat/contextOutput'
+import type { CategoryGrowth, ContextCommandOutput, ContextGrowth, ContextSection } from '@/chat/contextOutput'
 import { useTranslation } from '@/lib/use-translation'
 import { CloseIcon } from '@/components/icons'
 import { formatTimestamp } from '@/chat/presentation'
@@ -44,7 +44,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
     )
 }
 
-function CategoryBar({ name, tokens, percentage }: { name: string; tokens: string; percentage: string }) {
+function CategoryBar({ name, tokens, percentage, growth }: { name: string; tokens: string; percentage: string; growth?: CategoryGrowth }) {
     const { t } = useTranslation()
     const translated = t(`session.context.row.${name}`)
     const description = translated === `session.context.row.${name}` ? '' : translated
@@ -61,7 +61,13 @@ function CategoryBar({ name, tokens, percentage }: { name: string; tokens: strin
                     )}
                 </div>
                 <span className="shrink-0 font-mono text-[12px] text-[var(--app-hint)]">
-                    {tokens} <span className="text-[var(--app-subtle-fg)]">· {percentage}</span>
+                    {tokens}
+                    {growth && growth.tokenDelta !== 0 && (
+                        <span className={`text-[10px] font-medium ${growth.tokenDelta > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            {' '}{growth.tokenDelta > 0 ? '+' : ''}{formatTokens(growth.tokenDelta)}
+                        </span>
+                    )}
+                    <span className="text-[var(--app-subtle-fg)]"> · {percentage}</span>
                 </span>
             </div>
             <div className="h-[5px] rounded-full bg-[var(--app-subtle-bg)]">
@@ -245,7 +251,7 @@ function ParsedContext({ output, contextGrowth, onRefresh }: { output: ContextCo
                     </div>
                     <div className="flex flex-col gap-3">
                         {sortedCategoryRows.map((row, i) => (
-                            <CategoryBar key={i} name={row[0]} tokens={row[1] ?? ''} percentage={row[2] ?? '0%'} />
+                            <CategoryBar key={i} name={row[0]} tokens={row[1] ?? ''} percentage={row[2] ?? '0%'} growth={contextGrowth?.categories[row[0]]} />
                         ))}
                     </div>
                 </div>

@@ -99,29 +99,65 @@ export function extractContextCommandOutput(
     return null
 }
 
+export type CategoryGrowth = {
+    tokenDelta: number
+    percentageDelta: number
+}
+
 export type ContextGrowth = {
     tokenDelta: number
     percentageDelta: number
+    categories: Record<string, CategoryGrowth>
+}
+
+function extractCategoryMap(parsed: ParsedContextData): Map<string, { tokens: number; pct: number }> {
+    const map = new Map<string, { tokens: number; pct: number }>()
+    const categorySection = parsed.sections.find(s => s.title === 'Estimated usage by category')
+    if (!categorySection) return map
+    for (const row of categorySection.rows) {
+        if (row.length < 3) continue
+        map.set(row[0], {
+            tokens: parseTokenValue(row[1]),
+            pct: parseFloat(row[2]),
+        })
+    }
+    return map
 }
 
 export function computeContextGrowth(
     blocks: readonly ChatBlock[]
 ): ContextGrowth | null {
-    const outputs: { tokensUsed: number; percentage: number }[] = []
+    const outputs: { tokensUsed: number; percentage: number; categories: Map<string, { tokens: number; pct: number }> }[] = []
     for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i]
         if (block.kind !== 'agent-text') continue
         if (!CONTEXT_USAGE_HEADER.test(block.text)) continue
         const parsed = parseContextText(block.text)
         if (!parsed) continue
-        outputs.push({ tokensUsed: parseTokenValue(parsed.tokensUsed), percentage: parsed.tokensPercentage })
+        outputs.push({
+            tokensUsed: parseTokenValue(parsed.tokensUsed),
+            percentage: parsed.tokensPercentage,
+            categories: extractCategoryMap(parsed),
+        })
     }
     if (outputs.length < 2) return null
     const prev = outputs[outputs.length - 2]
     const curr = outputs[outputs.length - 1]
+
+    const categories: Record<string, CategoryGrowth> = {}
+    for (const [name, currVal] of curr.categories) {
+        const prevVal = prev.categories.get(name)
+        if (!prevVal) continue
+        const td = currVal.tokens - prevVal.tokens
+        const pd = Math.round((currVal.pct - prevVal.pct) * 10) / 10
+        if (td === 0 && pd === 0) continue
+        categories[name] = { tokenDelta: td, percentageDelta: pd }
+    }
+
     return {
         tokenDelta: curr.tokensUsed - prev.tokensUsed,
         percentageDelta: curr.percentage - prev.percentage,
+        categories,
     }
 }
 
