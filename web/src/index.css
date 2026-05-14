@@ -23,6 +23,17 @@
     --app-subtle-bg: #f3f4f6;
     --app-code-bg: #f6f8fa;
     --app-inline-code-bg: #e8e8e8;
+    --app-inline-code-border: transparent;
+    --app-inline-code-fg: #2d333b;
+    --app-code-header-bg: #eceff2;
+    --app-code-header-fg: #717784;
+    --app-code-copy-hover-bg: rgba(17, 24, 39, 0.06);
+    --app-md-quote-bg: #f1f3f5;
+    --app-md-quote-border: #c9d0d8;
+    --app-md-quote-fg: #525965;
+    --app-md-table-bg: #f5f6f7;
+    --app-md-table-head-bg: #eceff2;
+    --app-link-muted: rgba(17, 24, 39, 0.18);
 
     /* Diff colors (light) - from hapi-app */
     --app-diff-added-bg: #e6ffed;
@@ -82,6 +93,17 @@
     --app-subtle-bg: #0c0c0e;
     --app-code-bg: #09090b;
     --app-inline-code-bg: #151518;
+    --app-inline-code-border: transparent;
+    --app-inline-code-fg: #f5f7fa;
+    --app-code-header-bg: #1c1e22;
+    --app-code-header-fg: #c4cbd6;
+    --app-code-copy-hover-bg: rgba(255, 255, 255, 0.08);
+    --app-md-quote-bg: #31363d;
+    --app-md-quote-border: #6b7481;
+    --app-md-quote-fg: #d7dde6;
+    --app-md-table-bg: #141518;
+    --app-md-table-head-bg: #1c1e22;
+    --app-link-muted: rgba(255, 255, 255, 0.2);
 
     /* Diff colors (dark) */
     --app-diff-added-bg: #071510;
