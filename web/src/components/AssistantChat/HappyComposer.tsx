@@ -34,6 +34,7 @@ import { getModelOptionsForFlavor, getNextModelForFlavor } from './modelOptions'
 import { getClaudeComposerEffortOptions } from './claudeEffortOptions'
 import type { ParsedContextData } from '@/chat/contextOutput'
 import { getCodexComposerReasoningEffortOptions } from './codexReasoningEffortOptions'
+import { useComposerEnterBehavior } from '@/hooks/useComposerEnterBehavior'
 
 export interface TextInputState {
     text: string
@@ -126,6 +127,7 @@ export function HappyComposer(props: {
     const modelReasoningEffort = rawModelReasoningEffort ?? null
     const effort = rawEffort ?? null
 
+    const { composerEnterBehavior } = useComposerEnterBehavior()
     const api = useAssistantApi()
     const composerText = useAssistantState(({ composer }) => composer.text)
     const attachments = useAssistantState(({ composer }) => composer.attachments)
@@ -384,6 +386,14 @@ export function HappyComposer(props: {
 
         // Only plain Enter (no modifiers) sends; other modifier combos are ignored
         if (key === 'Enter') {
+            if (composerEnterBehavior === 'newline') {
+                if ((e.ctrlKey || e.metaKey) && !e.altKey && canSend) {
+                    e.preventDefault()
+                    api.composer().send()
+                    setShowContinueHint(false)
+                }
+                return
+            }
             e.preventDefault()
             if (!e.ctrlKey && !e.altKey && !e.metaKey && canSend) {
                 api.composer().send()
@@ -444,7 +454,8 @@ export function HappyComposer(props: {
         permissionModes,
         canSend,
         api,
-        haptic
+        haptic,
+        composerEnterBehavior
     ])
 
     useEffect(() => {
