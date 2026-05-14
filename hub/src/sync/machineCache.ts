@@ -11,7 +11,8 @@ const machineMetadataSchema = z.object({
     homeDir: z.string().optional(),
     happyHomeDir: z.string().optional(),
     happyLibDir: z.string().optional(),
-    workspaceRoot: z.string().optional()
+    workspaceRoot: z.string().optional(),
+    workspaceRoots: z.array(z.string()).optional()
 })
 
 export interface Machine {
@@ -31,6 +32,7 @@ export interface Machine {
         happyHomeDir?: string
         happyLibDir?: string
         workspaceRoot?: string
+        workspaceRoots?: string[]
     } | null
     metadataVersion: number
     runnerState: unknown | null
@@ -104,7 +106,14 @@ export class MachineCache {
             const happyHomeDir = typeof data.happyHomeDir === 'string' ? data.happyHomeDir : undefined
             const happyLibDir = typeof data.happyLibDir === 'string' ? data.happyLibDir : undefined
             const workspaceRoot = typeof data.workspaceRoot === 'string' ? data.workspaceRoot : undefined
-            return { host, platform, happyCliVersion, displayName, homeDir, happyHomeDir, happyLibDir, workspaceRoot }
+            const workspaceRoots = Array.from(new Set(
+                Array.isArray(data.workspaceRoots)
+                    ? data.workspaceRoots.filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
+                    : typeof data.workspaceRoot === 'string'
+                        ? [data.workspaceRoot]
+                        : []
+            ))
+            return { host, platform, happyCliVersion, displayName, homeDir, happyHomeDir, happyLibDir, workspaceRoot, workspaceRoots: workspaceRoots.length > 0 ? workspaceRoots : undefined }
         })()
 
         const storedActiveAt = stored.activeAt ?? stored.createdAt
