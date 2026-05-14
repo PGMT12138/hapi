@@ -215,7 +215,7 @@ export function ToolGroupCard(props: {
     const fileCount = props.block.summary.fileTargets.length
 
     return (
-        <Card className="overflow-hidden rounded-[20px] bg-[var(--app-tool-group-bg)] shadow-none">
+        <Card className="overflow-hidden rounded-lg bg-[var(--app-tool-group-bg)] shadow-none">
             <CardHeader className={cn('space-y-0 p-3', subtitle ? 'pb-2' : null)}>
                 <button
                     type="button"
@@ -282,7 +282,7 @@ export function ToolGroupCard(props: {
                                 <button
                                     key={tool.id}
                                     type="button"
-                                    className="flex items-center gap-3 rounded-[16px] border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-left transition-colors hover:bg-[var(--app-subtle-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]"
+                                    className="flex items-center gap-3 rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-left transition-colors hover:bg-[var(--app-subtle-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]"
                                     onClick={() => setSelectedToolId(tool.id)}
                                 >
                                     <span className={cn('shrink-0', toolStatusColorClass(tool.tool.state))}>

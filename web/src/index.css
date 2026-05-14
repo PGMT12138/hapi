@@ -134,7 +134,7 @@
     --app-user-bubble-border: #2a2b33;
     --app-chat-user-bg: #2b2f34;
     --app-chat-user-surface-bg: var(--app-user-bubble-bg);
-    --app-tool-card-bg: #2b2f34;
+    --app-tool-card-bg: #16181c;
     --app-tool-group-bg: var(--app-tool-card-bg);
 }
 
