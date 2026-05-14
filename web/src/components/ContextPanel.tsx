@@ -64,7 +64,7 @@ function CategoryBar({ name, tokens, percentage, growth }: { name: string; token
                     {tokens}
                     {growth && growth.tokenDelta !== 0 && (
                         <span className={`text-[10px] font-medium ${growth.tokenDelta > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                            {' '}{growth.tokenDelta > 0 ? '+' : ''}{formatTokens(growth.tokenDelta)}
+                            {' '}{growth.tokenDelta > 0 ? '+' : '-'}{formatTokens(Math.abs(growth.tokenDelta))}
                         </span>
                     )}
                     <span className="text-[var(--app-subtle-fg)]"> · {percentage}</span>
@@ -216,7 +216,7 @@ function ParsedContext({ output, contextGrowth, onRefresh }: { output: ContextCo
                         <span className={`font-mono text-[22px] font-bold ${tokenColor}`}>{parsed.tokensUsed}</span>
                         {contextGrowth && contextGrowth.tokenDelta !== 0 && (
                             <span className={`font-mono text-[12px] font-medium ${contextGrowth.tokenDelta > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                {contextGrowth.tokenDelta > 0 ? '+' : ''}{formatTokens(contextGrowth.tokenDelta)}
+                                {contextGrowth.tokenDelta > 0 ? '+' : '-'}{formatTokens(Math.abs(contextGrowth.tokenDelta))}
                             </span>
                         )}
                         <span className="font-mono text-[13px] text-[var(--app-hint)]"> / {parsed.tokensTotal}</span>
