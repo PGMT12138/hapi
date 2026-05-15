@@ -13,8 +13,8 @@ import run.hapi.app.R
 class NotificationHelper(private val context: Context) {
 
     companion object {
-        const val CHANNEL_SSE = "hapi_sse"
-        const val CHANNEL_NOTIFICATIONS = "hapi_notifications"
+        const val CHANNEL_SSE = "hapi_sse_v2"
+        const val CHANNEL_NOTIFICATIONS = "hapi_notif_v2"
         const val SSE_NOTIFICATION_ID = 1
         const val GROUP_KEY = "run.hapi.app.NOTIFICATIONS"
     }
@@ -24,10 +24,14 @@ class NotificationHelper(private val context: Context) {
 
     fun createChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Delete old channels to reset settings
+            notificationManager.deleteNotificationChannel("hapi_sse")
+            notificationManager.deleteNotificationChannel("hapi_notifications")
+
             val sseChannel = NotificationChannel(
                 CHANNEL_SSE,
                 context.getString(R.string.sse_notification_channel),
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_MIN
             ).apply {
                 setShowBadge(false)
                 description = "Persistent connection indicator"
@@ -39,6 +43,7 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "HAPI notifications"
+                enableVibration(true)
             }
 
             notificationManager.createNotificationChannels(listOf(sseChannel, notifChannel))
@@ -57,10 +62,11 @@ class NotificationHelper(private val context: Context) {
         return NotificationCompat.Builder(context, CHANNEL_SSE)
             .setContentTitle(context.getString(R.string.sse_notification_title))
             .setContentText(context.getString(R.string.sse_notification_text))
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_foreground_notification)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
     }
 
@@ -77,10 +83,12 @@ class NotificationHelper(private val context: Context) {
         val notification = NotificationCompat.Builder(context, CHANNEL_NOTIFICATIONS)
             .setContentTitle(title)
             .setContentText(body)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setGroup(GROUP_KEY)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
         notificationManager.notify(id, notification)

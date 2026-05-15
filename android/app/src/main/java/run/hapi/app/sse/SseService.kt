@@ -76,7 +76,7 @@ class SseService : LifecycleService() {
             val serverUrl = app.preferences.getServerUrl() ?: return@launch
             val token = app.preferences.getAuthToken() ?: return@launch
 
-            val url = "${serverUrl}/api/events?token=${token}&toast=all"
+            val url = "${serverUrl}/api/events?token=${token}&toast=all&visibility=visible"
             val request = Request.Builder().url(url).build()
 
             eventSource?.cancel()
@@ -111,6 +111,14 @@ class SseService : LifecycleService() {
         }
     }
 
+    private val titleTranslations = mapOf(
+        "Permission Request" to "权限请求",
+        "Ready for input" to "等待输入",
+        "Task completed" to "任务完成",
+        "Task failed" to "任务失败",
+        "Session completed" to "会话完成"
+    )
+
     private fun handleEvent(data: String) {
         try {
             val json = JSONObject(data)
@@ -118,15 +126,35 @@ class SseService : LifecycleService() {
 
             if (type == "toast") {
                 val toastData = json.getJSONObject("data")
-                val title = toastData.getString("title")
-                val body = toastData.getString("body")
-                val sessionId = toastData.optString("sessionId")
+                val rawTitle = toastData.getString("title")
+                val title = titleTranslations[rawTitle] ?: rawTitle
+                val sessionId = toastData.optString("sessionId").ifBlank { null }
+
+                val machineName = toastData.optString("machineName").ifBlank { null }
+                val sessionName = toastData.optString("sessionName").ifBlank { null }
+                val agentName = toastData.optString("agentName").ifBlank { null }
+                val url = toastData.optString("url").ifBlank { null }
+                val rawBody = toastData.optString("body").ifBlank { null }
+
+                val body = if (machineName != null || sessionName != null || agentName != null) {
+                    buildString {
+                        agentName?.let { append("🤖 $it") }
+                        machineName?.let { if (isNotEmpty()) append("\n"); append("💻 $it") }
+                        sessionName?.let { if (isNotEmpty()) append("\n"); append("💬 $it") }
+                        url?.let { if (isNotEmpty()) append("\n"); append("🔗 $it") }
+                    }
+                } else {
+                    buildString {
+                        append(rawBody ?: "")
+                        url?.let { append("\n🔗 $it") }
+                    }
+                }
 
                 notificationHelper.showNotification(
                     notificationId++,
                     title,
                     body,
-                    sessionId.ifBlank { null }
+                    sessionId
                 )
             }
         } catch (_: Exception) {

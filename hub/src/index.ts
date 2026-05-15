@@ -196,7 +196,7 @@ async function main() {
     syncEngine = new SyncEngine(store, socketServer.io, socketServer.rpcRegistry, sseManager)
 
     const notificationChannels: NotificationChannel[] = [
-        new PushNotificationChannel(pushService, sseManager, visibilityTracker, config.publicUrl)
+        new PushNotificationChannel(pushService, sseManager, visibilityTracker, config.publicUrl, (machineId) => machineId ? syncEngine?.getMachine(machineId) : undefined)
     ]
 
     if (config.serverChanSendKey && config.serverChanNotification) {

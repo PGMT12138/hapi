@@ -87,7 +87,7 @@ class SetupActivity : AppCompatActivity() {
         return withContext(Dispatchers.IO) {
             val client = OkHttpClient()
             val body = JSONObject().apply {
-                put("token", apiToken)
+                put("accessToken", apiToken)
             }
             val request = Request.Builder()
                 .url("${serverUrl.trimEnd('/')}/api/auth")

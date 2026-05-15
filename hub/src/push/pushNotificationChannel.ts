@@ -2,16 +2,39 @@ import type { Session } from '../sync/syncEngine'
 import type { NotificationChannel, TaskNotification } from '../notifications/notificationTypes'
 import { getAgentName, getSessionName } from '../notifications/sessionInfo'
 import type { SSEManager } from '../sse/sseManager'
+import type { Machine } from '../sync/machineCache'
 import type { VisibilityTracker } from '../visibility/visibilityTracker'
 import type { PushPayload, PushService } from './pushService'
+
+type MachineResolver = (machineId: string | null) => Machine | undefined
 
 export class PushNotificationChannel implements NotificationChannel {
     constructor(
         private readonly pushService: PushService,
         private readonly sseManager: SSEManager,
         private readonly visibilityTracker: VisibilityTracker,
-        _appUrl: string
+        private readonly appUrl: string,
+        private readonly resolveMachine: MachineResolver = () => undefined
     ) {}
+
+    private getMachineName(session: Session): string {
+        const machineId = (session.metadata as Record<string, unknown>)?.machineId as string | undefined ?? null
+        const machine = this.resolveMachine(machineId)
+        return machine?.metadata?.displayName || machine?.metadata?.host || 'Unknown'
+    }
+
+    private buildToastData(session: Session, title: string, body: string) {
+        const url = this.buildSessionPath(session.id)
+        return {
+            title,
+            body,
+            sessionId: session.id,
+            url,
+            agentName: getAgentName(session),
+            sessionName: getSessionName(session),
+            machineName: this.getMachineName(session)
+        }
+    }
 
     async sendPermissionRequest(session: Session): Promise<void> {
         if (!session.active) {
@@ -37,16 +60,10 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.pushService.sendToNamespace(session.namespace, payload)
 
-        const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
             await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
-                data: {
-                    title: payload.title,
-                    body: payload.body,
-                    sessionId: session.id,
-                    url
-                }
+                data: this.buildToastData(session, payload.title, payload.body)
             })
         }
     }
@@ -72,16 +89,10 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.pushService.sendToNamespace(session.namespace, payload)
 
-        const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
             await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
-                data: {
-                    title: payload.title,
-                    body: payload.body,
-                    sessionId: session.id,
-                    url
-                }
+                data: this.buildToastData(session, payload.title, payload.body)
             })
         }
     }
@@ -111,16 +122,10 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.pushService.sendToNamespace(session.namespace, payload)
 
-        const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
             await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
-                data: {
-                    title: payload.title,
-                    body: payload.body,
-                    sessionId: session.id,
-                    url
-                }
+                data: this.buildToastData(session, payload.title, payload.body)
             })
         }
     }
@@ -145,16 +150,10 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.pushService.sendToNamespace(session.namespace, payload)
 
-        const url = payload.data?.url ?? this.buildSessionPath(session.id)
         if (this.visibilityTracker.hasVisibleConnection(session.namespace)) {
             await this.sseManager.sendToast(session.namespace, {
                 type: 'toast',
-                data: {
-                    title: payload.title,
-                    body: payload.body,
-                    sessionId: session.id,
-                    url
-                }
+                data: this.buildToastData(session, payload.title, payload.body)
             })
         }
     }
