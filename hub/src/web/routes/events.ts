@@ -47,6 +47,7 @@ export function createEventsRoutes(
 
         const query = c.req.query()
         const all = parseBoolean(query.all)
+        const toastAll = query.toast === 'all'
         const sessionId = parseOptionalId(query.sessionId)
         const machineId = parseOptionalId(query.machineId)
         const subscriptionId = randomUUID()
@@ -82,6 +83,7 @@ export function createEventsRoutes(
                 id: subscriptionId,
                 namespace,
                 all,
+                toastAll,
                 sessionId: resolvedSessionId,
                 machineId,
                 visibility,

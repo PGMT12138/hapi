@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HAPI</string>
+    <string name="title_setup">Setup</string>
+    <string name="hint_server_url">Server URL (e.g. http://192.168.1.100:3006)</string>
+    <string name="hint_api_token">API Token (CLI_API_TOKEN)</string>
+    <string name="btn_connect">Connect</string>
+    <string name="error_empty_url">Please enter server URL</string>
+    <string name="error_empty_token">Please enter API token</string>
+    <string name="error_connection_failed">Connection failed. Check URL and token.</string>
+    <string name="sse_notification_channel">HAPI Connection</string>
+    <string name="sse_notification_title">HAPI Connected</string>
+    <string name="sse_notification_text">Listening for notifications…</string>
+    <string name="notification_channel">HAPI Notifications</string>
+</resources>

@@ -6,6 +6,7 @@ export type SSESubscription = {
     id: string
     namespace: string
     all: boolean
+    toastAll: boolean
     sessionId: string | null
     machineId: string | null
 }
@@ -30,6 +31,7 @@ export class SSEManager {
         id: string
         namespace: string
         all?: boolean
+        toastAll?: boolean
         sessionId?: string | null
         machineId?: string | null
         visibility?: VisibilityState
@@ -40,6 +42,7 @@ export class SSEManager {
             id: options.id,
             namespace: options.namespace,
             all: Boolean(options.all),
+            toastAll: Boolean(options.toastAll),
             sessionId: options.sessionId ?? null,
             machineId: options.machineId ?? null,
             send: options.send,
@@ -57,6 +60,7 @@ export class SSEManager {
             id: subscription.id,
             namespace: subscription.namespace,
             all: subscription.all,
+            toastAll: subscription.toastAll,
             sessionId: subscription.sessionId,
             machineId: subscription.machineId
         }
@@ -76,7 +80,8 @@ export class SSEManager {
             if (connection.namespace !== namespace) {
                 continue
             }
-            if (!this.visibilityTracker.isVisibleConnection(connection.id)) {
+            const isVisible = this.visibilityTracker.isVisibleConnection(connection.id)
+            if (!isVisible && !connection.toastAll) {
                 continue
             }
 
