@@ -27,7 +27,7 @@ const MESSAGE_PART_COMPONENTS = {
 
 function PendingDots() {
     return (
-        <span className="ml-1.5 inline-flex items-center gap-[3px] px-2 py-0.5 rounded-md bg-[var(--app-subtle-bg)]">
+        <span className="ml-1.5 inline-flex h-[16px] items-center gap-[3px] px-1.5 rounded bg-[var(--app-subtle-bg)]">
             {[0, 1, 2].map(i => (
                 <span
                     key={i}
