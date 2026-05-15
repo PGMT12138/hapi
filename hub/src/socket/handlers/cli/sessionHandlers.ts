@@ -55,6 +55,30 @@ const updateStateSchema = z.object({
     agentState: z.unknown().nullable()
 })
 
+function logContextIfPresent(sid: string, content: unknown): void {
+    try {
+        if (typeof content !== 'object' || content === null) return
+        const c = content as Record<string, unknown>
+        const data = (c.content as Record<string, unknown>)?.data as Record<string, unknown> | undefined
+        if (!data || data.type !== 'assistant') return
+        const message = data.message as Record<string, unknown> | undefined
+        if (!message) return
+        const parts = message.content as Array<Record<string, unknown>> | undefined
+        if (!parts) return
+        for (const part of parts) {
+            if (part.type === 'text' && typeof part.text === 'string' && part.text.includes('## Context Usage')) {
+                const modelMatch = part.text.match(/\*\*Model:\*\*\s*(.+)/)
+                const tokensMatch = part.text.match(/\*\*Tokens:\*\*\s*(.+)/)
+                const now = new Date().toLocaleString('sv-SE').substring(0, 19)
+                console.log(`[Context] ${now} | session=${sid.substring(0, 8)} | model=${(modelMatch?.[1] ?? '?').trim()} | tokens=${(tokensMatch?.[1] ?? '?').trim()}`)
+                return
+            }
+        }
+    } catch {
+        // Ignore parse errors
+    }
+}
+
 export type SessionHandlersDeps = {
     store: Store
     resolveSessionAccess: ResolveSessionAccess
@@ -96,6 +120,7 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
         const session = sessionAccess.value
 
         const msg = store.messages.addMessage(sid, content, localId)
+        logContextIfPresent(sid, content)
         if (shouldRecordSessionActivity(content)) {
             onSessionActivity?.(sid, msg.createdAt)
         }
