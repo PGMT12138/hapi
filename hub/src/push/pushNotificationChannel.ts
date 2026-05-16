@@ -5,6 +5,8 @@ import type { SSEManager } from '../sse/sseManager'
 import type { Machine } from '../sync/machineCache'
 import type { PushPayload, PushService } from './pushService'
 
+const MAX_DETAIL_LENGTH = 80
+
 type MachineResolver = (machineId: string | null) => Machine | undefined
 
 export class PushNotificationChannel implements NotificationChannel {
@@ -19,13 +21,18 @@ export class PushNotificationChannel implements NotificationChannel {
         try {
             const machineId = (session.metadata as Record<string, unknown>)?.machineId as string | undefined ?? null
             const machine = this.resolveMachine(machineId)
-            return machine?.metadata?.displayName || machine?.metadata?.host || 'Unknown'
+            return machine?.metadata?.displayName || machine?.metadata?.host || ''
         } catch {
-            return 'Unknown'
+            return ''
         }
     }
 
-    private buildToastData(session: Session, title: string, body: string) {
+    private truncate(text: string, max: number): string {
+        if (text.length <= max) return text
+        return text.slice(0, max) + '...'
+    }
+
+    private buildToastData(session: Session, title: string, body: string, detail?: string) {
         const url = this.buildSessionPath(session.id)
         try {
             const agentName = getAgentName(session)
@@ -37,6 +44,7 @@ export class PushNotificationChannel implements NotificationChannel {
             if (sessionName) lines.push(sessionName)
             if (projectPath) lines.push(projectPath)
             if (agentName) lines.push(agentName)
+            if (detail) lines.push(this.truncate(detail, MAX_DETAIL_LENGTH))
 
             return {
                 title,
@@ -61,6 +69,9 @@ export class PushNotificationChannel implements NotificationChannel {
             ? Object.values(session.agentState.requests)[0]
             : null
         const toolName = request?.tool ? ` (${request.tool})` : ''
+        const detail = request?.input
+            ? this.truncate(String(request.input), MAX_DETAIL_LENGTH)
+            : toolName ? `Tool: ${request.tool}` : undefined
 
         const payload: PushPayload = {
             title: 'Permission Request',
@@ -77,7 +88,7 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.sseManager.sendToast(session.namespace, {
             type: 'toast',
-            data: this.buildToastData(session, payload.title, payload.body)
+            data: this.buildToastData(session, payload.title, payload.body, detail)
         })
     }
 
@@ -120,6 +131,9 @@ export class PushNotificationChannel implements NotificationChannel {
             || normalizedStatus === 'error'
             || normalizedStatus === 'killed'
             || normalizedStatus === 'aborted'
+        const detail = notification.summary
+            ? this.truncate(notification.summary, MAX_DETAIL_LENGTH)
+            : undefined
 
         const payload: PushPayload = {
             title: isFailure ? 'Task failed' : 'Task completed',
@@ -135,7 +149,7 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.sseManager.sendToast(session.namespace, {
             type: 'toast',
-            data: this.buildToastData(session, payload.title, payload.body)
+            data: this.buildToastData(session, payload.title, payload.body, detail)
         })
     }
 
@@ -146,6 +160,7 @@ export class PushNotificationChannel implements NotificationChannel {
 
         const agentName = getAgentName(session)
         const name = getSessionName(session)
+        const detail = _reason ? this.truncate(_reason, MAX_DETAIL_LENGTH) : undefined
 
         const payload: PushPayload = {
             title: 'Session completed',
@@ -161,7 +176,7 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.sseManager.sendToast(session.namespace, {
             type: 'toast',
-            data: this.buildToastData(session, payload.title, payload.body)
+            data: this.buildToastData(session, payload.title, payload.body, detail)
         })
     }
 
