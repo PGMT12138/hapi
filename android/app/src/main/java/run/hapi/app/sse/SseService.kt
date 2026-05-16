@@ -123,7 +123,10 @@ class SseService : LifecycleService() {
             val url = "${serverUrl}/api/events?token=${jwt}&toast=all&visibility=visible"
             val request = Request.Builder().url(url).build()
 
-            eventSource?.cancel()
+            val oldSource = eventSource
+            eventSource = null
+            oldSource?.cancel()
+
             eventSource = EventSources.createFactory(client)
                 .newEventSource(request, object : EventSourceListener() {
 
@@ -151,14 +154,19 @@ class SseService : LifecycleService() {
                         val body = try { response?.body?.string()?.take(200) } catch (_: Exception) { null }
                         Log.w(TAG, "SSE failure: code=$code, error=${t?.message}, body=$body")
                         if (code == 401) {
-                            Log.d(TAG, "Auth expired, reconnecting with fresh JWT")
+                            Log.d(TAG, "Auth expired, forcing immediate reconnect with fresh JWT")
+                            this@SseService.eventSource?.cancel()
+                            this@SseService.eventSource = null
+                            backoffMs = BASE_BACKOFF_MS
+                            connect()
+                        } else {
+                            scheduleReconnect()
                         }
-                        scheduleReconnect()
                     }
 
                     override fun onClosed(eventSource: EventSource) {
                         Log.d(TAG, "SSE closed, reconnecting")
-                        scheduleReconnect()
+                        connect()
                     }
                 })
         }
