@@ -232,27 +232,8 @@ class SseService : LifecycleService() {
                 val toastData = json.getJSONObject("data")
                 val rawTitle = toastData.getString("title")
                 val title = titleTranslations[rawTitle] ?: rawTitle
+                val body = toastData.optString("body").ifBlank { "" }
                 val sessionId = toastData.optString("sessionId").ifBlank { null }
-
-                val machineName = toastData.optString("machineName").ifBlank { null }
-                val sessionName = toastData.optString("sessionName").ifBlank { null }
-                val agentName = toastData.optString("agentName").ifBlank { null }
-                val url = toastData.optString("url").ifBlank { null }
-                val rawBody = toastData.optString("body").ifBlank { null }
-
-                val body = if (machineName != null || sessionName != null || agentName != null) {
-                    buildString {
-                        agentName?.let { append("🤖 $it") }
-                        machineName?.let { if (isNotEmpty()) append("\n"); append("💻 $it") }
-                        sessionName?.let { if (isNotEmpty()) append("\n"); append("💬 $it") }
-                        url?.let { if (isNotEmpty()) append("\n"); append("🔗 $it") }
-                    }
-                } else {
-                    buildString {
-                        append(rawBody ?: "")
-                        url?.let { append("\n🔗 $it") }
-                    }
-                }
 
                 Log.d(TAG, "Showing notification: title=$title, sessionId=$sessionId")
                 notificationHelper.showNotification(
