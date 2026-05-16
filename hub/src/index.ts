@@ -20,7 +20,7 @@ import { createSocketServer } from './socket/server'
 import { SSEManager } from './sse/sseManager'
 import { getOrCreateVapidKeys } from './config/vapidKeys'
 import { PushService } from './push/pushService'
-import { PushNotificationChannel } from './push/pushNotificationChannel'
+import { PushNotificationChannel, extractAssistantText } from './push/pushNotificationChannel'
 import { VisibilityTracker } from './visibility/visibilityTracker'
 import { TunnelManager } from './tunnel'
 import { waitForTunnelTlsReady } from './tunnel/tlsGate'
@@ -196,7 +196,14 @@ async function main() {
     syncEngine = new SyncEngine(store, socketServer.io, socketServer.rpcRegistry, sseManager)
 
     const notificationChannels: NotificationChannel[] = [
-        new PushNotificationChannel(pushService, sseManager, config.publicUrl, (machineId) => machineId ? syncEngine?.getMachine(machineId) : undefined)
+        new PushNotificationChannel(pushService, sseManager, config.publicUrl, (machineId) => machineId ? syncEngine?.getMachine(machineId) : undefined, (sessionId) => {
+            const messages = store.messages.getMessages(sessionId, 20)
+            for (let i = messages.length - 1; i >= 0; i--) {
+                const text = extractAssistantText(messages[i].content)
+                if (text) return text
+            }
+            return null
+        })
     ]
 
     if (config.serverChanSendKey && config.serverChanNotification) {

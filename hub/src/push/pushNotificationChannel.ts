@@ -1,3 +1,4 @@
+import { isObject, unwrapRoleWrappedRecordEnvelope } from '@hapi/protocol'
 import type { Session } from '../sync/syncEngine'
 import type { NotificationChannel, TaskNotification } from '../notifications/notificationTypes'
 import { getAgentName, getSessionName } from '../notifications/sessionInfo'
@@ -6,15 +7,18 @@ import type { Machine } from '../sync/machineCache'
 import type { PushPayload, PushService } from './pushService'
 
 const MAX_DETAIL_LENGTH = 80
+const NOTIFICATION_SNIPPET_LENGTH = 50
 
 type MachineResolver = (machineId: string | null) => Machine | undefined
+type LastAssistantTextResolver = (sessionId: string) => string | null
 
 export class PushNotificationChannel implements NotificationChannel {
     constructor(
         private readonly pushService: PushService,
         private readonly sseManager: SSEManager,
         private readonly appUrl: string,
-        private readonly resolveMachine: MachineResolver = () => undefined
+        private readonly resolveMachine: MachineResolver = () => undefined,
+        private readonly resolveLastAssistantText: LastAssistantTextResolver = () => null
     ) {}
 
     private getMachineName(session: Session): string {
@@ -30,6 +34,12 @@ export class PushNotificationChannel implements NotificationChannel {
     private truncate(text: string, max: number): string {
         if (text.length <= max) return text
         return text.slice(0, max) + '...'
+    }
+
+    private getLastResponseSnippet(sessionId: string): string | null {
+        const fullText = this.resolveLastAssistantText(sessionId)
+        if (!fullText) return null
+        return this.truncate(fullText, NOTIFICATION_SNIPPET_LENGTH)
     }
 
     private buildToastData(session: Session, title: string, body: string, detail?: string) {
@@ -69,9 +79,6 @@ export class PushNotificationChannel implements NotificationChannel {
             ? Object.values(session.agentState.requests)[0]
             : null
         const toolName = request?.tool ? ` (${request.tool})` : ''
-        const detail = request?.input
-            ? this.truncate(String(request.input), MAX_DETAIL_LENGTH)
-            : toolName ? `Tool: ${request.tool}` : undefined
 
         const payload: PushPayload = {
             title: 'Permission Request',
@@ -88,7 +95,7 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.sseManager.sendToast(session.namespace, {
             type: 'toast',
-            data: this.buildToastData(session, payload.title, payload.body, detail)
+            data: this.buildToastData(session, payload.title, payload.body, this.getLastResponseSnippet(session.id) ?? undefined)
         })
     }
 
@@ -99,10 +106,12 @@ export class PushNotificationChannel implements NotificationChannel {
 
         const agentName = getAgentName(session)
         const name = getSessionName(session)
+        const snippet = this.getLastResponseSnippet(session.id)
+        const bodyText = snippet ? `${agentName}: ${snippet}` : `${agentName} is waiting in ${name}`
 
         const payload: PushPayload = {
             title: 'Ready for input',
-            body: `${agentName} is waiting in ${name}`,
+            body: bodyText,
             tag: `ready-${session.id}`,
             data: {
                 type: 'ready',
@@ -115,7 +124,7 @@ export class PushNotificationChannel implements NotificationChannel {
 
         await this.sseManager.sendToast(session.namespace, {
             type: 'toast',
-            data: this.buildToastData(session, payload.title, payload.body)
+            data: this.buildToastData(session, payload.title, payload.body, snippet ?? undefined)
         })
     }
 
@@ -133,7 +142,7 @@ export class PushNotificationChannel implements NotificationChannel {
             || normalizedStatus === 'aborted'
         const detail = notification.summary
             ? this.truncate(notification.summary, MAX_DETAIL_LENGTH)
-            : undefined
+            : this.getLastResponseSnippet(session.id) ?? undefined
 
         const payload: PushPayload = {
             title: isFailure ? 'Task failed' : 'Task completed',
@@ -160,11 +169,13 @@ export class PushNotificationChannel implements NotificationChannel {
 
         const agentName = getAgentName(session)
         const name = getSessionName(session)
-        const detail = _reason ? this.truncate(_reason, MAX_DETAIL_LENGTH) : undefined
+        const snippet = this.getLastResponseSnippet(session.id)
+        const bodyText = snippet ? `${agentName}: ${snippet}` : `${agentName} · ${name}`
+        const detail = _reason ? this.truncate(_reason, MAX_DETAIL_LENGTH) : snippet ?? undefined
 
         const payload: PushPayload = {
             title: 'Session completed',
-            body: `${agentName} · ${name}`,
+            body: bodyText,
             data: {
                 type: 'session-completion',
                 sessionId: session.id,
@@ -183,4 +194,65 @@ export class PushNotificationChannel implements NotificationChannel {
     private buildSessionPath(sessionId: string): string {
         return `/sessions/${sessionId}`
     }
+}
+
+export function extractAssistantText(content: unknown): string | null {
+    if (!isObject(content)) return null
+
+    // Try role-wrapped format: { role: 'assistant', content: [...] }
+    // or { type: 'assistant', message: { role: 'assistant', content: [...] } }
+    const record = unwrapRoleWrappedRecordEnvelope(content)
+    if (record?.role === 'assistant') {
+        const text = extractTextFromContent(record.content)
+        if (text && !isContextOutput(text)) return text
+    }
+
+    // Try nested envelope format: { content: { data: { type: 'assistant', message: { content: [...] } } } }
+    const outerContent = content.content
+    if (isObject(outerContent)) {
+        const data = outerContent.data
+        if (isObject(data) && data.type === 'assistant') {
+            const message = data.message
+            if (isObject(message)) {
+                const text = extractTextFromContent(message.content)
+                if (text && !isContextOutput(text)) return text
+            }
+        }
+    }
+
+    // Try direct data format: { data: { type: 'assistant', message: { content: [...] } } }
+    const directData = content.data
+    if (isObject(directData) && directData.type === 'assistant') {
+        const message = directData.message
+        if (isObject(message)) {
+            const text = extractTextFromContent(message.content)
+            if (text && !isContextOutput(text)) return text
+        }
+    }
+
+    return null
+}
+
+function isContextOutput(text: string): boolean {
+    return text.includes('## Context Usage')
+        || text.includes('<system-reminder>')
+        || text.includes('<command-name>')
+}
+
+function extractTextFromContent(inner: unknown): string | null {
+    if (typeof inner === 'string') return inner || null
+
+    if (Array.isArray(inner)) {
+        for (const block of inner) {
+            if (isObject(block) && block.type === 'text' && typeof block.text === 'string' && block.text) {
+                return block.text
+            }
+        }
+    }
+
+    if (isObject(inner) && inner.type === 'text' && typeof inner.text === 'string' && inner.text) {
+        return inner.text
+    }
+
+    return null
 }
