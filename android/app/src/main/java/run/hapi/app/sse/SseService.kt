@@ -8,10 +8,12 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -40,6 +42,7 @@ class SseService : LifecycleService() {
 
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var client: OkHttpClient
+    private lateinit var authClient: OkHttpClient
     private var eventSource: EventSource? = null
     private var connectJob: Job? = null
     private var refreshJob: Job? = null
@@ -53,6 +56,11 @@ class SseService : LifecycleService() {
         client = OkHttpClient.Builder()
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .connectTimeout(10, TimeUnit.SECONDS)
+            .build()
+        authClient = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
             .build()
     }
 
@@ -173,24 +181,26 @@ class SseService : LifecycleService() {
     }
 
     private suspend fun refreshToken(serverUrl: String, apiToken: String): String? {
-        return try {
-            val body = JSONObject().apply { put("accessToken", apiToken) }
-            val request = Request.Builder()
-                .url("${serverUrl.trimEnd('/')}/api/auth")
-                .post(body.toString().toRequestBody("application/json".toMediaType()))
-                .build()
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject().apply { put("accessToken", apiToken) }
+                val request = Request.Builder()
+                    .url("${serverUrl.trimEnd('/')}/api/auth")
+                    .post(body.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                Log.e(TAG, "Auth failed: ${response.code}")
-                return null
+                val response = authClient.newCall(request).execute()
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Auth failed: ${response.code}")
+                    return@withContext null
+                }
+
+                val responseBody = response.body?.string() ?: return@withContext null
+                JSONObject(responseBody).getString("token")
+            } catch (e: Exception) {
+                Log.e(TAG, "Auth error: ${e.message}")
+                null
             }
-
-            val responseBody = response.body?.string() ?: return null
-            JSONObject(responseBody).getString("token")
-        } catch (e: Exception) {
-            Log.e(TAG, "Auth error: ${e.message}")
-            null
         }
     }
 
