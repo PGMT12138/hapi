@@ -32,14 +32,15 @@ export class PushNotificationChannel implements NotificationChannel {
             const sessionName = getSessionName(session)
             const machineName = this.getMachineName(session)
 
-            const parts: string[] = []
-            if (agentName) parts.push(`🤖 ${agentName}`)
-            if (machineName) parts.push(`💻 ${machineName}`)
-            if (sessionName) parts.push(`💬 ${sessionName}`)
+            const lines: string[] = []
+            if (sessionName) lines.push(sessionName)
+            if (url) lines.push(url)
+            if (agentName) lines.push(agentName)
 
             return {
                 title,
-                body: parts.length > 0 ? parts.join('\n') : body,
+                body: lines.length > 0 ? lines.join('\n') : body,
+                subText: machineName || '',
                 sessionId: session.id,
                 url
             }

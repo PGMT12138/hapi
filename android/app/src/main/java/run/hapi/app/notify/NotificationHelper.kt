@@ -70,7 +70,7 @@ class NotificationHelper(private val context: Context) {
             .build()
     }
 
-    fun showNotification(id: Int, title: String, body: String, sessionId: String?) {
+    fun showNotification(id: Int, title: String, body: String, subText: String?, sessionId: String?) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("sessionId", sessionId)
@@ -80,9 +80,13 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val collapsedText = body.substringBefore('\n')
+
         val notification = NotificationCompat.Builder(context, CHANNEL_NOTIFICATIONS)
             .setContentTitle(title)
-            .setContentText(body)
+            .setSubText(subText)
+            .setContentText(collapsedText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

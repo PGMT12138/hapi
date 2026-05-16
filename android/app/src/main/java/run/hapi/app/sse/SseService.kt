@@ -233,13 +233,15 @@ class SseService : LifecycleService() {
                 val rawTitle = toastData.getString("title")
                 val title = titleTranslations[rawTitle] ?: rawTitle
                 val body = toastData.optString("body").ifBlank { "" }
+                val subText = toastData.optString("subText").ifBlank { null }
                 val sessionId = toastData.optString("sessionId").ifBlank { null }
 
-                Log.d(TAG, "Showing notification: title=$title, sessionId=$sessionId")
+                Log.d(TAG, "Showing notification: title=$title, subText=$subText, sessionId=$sessionId")
                 notificationHelper.showNotification(
                     notificationId++,
                     title,
                     body,
+                    subText,
                     sessionId
                 )
             }
