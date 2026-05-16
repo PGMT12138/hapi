@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useAppContext } from '@/lib/app-context'
 import { usePrompts } from '@/hooks/queries/usePrompts'
+import { usePromptActions } from '@/hooks/mutations/usePromptActions'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -61,31 +62,121 @@ function PromptDetailDialog({
     )
 }
 
+const inputClass = "w-full px-3 py-2 text-sm rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-[var(--app-link)] disabled:opacity-50"
+
+function CreatePromptDialog({
+    open,
+    onOpenChange,
+}: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+}) {
+    const { api } = useAppContext()
+    const actions = usePromptActions(api)
+    const { t } = useTranslation()
+    const [name, setName] = useState('')
+    const [content, setContent] = useState('')
+
+    const handleSave = async () => {
+        if (!name.trim() || !content.trim() || actions.isPending) return
+        await actions.createPrompt({ name: name.trim(), content: content.trim() })
+        setName('')
+        setContent('')
+        onOpenChange(false)
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>{t('prompts.add')}</DialogTitle>
+                </DialogHeader>
+                <div className="mt-3 flex flex-col gap-3">
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder={t('prompts.namePlaceholder')}
+                        className={inputClass}
+                    />
+                    <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder={t('prompts.contentPlaceholder')}
+                        rows={12}
+                        className={`${inputClass} resize-y`}
+                    />
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => onOpenChange(false)}
+                            className="rounded-lg px-3 py-1.5 text-sm text-[var(--app-hint)] hover:bg-[var(--app-hover)]"
+                        >
+                            {t('prompts.cancel')}
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={!name.trim() || !content.trim() || actions.isPending}
+                            className="rounded-lg bg-[var(--app-button)] px-3 py-1.5 text-sm font-medium text-[var(--app-button-text)] disabled:opacity-50"
+                        >
+                            {t('prompts.add')}
+                        </button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export function PromptPickerDialog({ open, onOpenChange, onSelect }: Props) {
     const { api } = useAppContext()
     const { prompts, isLoading } = usePrompts(api)
     const { t } = useTranslation()
     const { copy } = useCopyToClipboard()
     const [detailPrompt, setDetailPrompt] = useState<{ name: string; content: string } | null>(null)
+    const [search, setSearch] = useState('')
+    const [creating, setCreating] = useState(false)
+
+    const filtered = search.trim()
+        ? prompts.filter((p) => p.name.toLowerCase().includes(search.trim().toLowerCase()))
+        : prompts
 
     return (
         <>
-            <Dialog open={open && !detailPrompt} onOpenChange={onOpenChange}>
-                <DialogContent>
+            <Dialog open={open && !detailPrompt && !creating} onOpenChange={onOpenChange}>
+                <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{t('prompts.selectTitle')}</DialogTitle>
                         <DialogDescription>{t('prompts.selectDescription')}</DialogDescription>
                     </DialogHeader>
-                    <div className="mt-3 max-h-[50vh] overflow-y-auto">
+                    <div className="mt-3 flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t('prompts.searchPlaceholder')}
+                            className={inputClass}
+                        />
+                        <button
+                            onClick={() => setCreating(true)}
+                            title={t('prompts.add')}
+                            className="shrink-0 rounded-lg border border-[var(--app-divider)] px-2.5 py-2 text-[var(--app-link)] hover:bg-[var(--app-hover)] active:scale-95"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div className="mt-2 max-h-[50vh] overflow-y-auto">
                         {isLoading ? (
                             <div className="py-6 text-center text-sm text-[var(--app-hint)]">{t('prompts.loading')}</div>
-                        ) : prompts.length === 0 ? (
+                        ) : filtered.length === 0 ? (
                             <div className="py-6 text-center text-sm text-[var(--app-hint)]">
                                 {t('prompts.emptyList')}
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                {prompts.map((prompt) => (
+                                {filtered.map((prompt) => (
                                     <div
                                         key={prompt.id}
                                         className="flex items-start gap-2 rounded-lg bg-[var(--app-bg)] p-3 cursor-pointer hover:opacity-90"
@@ -148,6 +239,11 @@ export function PromptPickerDialog({ open, onOpenChange, onSelect }: Props) {
                     onClose={() => setDetailPrompt(null)}
                 />
             )}
+
+            <CreatePromptDialog
+                open={creating}
+                onOpenChange={setCreating}
+            />
         </>
     )
 }

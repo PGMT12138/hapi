@@ -385,6 +385,7 @@ export default {
   'prompts.emptyList': 'No prompts yet. Add some in Settings → Prompts.',
   'prompts.use': 'Use',
   'prompts.copy': 'Copy',
+  'prompts.searchPlaceholder': 'Search prompts…',
 
   // Model Presets
   'modelPresets.title': 'Model Management',

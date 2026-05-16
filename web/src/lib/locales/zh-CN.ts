@@ -387,6 +387,7 @@ export default {
   'prompts.emptyList': '暂无提示词。前往 设置 → 提示词 添加。',
   'prompts.use': '使用',
   'prompts.copy': '复制',
+  'prompts.searchPlaceholder': '搜索提示词…',
 
   // Model Presets
   'modelPresets.title': '模型管理',

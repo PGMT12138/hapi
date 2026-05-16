@@ -73,7 +73,7 @@ export function deletePrompt(db: Database, namespace: string, id: string): boole
 
 export function getPromptsByNamespace(db: Database, namespace: string): StoredPrompt[] {
     const rows = db.prepare(
-        'SELECT * FROM prompts WHERE namespace = ? ORDER BY name'
+        'SELECT * FROM prompts WHERE namespace = ? ORDER BY created_at DESC'
     ).all(namespace) as DbPromptRow[]
     return rows.map(toStoredPrompt)
 }
