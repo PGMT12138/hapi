@@ -41,9 +41,9 @@ export class PushNotificationChannel implements NotificationChannel {
             const projectPath = (session.metadata as Record<string, unknown>)?.path as string | undefined
 
             const lines: string[] = []
-            if (sessionName) lines.push(sessionName)
-            if (projectPath) lines.push(projectPath)
-            if (agentName) lines.push(agentName)
+            if (sessionName) lines.push(`会话: ${sessionName}`)
+            if (projectPath) lines.push(`项目: ${projectPath}`)
+            if (agentName) lines.push(`Agent: ${agentName}`)
             if (detail) lines.push(this.truncate(detail, MAX_DETAIL_LENGTH))
 
             return {
