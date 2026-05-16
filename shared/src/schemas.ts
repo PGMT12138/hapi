@@ -245,7 +245,10 @@ export const SyncEventSchema = z.discriminatedUnion('type', [
             title: z.string(),
             body: z.string(),
             sessionId: z.string(),
-            url: z.string()
+            url: z.string(),
+            agentName: z.string().optional(),
+            sessionName: z.string().optional(),
+            machineName: z.string().optional()
         })
     }),
     SessionChangedSchema.extend({

@@ -1,14 +1,21 @@
 package run.hapi.app.sse
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
@@ -24,15 +31,18 @@ class SseService : LifecycleService() {
         const val ACTION_START = "run.hapi.app.action.START_SSE"
         const val ACTION_STOP = "run.hapi.app.action.STOP_SSE"
 
+        private const val TAG = "SseService"
         private const val BASE_BACKOFF_MS = 1000L
         private const val MAX_BACKOFF_MS = 30_000L
         private const val JITTER_MS = 500L
+        private const val JWT_REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000L
     }
 
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var client: OkHttpClient
     private var eventSource: EventSource? = null
     private var connectJob: Job? = null
+    private var refreshJob: Job? = null
     private var backoffMs = BASE_BACKOFF_MS
     private var notificationId = 2
 
@@ -59,12 +69,26 @@ class SseService : LifecycleService() {
             notificationHelper.buildForegroundNotification()
         )
 
+        logNotificationPermission()
         connect()
+        startJwtRefresh()
         return START_STICKY
+    }
+
+    private fun logNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            Log.d(TAG, "POST_NOTIFICATIONS permission: $granted")
+        } else {
+            Log.d(TAG, "POST_NOTIFICATIONS permission: not required (API ${Build.VERSION.SDK_INT})")
+        }
     }
 
     override fun onDestroy() {
         connectJob?.cancel()
+        refreshJob?.cancel()
         eventSource?.cancel()
         super.onDestroy()
     }
@@ -73,10 +97,30 @@ class SseService : LifecycleService() {
         connectJob?.cancel()
         connectJob = lifecycleScope.launch {
             val app = application as HapiApp
-            val serverUrl = app.preferences.getServerUrl() ?: return@launch
-            val token = app.preferences.getAuthToken() ?: return@launch
+            val serverUrl = app.preferences.getServerUrl()
+            val apiToken = app.preferences.getApiToken()
 
-            val url = "${serverUrl}/api/events?token=${token}&toast=all&visibility=visible"
+            if (serverUrl == null) {
+                Log.e(TAG, "No server URL configured")
+                return@launch
+            }
+            if (apiToken == null) {
+                Log.e(TAG, "No API token configured")
+                return@launch
+            }
+
+            Log.d(TAG, "Connecting to ${serverUrl}/api/events ...")
+
+            val jwt = refreshToken(serverUrl, apiToken)
+            if (jwt == null) {
+                Log.e(TAG, "Failed to authenticate, scheduling reconnect")
+                scheduleReconnect()
+                return@launch
+            }
+
+            Log.d(TAG, "Auth successful, JWT length=${jwt.length}")
+
+            val url = "${serverUrl}/api/events?token=${jwt}&toast=all&visibility=visible"
             val request = Request.Builder().url(url).build()
 
             eventSource?.cancel()
@@ -84,6 +128,7 @@ class SseService : LifecycleService() {
                 .newEventSource(request, object : EventSourceListener() {
 
                     override fun onOpen(eventSource: EventSource, response: Response) {
+                        Log.d(TAG, "SSE connected (HTTP ${response.code})")
                         backoffMs = BASE_BACKOFF_MS
                     }
 
@@ -93,6 +138,7 @@ class SseService : LifecycleService() {
                         type: String?,
                         data: String
                     ) {
+                        Log.d(TAG, "SSE event: type=$type, data_len=${data.length}")
                         handleEvent(data)
                     }
 
@@ -101,13 +147,53 @@ class SseService : LifecycleService() {
                         t: Throwable?,
                         response: Response?
                     ) {
+                        val code = response?.code
+                        val body = try { response?.body?.string()?.take(200) } catch (_: Exception) { null }
+                        Log.w(TAG, "SSE failure: code=$code, error=${t?.message}, body=$body")
+                        if (code == 401) {
+                            Log.d(TAG, "Auth expired, reconnecting with fresh JWT")
+                        }
                         scheduleReconnect()
                     }
 
                     override fun onClosed(eventSource: EventSource) {
+                        Log.d(TAG, "SSE closed, reconnecting")
                         scheduleReconnect()
                     }
                 })
+        }
+    }
+
+    private suspend fun refreshToken(serverUrl: String, apiToken: String): String? {
+        return try {
+            val body = JSONObject().apply { put("accessToken", apiToken) }
+            val request = Request.Builder()
+                .url("${serverUrl.trimEnd('/')}/api/auth")
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                Log.e(TAG, "Auth failed: ${response.code}")
+                return null
+            }
+
+            val responseBody = response.body?.string() ?: return null
+            JSONObject(responseBody).getString("token")
+        } catch (e: Exception) {
+            Log.e(TAG, "Auth error: ${e.message}")
+            null
+        }
+    }
+
+    private fun startJwtRefresh() {
+        refreshJob?.cancel()
+        refreshJob = lifecycleScope.launch {
+            while (isActive) {
+                delay(JWT_REFRESH_INTERVAL_MS)
+                Log.d(TAG, "Proactive JWT refresh")
+                connect()
+            }
         }
     }
 
@@ -150,6 +236,7 @@ class SseService : LifecycleService() {
                     }
                 }
 
+                Log.d(TAG, "Showing notification: title=$title, sessionId=$sessionId")
                 notificationHelper.showNotification(
                     notificationId++,
                     title,
@@ -157,8 +244,8 @@ class SseService : LifecycleService() {
                     sessionId
                 )
             }
-        } catch (_: Exception) {
-            // Ignore malformed events
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to handle event: ${e.message}, data=${data.take(100)}")
         }
     }
 

@@ -18,21 +18,30 @@ export class PushNotificationChannel implements NotificationChannel {
     ) {}
 
     private getMachineName(session: Session): string {
-        const machineId = (session.metadata as Record<string, unknown>)?.machineId as string | undefined ?? null
-        const machine = this.resolveMachine(machineId)
-        return machine?.metadata?.displayName || machine?.metadata?.host || 'Unknown'
+        try {
+            const machineId = (session.metadata as Record<string, unknown>)?.machineId as string | undefined ?? null
+            const machine = this.resolveMachine(machineId)
+            return machine?.metadata?.displayName || machine?.metadata?.host || 'Unknown'
+        } catch {
+            return 'Unknown'
+        }
     }
 
     private buildToastData(session: Session, title: string, body: string) {
         const url = this.buildSessionPath(session.id)
-        return {
-            title,
-            body,
-            sessionId: session.id,
-            url,
-            agentName: getAgentName(session),
-            sessionName: getSessionName(session),
-            machineName: this.getMachineName(session)
+        try {
+            return {
+                title,
+                body,
+                sessionId: session.id,
+                url,
+                agentName: getAgentName(session),
+                sessionName: getSessionName(session),
+                machineName: this.getMachineName(session)
+            }
+        } catch (error) {
+            console.error('[PushNotificationChannel] buildToastData failed, using fallback:', error)
+            return { title, body, sessionId: session.id, url }
         }
     }
 
