@@ -16,7 +16,6 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_SSE = "hapi_sse_v2"
         const val CHANNEL_NOTIFICATIONS = "hapi_notif_v2"
         const val SSE_NOTIFICATION_ID = 1
-        const val GROUP_KEY = "run.hapi.app.NOTIFICATIONS"
     }
 
     private val notificationManager =
@@ -90,7 +89,6 @@ class NotificationHelper(private val context: Context) {
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
-            .setGroup(GROUP_KEY)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
