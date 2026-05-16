@@ -31,10 +31,11 @@ export class PushNotificationChannel implements NotificationChannel {
             const agentName = getAgentName(session)
             const sessionName = getSessionName(session)
             const machineName = this.getMachineName(session)
+            const projectPath = (session.metadata as Record<string, unknown>)?.path as string | undefined
 
             const lines: string[] = []
             if (sessionName) lines.push(sessionName)
-            if (url) lines.push(url)
+            if (projectPath) lines.push(projectPath)
             if (agentName) lines.push(agentName)
 
             return {
