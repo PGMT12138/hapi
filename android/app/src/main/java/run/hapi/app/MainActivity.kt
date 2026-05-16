@@ -182,5 +182,18 @@ class MainActivity : AppCompatActivity() {
             val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
             return if (nightMode == Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
         }
+
+        @JavascriptInterface
+        fun isNativeApp(): String = "true"
+
+        @JavascriptInterface
+        fun openSettings() {
+            runOnUiThread {
+                val intent = Intent(this@MainActivity, SetupActivity::class.java)
+                intent.putExtra("reconfigure", true)
+                startActivity(intent)
+                finish()
+            }
+        }
     }
 }

@@ -32,15 +32,23 @@ class SetupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         preferences = (application as HapiApp).preferences
+        val reconfigure = intent?.getBooleanExtra("reconfigure", false) == true
 
         lifecycleScope.launch {
-            if (preferences.isConfigured.first()) {
+            if (!reconfigure && preferences.isConfigured.first()) {
                 startMain()
                 return@launch
             }
 
             setContentView(R.layout.activity_setup)
             bindViews()
+
+            if (reconfigure) {
+                val url = preferences.getServerUrl()
+                val token = preferences.getApiToken()
+                if (url != null) serverUrlInput.setText(url)
+                if (token != null) apiTokenInput.setText(token)
+            }
         }
     }
 
@@ -106,10 +114,15 @@ class SetupActivity : AppCompatActivity() {
     }
 
     private fun startSseService() {
-        val intent = Intent(this, SseService::class.java).apply {
+        val stopIntent = Intent(this, SseService::class.java).apply {
+            action = SseService.ACTION_STOP
+        }
+        stopService(stopIntent)
+
+        val startIntent = Intent(this, SseService::class.java).apply {
             action = SseService.ACTION_START
         }
-        startForegroundService(intent)
+        startForegroundService(startIntent)
     }
 
     private fun startMain() {

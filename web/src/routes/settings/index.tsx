@@ -17,6 +17,7 @@ import {
     type ChatSurfaceColorPreset,
 } from '@/hooks/useChatSurfaceColors'
 import { useAppearance, getAppearanceOptions, type AppearancePreference, useTheme } from '@/hooks/useTheme'
+import { usePlatform } from '@/hooks/usePlatform'
 import { PROTOCOL_VERSION } from '@hapi/protocol'
 
 const locales: { value: Locale; nativeLabel: string }[] = [
@@ -170,6 +171,7 @@ export default function SettingsPage() {
     } = useChatSurfaceColors()
     const { appearance, setAppearance } = useAppearance()
     const { colorScheme } = useTheme()
+    const { isNativeApp } = usePlatform()
 
     // Voice language state - read from localStorage
     const [voiceLanguage, setVoiceLanguage] = useState<string | null>(() => {
@@ -720,6 +722,27 @@ export default function SettingsPage() {
                             </svg>
                         </button>
                     </div>
+
+                    {/* Server config section (native app only) */}
+                    {isNativeApp && (
+                        <div className="border-b border-[var(--app-divider)]">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const bridge = (globalThis as Record<string, unknown>).HapiBridge as { openSettings?: () => void } | undefined
+                                    bridge?.openSettings?.()
+                                }}
+                                className="flex w-full items-center justify-between px-3 py-3 text-left transition-colors hover:bg-[var(--app-subtle-bg)]"
+                            >
+                                <span className="text-[var(--app-fg)]">{t('settings.serverConfig')}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                    className="text-[var(--app-hint)]">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
 
                     {/* About section */}
                     <div className="border-b border-[var(--app-divider)]">

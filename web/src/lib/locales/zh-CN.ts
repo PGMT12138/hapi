@@ -367,6 +367,7 @@ export default {
   'settings.about.website': '官方网站',
   'settings.about.appVersion': '应用版本',
   'settings.about.protocolVersion': '协议版本',
+  'settings.serverConfig': '服务器配置',
 
   // Prompts
   'prompts.title': '提示词',

@@ -365,6 +365,7 @@ export default {
   'settings.about.website': 'Website',
   'settings.about.appVersion': 'App Version',
   'settings.about.protocolVersion': 'Protocol Version',
+  'settings.serverConfig': 'Server Configuration',
 
   // Prompts
   'prompts.title': 'Prompts',
