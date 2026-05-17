@@ -120,6 +120,7 @@ Common types, Zod schemas, Socket.IO event types, and utilities shared across al
 - Test files (`*.test.ts`, `*.test.tsx`) live next to source.
 - No backward compatibility concerns — breaking old formats is acceptable.
 - Prefer pragmatism over overengineering. Write necessary tests only.
+- 提交信息（commit message）永远用中文。
 
 ## Common Tasks Reference
 

@@ -1,5 +1,4 @@
-import { useState, useEffect, type FC, type PropsWithChildren } from 'react'
-import { useMessage } from '@assistant-ui/react'
+import { useState, type FC, type PropsWithChildren } from 'react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
 import { cn } from '@/lib/utils'
 import { defaultComponents, MARKDOWN_PLUGINS, MARKDOWN_REHYPE_PLUGINS } from '@/components/assistant-ui/markdown-text'
@@ -54,19 +53,6 @@ export const Reasoning: FC = () => {
 export const ReasoningGroup: FC<PropsWithChildren> = ({ children }) => {
     const [isOpen, setIsOpen] = useState(false)
 
-    // Check if reasoning is still streaming
-    const message = useMessage()
-    const isStreaming = message.status?.type === 'running'
-        && message.content.length > 0
-        && message.content[message.content.length - 1]?.type === 'reasoning'
-
-    // Auto-expand while streaming
-    useEffect(() => {
-        if (isStreaming) {
-            setIsOpen(true)
-        }
-    }, [isStreaming])
-
     return (
         <div className="aui-reasoning-group my-2">
             <button
@@ -80,11 +66,6 @@ export const ReasoningGroup: FC<PropsWithChildren> = ({ children }) => {
             >
                 <ChevronIcon open={isOpen} />
                 <span>Reasoning</span>
-                {isStreaming && (
-                    <span className="flex items-center gap-1 ml-1 text-[var(--app-hint)]">
-                        <ShimmerDot />
-                    </span>
-                )}
             </button>
 
             <div

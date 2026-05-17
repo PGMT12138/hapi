@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { MessagePrimitive, useAssistantState } from '@assistant-ui/react'
 import { LazyRainbowText } from '@/components/LazyRainbowText'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
@@ -9,6 +10,48 @@ import { CopyIcon, CheckIcon } from '@/components/icons'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { getConversationMessageAnchorId } from '@/chat/outline'
 import { formatTimestamp } from '@/chat/presentation'
+
+const MAX_COLLAPSED_LENGTH = 100
+
+function CollapsibleText({ text }: { text: string }) {
+    const [expanded, setExpanded] = useState(false)
+
+    if (text.length <= MAX_COLLAPSED_LENGTH) {
+        return <LazyRainbowText text={text} />
+    }
+
+    if (expanded) {
+        return (
+            <>
+                <LazyRainbowText text={text} />
+                <div className="text-right">
+                    <button
+                        type="button"
+                        onClick={() => setExpanded(false)}
+                        className="text-[11px] text-[var(--app-hint)] hover:text-[var(--app-fg)] cursor-pointer"
+                    >
+                        收起
+                    </button>
+                </div>
+            </>
+        )
+    }
+
+    return (
+        <>
+            <LazyRainbowText text={text.slice(0, MAX_COLLAPSED_LENGTH) + '...'} />
+            <div className="text-right">
+                <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="text-[11px] text-[var(--app-hint)] hover:text-[var(--app-fg)] cursor-pointer"
+                >
+                    展开
+                </button>
+            </div>
+        </>
+    )
+}
 
 export function HappyUserMessage() {
     const ctx = useHappyChatContext()
@@ -72,7 +115,7 @@ export function HappyUserMessage() {
             <MessagePrimitive.Root className={`${userBubbleClass} group/msg`}>
                 {hasText && (
                     <div style={{ maxWidth: 'none' }}>
-                        <LazyRainbowText text={text} />
+                        <CollapsibleText text={text} />
                     </div>
                 )}
                 {hasAttachments && <MessageAttachments attachments={attachments} />}
