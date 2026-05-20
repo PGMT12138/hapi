@@ -107,7 +107,7 @@ function SectionTable(props: { section: ContextSection; translationKey: string; 
     }
 
     return (
-        <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle-bg)]/30">
+        <div className="overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-subtle-bg)]/30">
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
