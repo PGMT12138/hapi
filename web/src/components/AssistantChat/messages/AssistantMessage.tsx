@@ -69,12 +69,22 @@ export function HappyAssistantMessage() {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return formatModelName(custom?.model)
     })
-    // Extract block ID from message ID (format: "assistant:<blockId>")
+    // Extract block ID from message ID.
+    // assistant-ui merges consecutive assistant messages; the surviving ID may be:
+    //   "assistant:<blockId>"  — text/reasoning block
+    //   "tool:<toolCallId>"    — single tool-call block
+    //   "tool:tool-group:<id>" — grouped tool-call blocks (firstToolId or lastToolId)
     const blockId = useAssistantState(({ message }) => {
         if (message.role !== 'assistant') return undefined
         const id = message.id
-        const prefix = 'assistant:'
-        return id.startsWith(prefix) ? id.slice(prefix.length) : undefined
+        if (id.startsWith('assistant:')) return id.slice('assistant:'.length)
+        if (id.startsWith('tool:')) {
+            const toolId = id.slice('tool:'.length)
+            // Strip tool-group: prefix so we look up by the underlying toolCallId
+            if (toolId.startsWith('tool-group:')) return toolId.slice('tool-group:'.length)
+            return toolId
+        }
+        return undefined
     })
     const tokenDelta = useTokenDelta(blockId)
     const isPending = useTokenDeltaPending(blockId)
