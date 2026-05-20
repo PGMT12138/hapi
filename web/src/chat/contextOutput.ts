@@ -166,45 +166,24 @@ export function computeModelNamesFromHistory(
 ): Map<string, string> {
     const modelNames = new Map<string, string>()
 
-    // Collect all context output blocks with parsed model names
-    const contextOutputs: { index: number; model: string }[] = []
-    for (let i = 0; i < blocks.length; i++) {
+    for (let i = 1; i < blocks.length; i++) {
         const block = blocks[i]
         if (block.kind !== 'agent-text') continue
         if (!CONTEXT_USAGE_HEADER.test(block.text)) continue
         const parsed = parseContextText(block.text)
         if (!parsed) continue
-        contextOutputs.push({ index: i, model: parsed.model })
-    }
 
-    if (contextOutputs.length === 0) return modelNames
-
-    // Assign the model name from each context output to all assistant blocks
-    // between the previous context output and this one
-    for (let ci = 0; ci < contextOutputs.length; ci++) {
-        const curr = contextOutputs[ci]
-        const startIdx = ci > 0 ? contextOutputs[ci - 1].index + 1 : 0
-
-        for (let j = startIdx; j < curr.index; j++) {
-            const block = blocks[j]
+        // Find the nearest assistant block before this context output
+        for (let j = i - 1; j >= 0; j--) {
+            const prev = blocks[j]
             if (
-                (block.kind === 'agent-text' || block.kind === 'agent-reasoning' || block.kind === 'tool-call')
-                && !(block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text))
+                prev.kind === 'agent-text'
+                || prev.kind === 'agent-reasoning'
+                || prev.kind === 'tool-call'
             ) {
-                modelNames.set(block.id, curr.model)
+                modelNames.set(prev.id, parsed.model)
+                break
             }
-        }
-    }
-
-    // Also assign the latest model to blocks after the last context output
-    const last = contextOutputs[contextOutputs.length - 1]
-    for (let j = last.index + 1; j < blocks.length; j++) {
-        const block = blocks[j]
-        if (
-            (block.kind === 'agent-text' || block.kind === 'agent-reasoning' || block.kind === 'tool-call')
-            && !(block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text))
-        ) {
-            modelNames.set(block.id, last.model)
         }
     }
 
