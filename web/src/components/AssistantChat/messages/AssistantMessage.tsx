@@ -10,9 +10,8 @@ import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
 import { getAssistantCopyText } from '@/components/AssistantChat/messages/assistantCopyText'
 import { getConversationMessageAnchorId } from '@/chat/outline'
 import { formatTimestamp, formatDuration } from '@/chat/presentation'
-import { formatModelName } from '@hapi/protocol'
 import { formatTokens } from '@/lib/formatTokens'
-import { useTokenDelta, useTokenDeltaPending } from '@/components/SessionChat'
+import { useTokenDelta, useTokenDeltaPending, useModelNameFromContext } from '@/components/SessionChat'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -65,10 +64,6 @@ export function HappyAssistantMessage() {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.durationMs
     })
-    const modelName = useAssistantState(({ message }) => {
-        const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
-        return formatModelName(custom?.model)
-    })
     // Extract block ID from message ID.
     // assistant-ui merges consecutive assistant messages; the surviving ID may be:
     //   "assistant:<blockId>"  — text/reasoning block
@@ -86,6 +81,7 @@ export function HappyAssistantMessage() {
         }
         return undefined
     })
+    const modelName = useModelNameFromContext(blockId)
     const tokenDelta = useTokenDelta(blockId)
     const isPending = useTokenDeltaPending(blockId)
 
@@ -142,11 +138,11 @@ export function HappyAssistantMessage() {
             )}
             {createdAt && (
                 <div className="mt-0.5 text-[11px] text-[var(--app-fg)] opacity-50">
-                    {modelName && (
-                        <span className="mr-1.5 font-medium">{modelName}</span>
-                    )}
                     {formatTimestamp(createdAt instanceof Date ? createdAt.getTime() : Number(createdAt))}
                     {durationMs != null && ` (${formatDuration(durationMs)})`}
+                    {modelName && (
+                        <span className="ml-1.5 font-medium">{modelName}</span>
+                    )}
                     {tokenDelta != null && (
                         <span className="ml-1.5 px-1.5 py-px rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)] font-medium text-[11px]">+{formatTokens(tokenDelta)}</span>
                     )}
