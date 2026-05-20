@@ -17,7 +17,7 @@ import { reduceChatBlocks } from '@/chat/reducer'
 import { reconcileChatBlocks } from '@/chat/reconcile'
 import { buildConversationOutline } from '@/chat/outline'
 import { buildVisibleChatBlocks, isToolGroupBlock, type ToolGroupBlock } from '@/chat/toolGroups'
-import { extractContextCommandOutput, computeContextGrowth, computeModelNamesFromHistory, computeTokenDeltasFromHistory, computePendingTokenBlocks } from '@/chat/contextOutput'
+import { extractContextCommandOutput, computeContextGrowth, computeModelNamesFromHistory, computeTokenDeltasFromHistory, computePendingTokenBlocks, computeDurationFromHistory } from '@/chat/contextOutput'
 import { isQueuedForInvocation } from '@/lib/messages'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
@@ -51,6 +51,7 @@ function getOutlineTitle(session: Session): string {
 const TokenDeltaContext = createContext<Map<string, number>>(new Map())
 const PendingTokenDeltaContext = createContext<Set<string>>(new Set())
 const ModelNameContext = createContext<Map<string, string>>(new Map())
+const DurationContext = createContext<Map<string, number>>(new Map())
 
 export function useTokenDelta(blockId: string | undefined): number | undefined {
     const deltas = useContext(TokenDeltaContext)
@@ -68,6 +69,12 @@ export function useModelNameFromContext(blockId: string | undefined): string | u
     const models = useContext(ModelNameContext)
     if (!blockId) return undefined
     return models.get(blockId)
+}
+
+export function useDurationFromContext(blockId: string | undefined): number | undefined {
+    const durations = useContext(DurationContext)
+    if (!blockId) return undefined
+    return durations.get(blockId)
 }
 
 export function SessionChat(props: {
@@ -355,6 +362,12 @@ export function SessionChat(props: {
         [reconciled.blocks]
     )
 
+    // Compute durations from block history
+    const durationMap = useMemo(
+        () => computeDurationFromHistory(reconciled.blocks),
+        [reconciled.blocks]
+    )
+
     // Compute context growth (delta between last two context outputs)
     const contextGrowth = useMemo(
         () => computeContextGrowth(reconciled.blocks),
@@ -533,6 +546,7 @@ export function SessionChat(props: {
             <TokenDeltaContext.Provider value={tokenDeltas}>
             <PendingTokenDeltaContext.Provider value={pendingTokenBlocks}>
             <ModelNameContext.Provider value={modelNames}>
+            <DurationContext.Provider value={durationMap}>
             <AssistantRuntimeProvider runtime={runtime}>
                 <div className="relative flex min-h-0 flex-1 flex-col">
                     <HappyThread
@@ -624,6 +638,7 @@ export function SessionChat(props: {
                     />
                 </div>
             </AssistantRuntimeProvider>
+            </DurationContext.Provider>
             </ModelNameContext.Provider>
             </PendingTokenDeltaContext.Provider>
             </TokenDeltaContext.Provider>

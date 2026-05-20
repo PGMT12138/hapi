@@ -11,7 +11,7 @@ import { getAssistantCopyText } from '@/components/AssistantChat/messages/assist
 import { getConversationMessageAnchorId } from '@/chat/outline'
 import { formatTimestamp, formatDuration } from '@/chat/presentation'
 import { formatTokens } from '@/lib/formatTokens'
-import { useTokenDelta, useTokenDeltaPending, useModelNameFromContext } from '@/components/SessionChat'
+import { useTokenDelta, useTokenDeltaPending, useModelNameFromContext, useDurationFromContext } from '@/components/SessionChat'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -60,10 +60,6 @@ export function HappyAssistantMessage() {
         return getAssistantCopyText(message.content)
     })
     const createdAt = useAssistantState(({ message }) => message.createdAt)
-    const durationMs = useAssistantState(({ message }) => {
-        const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
-        return custom?.durationMs
-    })
     // Extract block ID from message ID.
     // assistant-ui merges consecutive assistant messages; the surviving ID may be:
     //   "assistant:<blockId>"  — text/reasoning block
@@ -81,6 +77,7 @@ export function HappyAssistantMessage() {
         }
         return undefined
     })
+    const durationMs = useDurationFromContext(blockId)
     const modelName = useModelNameFromContext(blockId)
     const tokenDelta = useTokenDelta(blockId)
     const isPending = useTokenDeltaPending(blockId)

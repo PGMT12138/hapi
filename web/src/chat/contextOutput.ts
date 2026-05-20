@@ -252,6 +252,28 @@ export function computeTokenDeltasFromHistory(
     return deltas
 }
 
+export function computeDurationFromHistory(
+    blocks: readonly ChatBlock[]
+): Map<string, number> {
+    const durations = new Map<string, number>()
+    let lastUserCreatedAt: number | undefined
+
+    for (const block of blocks) {
+        if (block.kind === 'user-text') {
+            lastUserCreatedAt = block.createdAt
+        } else if (
+            (block.kind === 'agent-text' || block.kind === 'agent-reasoning' || block.kind === 'tool-call')
+            && !(block.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(block.text))
+        ) {
+            if (lastUserCreatedAt != null) {
+                durations.set(block.id, block.createdAt - lastUserCreatedAt)
+            }
+        }
+    }
+
+    return durations
+}
+
 export function computePendingTokenBlocks(
     blocks: readonly ChatBlock[]
 ): Set<string> {

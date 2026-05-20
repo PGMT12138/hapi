@@ -3,7 +3,7 @@ import type { AppendMessage, AttachmentAdapter, ThreadMessageLike } from '@assis
 import { useExternalMessageConverter, useExternalStoreRuntime } from '@assistant-ui/react'
 import { safeStringify } from '@hapi/protocol'
 import { renderEventLabel } from '@/chat/presentation'
-import type { ChatBlock, CliOutputBlock } from '@/chat/types'
+import type { CliOutputBlock } from '@/chat/types'
 import type { AgentEvent, ToolCallBlock } from '@/chat/types'
 import type { ToolGroupBlock, VisibleChatBlock } from '@/chat/toolGroups'
 import type { AttachmentMetadata, MessageStatus as HappyMessageStatus, Session } from '@/types/api'
@@ -18,26 +18,10 @@ export type HappyChatMessageMetadata = {
     source?: CliOutputBlock['source']
     attachments?: AttachmentMetadata[]
     invokedAt?: number | null
-    durationMs?: number
     model?: string
 }
 
-function buildDurationMap(blocks: readonly ChatBlock[]): Map<string, number> {
-    const map = new Map<string, number>()
-    let lastUserCreatedAt: number | undefined
-    for (const block of blocks) {
-        if (block.kind === 'user-text') {
-            lastUserCreatedAt = block.createdAt
-        } else if (block.kind === 'agent-text' || block.kind === 'agent-reasoning') {
-            if (lastUserCreatedAt != null) {
-                map.set(block.id, block.createdAt - lastUserCreatedAt)
-            }
-        }
-    }
-    return map
-}
-
-function toThreadMessageLike(block: VisibleChatBlock, durationMap: Map<string, number>): ThreadMessageLike {
+function toThreadMessageLike(block: VisibleChatBlock): ThreadMessageLike {
     if (block.kind === 'user-text') {
         const messageId = `user:${block.id}`
         return {
@@ -67,7 +51,6 @@ function toThreadMessageLike(block: VisibleChatBlock, durationMap: Map<string, n
             metadata: {
                 custom: {
                     kind: 'assistant',
-                    durationMs: durationMap.get(block.id),
                     model: block.model
                 } satisfies HappyChatMessageMetadata
             }
@@ -84,7 +67,6 @@ function toThreadMessageLike(block: VisibleChatBlock, durationMap: Map<string, n
             metadata: {
                 custom: {
                     kind: 'assistant',
-                    durationMs: durationMap.get(block.id),
                     model: block.model
                 } satisfies HappyChatMessageMetadata
             }
@@ -227,13 +209,10 @@ export function useHappyRuntime(props: {
     attachmentAdapter?: AttachmentAdapter
     allowSendWhenInactive?: boolean
 }) {
-    // Pre-compute duration map so the converter callback can access it
-    const durationMap = useMemo(() => buildDurationMap(props.blocks as readonly ChatBlock[]), [props.blocks])
-
     // Use cached message converter for performance optimization
     // This prevents re-converting all messages on every render
     const convertedMessages = useExternalMessageConverter<VisibleChatBlock>({
-        callback: useCallback((block: VisibleChatBlock) => toThreadMessageLike(block, durationMap), [durationMap]),
+        callback: useCallback((block: VisibleChatBlock) => toThreadMessageLike(block), []),
         messages: props.blocks as VisibleChatBlock[],
         isRunning: props.session.thinking,
     })
