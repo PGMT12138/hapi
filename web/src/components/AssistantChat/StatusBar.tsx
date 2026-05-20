@@ -178,7 +178,7 @@ export function StatusBar(props: {
             }
 
             const text = freeTokens
-                ? `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%) / ${freeTokens} (${freePercent ?? ''})`
+                ? `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%) · ${freeTokens} (${freePercent ?? ''})`
                 : `${parsed.tokensUsed} / ${parsed.tokensTotal} (${percent}%)`
 
             return { text, freeText: null, color, bgColor, isFetching: false }
