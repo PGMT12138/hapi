@@ -166,23 +166,33 @@ export function computeModelNamesFromHistory(
 ): Map<string, string> {
     const modelNames = new Map<string, string>()
 
-    for (let i = 1; i < blocks.length; i++) {
+    for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i]
         if (block.kind !== 'agent-text') continue
         if (!CONTEXT_USAGE_HEADER.test(block.text)) continue
         const parsed = parseContextText(block.text)
         if (!parsed) continue
 
-        // Find the nearest assistant block before this context output
+        // Find the last user message before this context output
+        let lastUserIdx = -1
         for (let j = i - 1; j >= 0; j--) {
-            const prev = blocks[j]
-            if (
-                prev.kind === 'agent-text'
-                || prev.kind === 'agent-reasoning'
-                || prev.kind === 'tool-call'
-            ) {
-                modelNames.set(prev.id, parsed.model)
+            if (blocks[j].kind === 'user-text') {
+                lastUserIdx = j
                 break
+            }
+        }
+        if (lastUserIdx < 0) continue
+
+        // Assign model name to ALL assistant blocks in the range.
+        // assistant-ui merges consecutive assistant messages, keeping the first block's ID.
+        // By assigning to all blocks, the model name is found regardless of which ID survives.
+        for (let j = lastUserIdx + 1; j < i; j++) {
+            const b = blocks[j]
+            if (
+                (b.kind === 'agent-text' || b.kind === 'agent-reasoning' || b.kind === 'tool-call')
+                && !(b.kind === 'agent-text' && CONTEXT_USAGE_HEADER.test(b.text))
+            ) {
+                modelNames.set(b.id, parsed.model)
             }
         }
     }
