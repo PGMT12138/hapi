@@ -35,6 +35,8 @@
     --app-md-table-head-bg: #eceff2;
     --app-link-muted: rgba(17, 24, 39, 0.18);
 
+    --app-session-name: #353b3b;
+
     /* Diff colors (light) - from hapi-app */
     --app-diff-added-bg: #e6ffed;
     --app-diff-added-text: #24292e;
@@ -104,6 +106,8 @@
     --app-md-table-bg: #141518;
     --app-md-table-head-bg: #1c1e22;
     --app-link-muted: rgba(255, 255, 255, 0.2);
+
+    --app-session-name: #f1f5f5cc;
 
     /* Diff colors (dark) */
     --app-diff-added-bg: #071510;
@@ -224,6 +228,11 @@ body {
 @media (min-width: 1024px) {
     .desktop-scrollbar-left {
         direction: rtl;
+        scrollbar-width: none;
+    }
+
+    .desktop-scrollbar-left::-webkit-scrollbar {
+        display: none;
     }
 
     .desktop-scrollbar-left > * {
@@ -234,6 +243,14 @@ body {
     div[style*="--sidebar-w"] {
         width: var(--sidebar-w) !important;
     }
+}
+
+/* Session list project path distinct style */
+.session-path {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    opacity: 0.6;
 }
 
 /* Sidebar resize handle */

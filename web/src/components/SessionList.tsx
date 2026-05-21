@@ -580,7 +580,7 @@ function SessionItem(props: {
                 <div className={`flex items-center justify-between gap-3 ${!s.active ? 'opacity-50' : ''}`}>
                     <div className="flex items-center gap-2 min-w-0">
                         <FlavorIcon flavor={s.metadata?.flavor} className="h-4 w-4 shrink-0" />
-                        <div className={`truncate text-sm font-medium ${s.active ? 'text-[var(--app-fg)]' : 'text-[var(--app-hint)]'}`}>
+                        <div className={`truncate text-sm font-medium text-[var(--app-session-name)]`}>
                             {sessionName}
                         </div>
                         {s.active && s.thinking ? (
@@ -874,18 +874,18 @@ export function SessionList(props: {
                             <button
                                 type="button"
                                 onClick={() => toggleMachine(mg)}
-                                className="flex w-full items-center gap-2 px-1 py-1.5 text-left rounded-lg transition-colors hover:bg-[var(--app-subtle-bg)] select-none"
+                                className="flex w-full items-center gap-2 px-1 py-1.5 text-left transition-colors hover:bg-[var(--app-subtle-bg)] select-none"
                             >
                                 <ChevronIcon className="h-4 w-4 text-[var(--app-hint)] shrink-0" collapsed={machineCollapsed} />
                                 <MachineIcon className="h-4 w-4 text-[var(--app-hint)] shrink-0" />
-                                <span className="text-sm font-semibold truncate flex-1">{mg.label}</span>
+                                <span className="text-[15px] font-bold truncate flex-1 text-[var(--app-fg)]">{mg.label}</span>
                                 <span className="text-[11px] tabular-nums text-[var(--app-hint)] shrink-0">({mg.totalSessions})</span>
                             </button>
 
                             {/* Level 2: Projects */}
                             <div className="collapsible-panel" data-open={!machineCollapsed || undefined}>
                                 <div className="collapsible-inner">
-                                <div className="flex flex-col ml-3.5 pl-1 mt-0.5">
+                                <div className="flex flex-col gap-1 ml-2 pl-2 py-1">
                                     {mg.projectGroups.map((group) => {
                                         const isCollapsed = isGroupCollapsed(group)
                                         const visibleGroupSessions = getVisibleGroupSessions(group)
@@ -894,12 +894,12 @@ export function SessionList(props: {
                                         return (
                                             <div key={group.key}>
                                                 <div
-                                                    className="group/project sticky top-0 z-10 flex items-center gap-2 px-1 py-1.5 text-left rounded-lg transition-colors hover:bg-[var(--app-subtle-bg)] cursor-pointer min-w-0 w-full select-none"
+                                                    className="group/project sticky top-0 z-10 flex items-center gap-2 px-1 py-1 text-left rounded-md transition-colors hover:bg-[var(--app-subtle-bg)] cursor-pointer min-w-0 w-full select-none"
                                                     onClick={() => toggleGroup(group.key, isCollapsed)}
                                                     title={group.directory}
                                                 >
                                                     <ChevronIcon className="h-3.5 w-3.5 text-[var(--app-hint)] shrink-0" collapsed={isCollapsed} />
-                                                    <span className="font-medium text-sm truncate flex-1">
+                                                    <span className="session-path text-[var(--app-fg)] truncate flex-1">
                                                         {group.displayName}
                                                     </span>
                                                     <CopyPathButton path={group.directory} className="opacity-0 group-hover/project:opacity-100 transition-opacity duration-150" />
@@ -911,7 +911,7 @@ export function SessionList(props: {
                                                 {/* Level 3: Sessions */}
                                                 <div className="collapsible-panel" data-open={!isCollapsed || undefined}>
                                                     <div className="collapsible-inner">
-                                                    <div className="flex flex-col gap-0.5 ml-3 pl-1 pr-1 py-1">
+                                                    <div className="flex flex-col gap-0.5 ml-3 pl-1 pr-1 py-0.5">
                                                         {visibleGroupSessions.map((s) => (
                                                             <SessionItem
                                                                 key={s.id}
