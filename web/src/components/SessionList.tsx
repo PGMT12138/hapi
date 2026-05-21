@@ -437,25 +437,27 @@ function SessionListSearch(props: {
 }) {
     const { t } = useTranslation()
     return (
-        <div className="relative px-3 pb-2">
-            <SearchIcon className="pointer-events-none absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--app-hint)]" />
-            <input
-                type="search"
-                value={props.value}
-                onChange={(event) => props.onChange(event.target.value)}
-                placeholder={t('sessions.search.placeholder')}
-                className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] py-1.5 pl-8 pr-8 text-sm text-[var(--app-fg)] outline-none transition-colors placeholder:text-[var(--app-hint)] focus:border-[var(--app-link)]"
-            />
-            {props.value ? (
-                <button
-                    type="button"
-                    onClick={() => props.onChange('')}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
-                    title={t('sessions.search.clear')}
-                >
-                    <XIcon className="h-3.5 w-3.5" />
-                </button>
-            ) : null}
+        <div className="px-3 pb-2">
+            <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--app-hint)]" />
+                <input
+                    type="search"
+                    value={props.value}
+                    onChange={(event) => props.onChange(event.target.value)}
+                    placeholder={t('sessions.search.placeholder')}
+                    className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] py-1.5 pl-8 pr-8 text-sm text-[var(--app-fg)] outline-none transition-colors placeholder:text-[var(--app-hint)] focus:border-[var(--app-link)]"
+                />
+                {props.value ? (
+                    <button
+                        type="button"
+                        onClick={() => props.onChange('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
+                        title={t('sessions.search.clear')}
+                    >
+                        <XIcon className="h-3.5 w-3.5" />
+                    </button>
+                ) : null}
+            </div>
         </div>
     )
 }
