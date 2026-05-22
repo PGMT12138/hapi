@@ -21,6 +21,7 @@ import type {
     PushSubscriptionPayload,
     PushUnsubscribePayload,
     PushVapidPublicKeyResponse,
+    SlashCommandFavoritesResponse,
     SlashCommandsResponse,
     SkillsResponse,
     SpawnResponse,
@@ -566,6 +567,24 @@ export class ApiClient {
 
     async deletePrompt(id: string): Promise<{ ok: boolean }> {
         return await this.request(`/api/prompts/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        })
+    }
+
+    async getSlashCommandFavorites(agentType: string): Promise<SlashCommandFavoritesResponse> {
+        return await this.request<SlashCommandFavoritesResponse>(`/api/slash-command-favorites?agentType=${encodeURIComponent(agentType)}`)
+    }
+
+    async addSlashCommandFavorite(agentType: string, commandName: string): Promise<{ favorite: SlashCommandFavoritesResponse['favorites'][number] }> {
+        return await this.request('/api/slash-command-favorites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentType, commandName }),
+        })
+    }
+
+    async removeSlashCommandFavorite(agentType: string, commandName: string): Promise<{ ok: boolean }> {
+        return await this.request(`/api/slash-command-favorites/${encodeURIComponent(agentType)}/${encodeURIComponent(commandName)}`, {
             method: 'DELETE'
         })
     }

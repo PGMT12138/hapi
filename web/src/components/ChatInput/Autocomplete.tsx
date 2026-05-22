@@ -165,7 +165,7 @@ export const Autocomplete = memo(function Autocomplete(props: AutocompleteProps)
                 return (
                     <div key={group.key}>
                         <div
-                            className="sticky top-0 z-10 flex items-center gap-1.5 px-3 py-2 bg-[var(--app-bg)] text-sm font-bold text-[var(--app-hint)] cursor-pointer select-none hover:bg-[var(--app-secondary-bg)] transition-colors"
+                            className="sticky top-0 z-10 flex items-center gap-1.5 px-3 py-1 bg-[var(--app-bg)] text-sm font-bold text-[var(--app-hint)] cursor-pointer select-none hover:bg-[var(--app-secondary-bg)] transition-colors"
                             onClick={() => toggleGroup(group.key)}
                             onMouseDown={(e) => e.preventDefault()}
                         >
@@ -183,7 +183,7 @@ export const Autocomplete = memo(function Autocomplete(props: AutocompleteProps)
                                             key={suggestion.key}
                                             type="button"
                                             data-suggestion-index={flatIndex}
-                                            className={`flex w-full cursor-pointer flex-col items-start gap-0.5 px-3 py-2 text-left text-sm transition-colors ${
+                                            className={`flex w-full cursor-pointer flex-col items-start gap-0 px-3 py-1 text-left text-sm transition-colors ${
                                                 flatIndex === selectedIndex
                                                     ? 'bg-[var(--app-button)] text-[var(--app-button-text)]'
                                                     : 'text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]'
@@ -193,7 +193,7 @@ export const Autocomplete = memo(function Autocomplete(props: AutocompleteProps)
                                         >
                                             <span className="w-full font-medium">{suggestion.label}</span>
                                             {suggestion.description && (
-                                                <span className={`w-full min-h-[2.25rem] text-xs leading-snug line-clamp-2 ${
+                                                <span className={`w-full text-xs leading-snug line-clamp-1 ${
                                                     flatIndex === selectedIndex
                                                         ? 'opacity-80'
                                                         : 'text-[var(--app-hint)]'

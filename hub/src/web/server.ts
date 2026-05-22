@@ -21,6 +21,7 @@ import { createPushRoutes } from './routes/push'
 import { createVoiceRoutes } from './routes/voice'
 import { createModelConfigPresetRoutes } from './routes/modelConfigPresets'
 import { createPromptRoutes } from './routes/prompts'
+import { createSlashCommandFavoriteRoutes } from './routes/slashCommandFavorites'
 import type { SSEManager } from '../sse/sseManager'
 import type { VisibilityTracker } from '../visibility/visibilityTracker'
 import type { Server as BunServer } from 'bun'
@@ -101,6 +102,7 @@ function createWebApp(options: {
     app.route('/api', createVoiceRoutes())
     app.route('/api', createModelConfigPresetRoutes(options.store))
     app.route('/api', createPromptRoutes(options.store))
+    app.route('/api', createSlashCommandFavoriteRoutes(options.store))
 
     // Skip static serving in relay mode, show helpful message on root
     if (options.relayMode) {

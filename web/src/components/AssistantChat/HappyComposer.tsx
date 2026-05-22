@@ -28,6 +28,7 @@ import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { StatusBar } from '@/components/AssistantChat/StatusBar'
 import { ComposerButtons } from '@/components/AssistantChat/ComposerButtons'
 import { PromptPickerDialog } from '@/components/PromptPickerDialog'
+import { SlashCommandBrowserDialog } from '@/components/SlashCommandBrowserDialog'
 import { AttachmentItem } from '@/components/AssistantChat/AttachmentItem'
 import { useTranslation } from '@/lib/use-translation'
 import { getModelOptionsForFlavor, getNextModelForFlavor } from './modelOptions'
@@ -35,6 +36,9 @@ import { getClaudeComposerEffortOptions } from './claudeEffortOptions'
 import type { ParsedContextData } from '@/chat/contextOutput'
 import { getCodexComposerReasoningEffortOptions } from './codexReasoningEffortOptions'
 import { useComposerEnterBehavior } from '@/hooks/useComposerEnterBehavior'
+import { useSlashCommandFavorites } from '@/hooks/queries/useSlashCommandFavorites'
+import { useSlashCommandFavoriteActions } from '@/hooks/mutations/useSlashCommandFavoriteActions'
+import { useAppContext } from '@/lib/app-context'
 
 export interface TextInputState {
     text: string
@@ -162,11 +166,18 @@ export function HappyComposer(props: {
     const [showSlashMenu, setShowSlashMenu] = useState(false)
     const [slashMenuCommands, setSlashMenuCommands] = useState<Suggestion[]>([])
     const [slashMenuSelectedIndex, setSlashMenuSelectedIndex] = useState(0)
+    const [slashBrowserOpen, setSlashBrowserOpen] = useState(false)
+    const [allCommandsCache, setAllCommandsCache] = useState<Suggestion[]>([])
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const prevControlledByUser = useRef(controlledByUser)
 
     useComposerDraft(sessionId, composerText, (text) => api.composer().setText(text))
+
+    const { api: appApi } = useAppContext()
+    const agentType = agentFlavor ?? 'claude'
+    const { favoriteNames } = useSlashCommandFavorites(appApi, agentType)
+    const favoriteActions = useSlashCommandFavoriteActions(appApi, agentType)
 
     useEffect(() => {
         setInputState((prev) => {
@@ -216,11 +227,18 @@ export function HappyComposer(props: {
             return
         }
         const allCommands = await autocompleteSuggestions('/')
-        setSlashMenuCommands(allCommands)
+        setAllCommandsCache(allCommands)
+        const filtered = favoriteNames.size > 0
+            ? allCommands.filter((cmd) => {
+                const name = cmd.text.startsWith('/') ? cmd.text.slice(1) : cmd.text
+                return favoriteNames.has(name)
+            })
+            : allCommands
+        setSlashMenuCommands(filtered)
         setSlashMenuSelectedIndex(0)
         setShowSlashMenu(true)
         setShowSettings(false)
-    }, [showSlashMenu, autocompleteSuggestions])
+    }, [showSlashMenu, autocompleteSuggestions, favoriteNames])
 
     const handleSlashMenuSelect = useCallback((index: number) => {
         const cmd = slashMenuCommands[index]
@@ -792,6 +810,22 @@ export function HappyComposer(props: {
                             onSelect={handleSlashMenuSelect}
                             query="/"
                         />
+                        <div className="border-t border-[var(--app-divider)]">
+                            <button
+                                onClick={() => {
+                                    setShowSlashMenu(false)
+                                    setSlashBrowserOpen(true)
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--app-hint)] hover:bg-[var(--app-hover)] active:scale-[0.98]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                                浏览全部命令
+                            </button>
+                        </div>
                     </FloatingOverlay>
                 </div>
             )
@@ -934,6 +968,27 @@ export function HappyComposer(props: {
                 const current = composerText ?? ''
                 const separator = current.trim() ? '\n' : ''
                 api.composer().setText(current.trimEnd() + separator + content)
+            }}
+        />
+        <SlashCommandBrowserDialog
+            open={slashBrowserOpen}
+            onOpenChange={setSlashBrowserOpen}
+            allCommands={allCommandsCache}
+            favoriteNames={favoriteNames}
+            onToggleFavorite={async (commandName, favorited) => {
+                if (favorited) {
+                    await favoriteActions.removeFavorite(commandName)
+                } else {
+                    await favoriteActions.addFavorite(commandName)
+                }
+            }}
+            onSelect={(commandText) => {
+                const newText = composerText.trimEnd() + (composerText.trim() ? ' ' : '') + commandText + ' '
+                api.composer().setText(newText)
+                setInputState({
+                    text: newText,
+                    selection: { start: newText.length, end: newText.length }
+                })
             }}
         />
         </>

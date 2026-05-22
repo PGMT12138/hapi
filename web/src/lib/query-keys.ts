@@ -19,5 +19,6 @@ export const queryKeys = {
     skills: (sessionId: string) => ['skills', sessionId] as const,
     modelConfigPresets: ['model-config-presets'] as const,
     prompts: ['prompts'] as const,
+    slashCommandFavorites: (agentType: string) => ['slash-command-favorites', agentType] as const,
     globalEnv: (machineId: string) => ['global-env', machineId] as const,
 }

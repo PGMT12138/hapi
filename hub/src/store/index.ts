@@ -8,6 +8,7 @@ import { ModelConfigPresetStore } from './modelConfigPresetStore'
 import { PromptStore } from './promptStore'
 import { PushStore } from './pushStore'
 import { SessionStore } from './sessionStore'
+import { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 import { UserStore } from './userStore'
 
 export type {
@@ -17,6 +18,7 @@ export type {
     StoredPushSubscription,
     StoredPrompt,
     StoredSession,
+    StoredSlashCommandFavorite,
     StoredUser,
     VersionedUpdateResult
 } from './types'
@@ -26,9 +28,10 @@ export { ModelConfigPresetStore } from './modelConfigPresetStore'
 export { PromptStore } from './promptStore'
 export { PushStore } from './pushStore'
 export { SessionStore } from './sessionStore'
+export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 10
+const SCHEMA_VERSION: number = 11
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -36,7 +39,8 @@ const REQUIRED_TABLES = [
     'users',
     'push_subscriptions',
     'model_config_presets',
-    'prompts'
+    'prompts',
+    'slash_command_favorites'
 ] as const
 
 export class Store {
@@ -50,6 +54,7 @@ export class Store {
     readonly push: PushStore
     readonly modelConfigPresets: ModelConfigPresetStore
     readonly prompts: PromptStore
+    readonly slashCommandFavorites: SlashCommandFavoriteStore
 
     constructor(dbPath: string) {
         this.dbPath = dbPath
@@ -93,6 +98,7 @@ export class Store {
         this.push = new PushStore(this.db)
         this.modelConfigPresets = new ModelConfigPresetStore(this.db)
         this.prompts = new PromptStore(this.db)
+        this.slashCommandFavorites = new SlashCommandFavoriteStore(this.db)
     }
 
     private initSchema(): void {
@@ -111,6 +117,7 @@ export class Store {
             7: () => this.migrateFromV7ToV8(),
             8: () => this.migrateFromV8ToV9(),
             9: () => this.migrateFromV9ToV10(),
+            10: () => this.migrateFromV10ToV11(),
         })
 
         if (currentVersion === 0) {
@@ -256,6 +263,17 @@ export class Store {
                 UNIQUE(namespace, name)
             );
             CREATE INDEX IF NOT EXISTS idx_prompts_namespace ON prompts(namespace);
+
+            CREATE TABLE IF NOT EXISTS slash_command_favorites (
+                id TEXT PRIMARY KEY,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                agent_type TEXT NOT NULL,
+                command_name TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                UNIQUE(namespace, agent_type, command_name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_slash_command_favorites_namespace
+                ON slash_command_favorites(namespace, agent_type);
         `)
     }
 
@@ -487,6 +505,21 @@ export class Store {
                 UNIQUE(namespace, name)
             );
             CREATE INDEX IF NOT EXISTS idx_prompts_namespace ON prompts(namespace);
+        `)
+    }
+
+    private migrateFromV10ToV11(): void {
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS slash_command_favorites (
+                id TEXT PRIMARY KEY,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                agent_type TEXT NOT NULL,
+                command_name TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                UNIQUE(namespace, agent_type, command_name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_slash_command_favorites_namespace
+                ON slash_command_favorites(namespace, agent_type);
         `)
     }
 

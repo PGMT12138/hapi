@@ -277,3 +277,14 @@ export type PromptsResponse = {
 export type PromptResponse = {
     prompt: Prompt
 }
+
+export type SlashCommandFavorite = {
+    id: string
+    agentType: string
+    commandName: string
+    createdAt: number
+}
+
+export type SlashCommandFavoritesResponse = {
+    favorites: SlashCommandFavorite[]
+}

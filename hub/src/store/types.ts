@@ -80,6 +80,14 @@ export type StoredPrompt = {
     updatedAt: number
 }
 
+export type StoredSlashCommandFavorite = {
+    id: string
+    namespace: string
+    agentType: string
+    commandName: string
+    createdAt: number
+}
+
 export type VersionedUpdateResult<T> =
     | { result: 'success'; version: number; value: T }
     | { result: 'version-mismatch'; version: number; value: T }
