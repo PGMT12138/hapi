@@ -47,3 +47,13 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+
+# Superpowers plugin
+.superpowers/
+
+# Generated docs
+docs/superpowers/
+
+# Runtime output
+nohup.out
+**/nohup.out
