@@ -26,6 +26,7 @@ type DbSessionRow = {
     active: number
     active_at: number | null
     seq: number
+    hidden: number
 }
 
 function toStoredSession(row: DbSessionRow): StoredSession {
@@ -49,7 +50,8 @@ function toStoredSession(row: DbSessionRow): StoredSession {
         teamStateUpdatedAt: row.team_state_updated_at,
         active: row.active === 1,
         activeAt: row.active_at,
-        seq: row.seq
+        seq: row.seq,
+        hidden: row.hidden === 1
     }
 }
 
@@ -381,13 +383,13 @@ export function getSessionByNamespace(db: Database, id: string, namespace: strin
 }
 
 export function getSessions(db: Database): StoredSession[] {
-    const rows = db.prepare('SELECT * FROM sessions ORDER BY updated_at DESC').all() as DbSessionRow[]
+    const rows = db.prepare('SELECT * FROM sessions WHERE hidden = 0 ORDER BY updated_at DESC').all() as DbSessionRow[]
     return rows.map(toStoredSession)
 }
 
 export function getSessionsByNamespace(db: Database, namespace: string): StoredSession[] {
     const rows = db.prepare(
-        'SELECT * FROM sessions WHERE namespace = ? ORDER BY updated_at DESC'
+        'SELECT * FROM sessions WHERE namespace = ? AND hidden = 0 ORDER BY updated_at DESC'
     ).all(namespace) as DbSessionRow[]
     return rows.map(toStoredSession)
 }
@@ -397,4 +399,16 @@ export function deleteSession(db: Database, id: string, namespace: string): bool
         'DELETE FROM sessions WHERE id = ? AND namespace = ?'
     ).run(id, namespace)
     return result.changes > 0
+}
+
+export function setSessionHidden(db: Database, id: string, hidden: boolean, namespace: string): boolean {
+    const result = db.prepare('UPDATE sessions SET hidden = ? WHERE id = ? AND namespace = ?').run(hidden ? 1 : 0, id, namespace)
+    return result.changes > 0
+}
+
+export function getHiddenSessionsByNamespace(db: Database, namespace: string): StoredSession[] {
+    const rows = db.prepare(
+        'SELECT * FROM sessions WHERE namespace = ? AND hidden = 1 ORDER BY updated_at DESC'
+    ).all(namespace) as DbSessionRow[]
+    return rows.map(toStoredSession)
 }

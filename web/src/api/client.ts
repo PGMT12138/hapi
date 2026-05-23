@@ -507,6 +507,24 @@ export class ApiClient {
         })
     }
 
+    async hideSession(sessionId: string): Promise<void> {
+        await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/hide`, {
+            method: 'POST',
+            body: JSON.stringify({})
+        })
+    }
+
+    async unhideSession(sessionId: string): Promise<void> {
+        await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/unhide`, {
+            method: 'POST',
+            body: JSON.stringify({})
+        })
+    }
+
+    async getHiddenSessions(): Promise<SessionsResponse> {
+        return await this.request<SessionsResponse>('/api/sessions/hidden')
+    }
+
     async fetchVoiceToken(options?: { customAgentId?: string; customApiKey?: string }): Promise<{
         allowed: boolean
         token?: string

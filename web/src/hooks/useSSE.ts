@@ -30,7 +30,7 @@ const RECONNECT_MAX_DELAY_MS = 30_000
 const RECONNECT_JITTER_MS = 500
 const INVALIDATION_BATCH_MS = 16
 
-type SessionPatch = Partial<Pick<Session, 'active' | 'thinking' | 'activeAt' | 'updatedAt' | 'model' | 'modelReasoningEffort' | 'effort' | 'permissionMode' | 'collaborationMode'>>
+type SessionPatch = Partial<Pick<Session, 'active' | 'thinking' | 'activeAt' | 'updatedAt' | 'model' | 'modelReasoningEffort' | 'effort' | 'permissionMode' | 'collaborationMode' | 'hidden'>>
 
 function sortSessionSummaries(left: SessionSummary, right: SessionSummary): number {
     if (left.active !== right.active) {
@@ -101,6 +101,10 @@ function getSessionPatch(value: unknown): SessionPatch | null {
         patch.collaborationMode = value.collaborationMode as Session['collaborationMode']
         hasKnownPatch = true
     }
+    if (typeof value.hidden === 'boolean') {
+        patch.hidden = value.hidden
+        hasKnownPatch = true
+    }
 
     return hasKnownPatch ? patch : null
 }
@@ -109,7 +113,7 @@ function hasUnknownSessionPatchKeys(value: unknown): boolean {
     if (!hasRecordShape(value)) {
         return false
     }
-    const knownKeys = new Set(['active', 'thinking', 'activeAt', 'updatedAt', 'model', 'modelReasoningEffort', 'effort', 'permissionMode', 'collaborationMode'])
+    const knownKeys = new Set(['active', 'thinking', 'activeAt', 'updatedAt', 'model', 'modelReasoningEffort', 'effort', 'permissionMode', 'collaborationMode', 'hidden'])
     return Object.keys(value).some((key) => !knownKeys.has(key))
 }
 
@@ -388,6 +392,12 @@ export function useSSE(options: {
                     return previous
                 }
 
+                if (patch.hidden === true) {
+                    patched = true
+                    nextSessions.splice(index, 1)
+                    return { ...previous, sessions: nextSessions }
+                }
+
                 const nextSummary: SessionSummary = {
                     ...current,
                     active: patch.active ?? current.active,
@@ -395,7 +405,8 @@ export function useSSE(options: {
                     activeAt: patch.activeAt ?? current.activeAt,
                     updatedAt: patch.updatedAt ?? current.updatedAt,
                     model: Object.prototype.hasOwnProperty.call(patch, 'model') ? patch.model ?? null : current.model,
-                    effort: Object.prototype.hasOwnProperty.call(patch, 'effort') ? patch.effort ?? null : current.effort
+                    effort: Object.prototype.hasOwnProperty.call(patch, 'effort') ? patch.effort ?? null : current.effort,
+                    hidden: Object.prototype.hasOwnProperty.call(patch, 'hidden') ? patch.hidden : current.hidden
                 }
 
                 patched = true

@@ -85,6 +85,20 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
         return c.json({ sessions })
     })
 
+    app.get('/sessions/hidden', (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const namespace = c.get('namespace')
+        const sessions = engine.getHiddenSessionsByNamespace(namespace)
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .map(toSessionSummary)
+
+        return c.json({ sessions })
+    })
+
     app.get('/sessions/:id', (c) => {
         const engine = requireSyncEngine(c, getSyncEngine)
         if (engine instanceof Response) {
@@ -235,6 +249,52 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
 
         await engine.archiveSession(sessionResult.sessionId)
         return c.json({ ok: true })
+    })
+
+    app.post('/sessions/:id/hide', (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const sessionResult = requireSessionFromParam(c, engine)
+        if (sessionResult instanceof Response) {
+            return sessionResult
+        }
+
+        if (sessionResult.session.active) {
+            return c.json({ error: 'Cannot hide active session. Archive it first.' }, 409)
+        }
+
+        try {
+            engine.hideSession(sessionResult.sessionId)
+            return c.json({ ok: true })
+        } catch (error) {
+            return c.json({
+                error: error instanceof Error ? error.message : 'Failed to hide session'
+            }, 500)
+        }
+    })
+
+    app.post('/sessions/:id/unhide', (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const sessionResult = requireSessionFromParam(c, engine)
+        if (sessionResult instanceof Response) {
+            return sessionResult
+        }
+
+        try {
+            engine.unhideSession(sessionResult.sessionId)
+            return c.json({ ok: true })
+        } catch (error) {
+            return c.json({
+                error: error instanceof Error ? error.message : 'Failed to unhide session'
+            }, 500)
+        }
     })
 
     app.post('/sessions/:id/switch', async (c) => {

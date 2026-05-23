@@ -21,6 +21,7 @@ export type SessionSummary = {
     pendingRequestsCount: number
     model: string | null
     effort: string | null
+    hidden?: boolean
 }
 
 export function toSessionSummary(session: Session): SessionSummary {
@@ -56,6 +57,7 @@ export function toSessionSummary(session: Session): SessionSummary {
         todoProgress,
         pendingRequestsCount,
         model: session.model,
-        effort: session.effort
+        effort: session.effort,
+        hidden: session.hidden
     }
 }

@@ -32,7 +32,8 @@ function createSession(overrides?: Partial<Session>): Session {
         modelReasoningEffort: null,
         effort: null,
         permissionMode: 'default',
-        collaborationMode: 'default'
+        collaborationMode: 'default',
+        hidden: false
     }
 
     return {

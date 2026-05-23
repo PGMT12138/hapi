@@ -4,11 +4,13 @@ import type { StoredSession, VersionedUpdateResult } from './types'
 import {
     deleteSession,
     getOrCreateSession,
+    getHiddenSessionsByNamespace,
     getSession,
     getSessionByNamespace,
     getSessions,
     getSessionsByNamespace,
     setSessionEffort,
+    setSessionHidden,
     setSessionModel,
     setSessionModelReasoningEffort,
     setSessionTeamState,
@@ -103,5 +105,13 @@ export class SessionStore {
 
     deleteSession(id: string, namespace: string): boolean {
         return deleteSession(this.db, id, namespace)
+    }
+
+    setSessionHidden(id: string, hidden: boolean, namespace: string): boolean {
+        return setSessionHidden(this.db, id, hidden, namespace)
+    }
+
+    getHiddenSessionsByNamespace(namespace: string): StoredSession[] {
+        return getHiddenSessionsByNamespace(this.db, namespace)
     }
 }

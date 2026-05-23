@@ -119,7 +119,8 @@ export const CreateSessionResponseSchema = z.object({
         modelReasoningEffort: z.string().nullable().optional().default(null),
         effort: z.string().nullable().optional().default(null),
         permissionMode: PermissionModeSchema.optional(),
-        collaborationMode: CodexCollaborationModeSchema.optional()
+        collaborationMode: CodexCollaborationModeSchema.optional(),
+        hidden: z.boolean().default(false)
     })
 })
 

@@ -22,6 +22,8 @@ export function useSessionActions(
     setEffort: (effort: string | null) => Promise<void>
     renameSession: (name: string) => Promise<void>
     deleteSession: () => Promise<void>
+    hideSession: () => Promise<void>
+    unhideSession: () => Promise<void>
     isPending: boolean
 } {
     const queryClient = useQueryClient()
@@ -152,6 +154,26 @@ export function useSessionActions(
         },
     })
 
+    const hideMutation = useMutation({
+        mutationFn: async () => {
+            if (!api || !sessionId) {
+                throw new Error('Session unavailable')
+            }
+            await api.hideSession(sessionId)
+        },
+        onSuccess: () => void invalidateSession(),
+    })
+
+    const unhideMutation = useMutation({
+        mutationFn: async () => {
+            if (!api || !sessionId) {
+                throw new Error('Session unavailable')
+            }
+            await api.unhideSession(sessionId)
+        },
+        onSuccess: () => void invalidateSession(),
+    })
+
     return {
         abortSession: abortMutation.mutateAsync,
         archiveSession: archiveMutation.mutateAsync,
@@ -163,6 +185,8 @@ export function useSessionActions(
         setEffort: effortMutation.mutateAsync,
         renameSession: renameMutation.mutateAsync,
         deleteSession: deleteMutation.mutateAsync,
+        hideSession: hideMutation.mutateAsync,
+        unhideSession: unhideMutation.mutateAsync,
         isPending: abortMutation.isPending
             || archiveMutation.isPending
             || switchMutation.isPending
@@ -172,6 +196,8 @@ export function useSessionActions(
             || modelReasoningEffortMutation.isPending
             || effortMutation.isPending
             || renameMutation.isPending
-            || deleteMutation.isPending,
+            || deleteMutation.isPending
+            || hideMutation.isPending
+            || unhideMutation.isPending,
     }
 }

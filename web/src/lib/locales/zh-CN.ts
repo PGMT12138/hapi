@@ -107,6 +107,8 @@ export default {
   'session.action.archive': '归档',
   'session.action.delete': '删除',
   'session.action.copy': '复制',
+  'session.action.hide': '隐藏',
+  'session.action.unhide': '取消隐藏',
 
   // Dialogs
   'dialog.rename.title': '重命名会话',
@@ -423,6 +425,23 @@ export default {
 
   // Misc
   'misc.noMachines': '无可用机器',
+
+  // Hidden Sessions
+  'hiddenSessions.title': '已隐藏的会话',
+  'hiddenSessions.nav': '已隐藏会话',
+  'hiddenSessions.empty': '没有已隐藏的会话。',
+  'hiddenSessions.search.placeholder': '搜索已隐藏的会话…',
+  'hiddenSessions.search.noResults': '没有匹配的会话。',
+  'hiddenSessions.search.clear': '清除搜索',
+  'hiddenSessions.machine.all': '所有机器',
+  'hiddenSessions.agent': '代理',
+  'hiddenSessions.project': '项目',
+  'hiddenSessions.machine': '机器',
+  'hiddenSessions.lastActive': '最后活动',
+  'hiddenSessions.unhide': '取消隐藏',
+  'hiddenSessions.delete': '删除',
+  'hiddenSessions.delete.title': '删除会话',
+  'hiddenSessions.delete.description': '确定要删除 "{name}" 吗？此操作无法撤销。',
 
   // Slash commands - Claude
   'slash.claude.help': '列出所有可用命令',

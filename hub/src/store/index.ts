@@ -31,7 +31,7 @@ export { SessionStore } from './sessionStore'
 export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 11
+const SCHEMA_VERSION: number = 12
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -118,6 +118,7 @@ export class Store {
             8: () => this.migrateFromV8ToV9(),
             9: () => this.migrateFromV9ToV10(),
             10: () => this.migrateFromV10ToV11(),
+            11: () => this.migrateFromV11ToV12(),
         })
 
         if (currentVersion === 0) {
@@ -185,7 +186,8 @@ export class Store {
                 team_state_updated_at INTEGER,
                 active INTEGER DEFAULT 0,
                 active_at INTEGER,
-                seq INTEGER DEFAULT 0
+                seq INTEGER DEFAULT 0,
+                hidden INTEGER DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS idx_sessions_tag ON sessions(tag);
             CREATE INDEX IF NOT EXISTS idx_sessions_tag_namespace ON sessions(tag, namespace);
@@ -521,6 +523,14 @@ export class Store {
             CREATE INDEX IF NOT EXISTS idx_slash_command_favorites_namespace
                 ON slash_command_favorites(namespace, agent_type);
         `)
+    }
+
+    private migrateFromV11ToV12(): void {
+        const columns = this.getSessionColumnNames()
+        if (columns.size === 0) return
+        if (!columns.has('hidden')) {
+            this.db.exec('ALTER TABLE sessions ADD COLUMN hidden INTEGER DEFAULT 0')
+        }
     }
 
     private buildSchemaMismatchError(currentVersion: number): Error {

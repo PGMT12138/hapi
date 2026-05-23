@@ -399,6 +399,18 @@ export class SyncEngine {
         await this.sessionCache.deleteSession(sessionId)
     }
 
+    hideSession(sessionId: string): void {
+        this.sessionCache.hideSession(sessionId)
+    }
+
+    unhideSession(sessionId: string): void {
+        this.sessionCache.unhideSession(sessionId)
+    }
+
+    getHiddenSessionsByNamespace(namespace: string): Session[] {
+        return this.sessionCache.getHiddenSessionsByNamespace(namespace)
+    }
+
     async applySessionConfig(
         sessionId: string,
         config: {

@@ -1,6 +1,7 @@
 import { AgentStateSchema, MetadataSchema, TeamStateSchema } from '@hapi/protocol/schemas'
 import type { CodexCollaborationMode, PermissionMode, Session } from '@hapi/protocol/types'
 import type { Store } from '../store'
+import type { StoredSession } from '../store/types'
 import { clampAliveTime } from './aliveTime'
 import { EventPublisher } from './eventPublisher'
 import { extractTodoWriteTodosFromMessageContent, TodosSchema } from './todos'
@@ -24,7 +25,7 @@ export class SessionCache {
     }
 
     getSessions(): Session[] {
-        return Array.from(this.sessions.values())
+        return Array.from(this.sessions.values()).filter(s => !s.hidden)
     }
 
     getSessionsByNamespace(namespace: string): Session[] {
@@ -147,7 +148,8 @@ export class SessionCache {
             modelReasoningEffort: stored.modelReasoningEffort,
             effort: stored.effort,
             permissionMode: existing?.permissionMode,
-            collaborationMode: existing?.collaborationMode
+            collaborationMode: existing?.collaborationMode,
+            hidden: stored.hidden
         }
 
         this.sessions.set(sessionId, session)
@@ -432,6 +434,87 @@ export class SessionCache {
         }
 
         this.publisher.emit({ type: 'session-updated', sessionId, data: session })
+    }
+
+    getHiddenSessionsByNamespace(namespace: string): Session[] {
+        const storedSessions = this.store.sessions.getHiddenSessionsByNamespace(namespace)
+        return storedSessions.map(stored => this.buildSessionFromStored(stored))
+    }
+
+    private buildSessionFromStored(stored: StoredSession): Session {
+        const metadata = (() => {
+            const parsed = MetadataSchema.safeParse(stored.metadata)
+            return parsed.success ? parsed.data : null
+        })()
+        const agentState = (() => {
+            const parsed = AgentStateSchema.safeParse(stored.agentState)
+            return parsed.success ? parsed.data : null
+        })()
+        const todos = (() => {
+            if (stored.todos === null) return undefined
+            const parsed = TodosSchema.safeParse(stored.todos)
+            return parsed.success ? parsed.data : undefined
+        })()
+        const teamState = (() => {
+            if (stored.teamState === null || stored.teamState === undefined) return undefined
+            const parsed = TeamStateSchema.safeParse(stored.teamState)
+            return parsed.success ? parsed.data : undefined
+        })()
+        return {
+            id: stored.id,
+            namespace: stored.namespace,
+            seq: stored.seq,
+            createdAt: stored.createdAt,
+            updatedAt: stored.updatedAt,
+            active: stored.active,
+            activeAt: stored.activeAt ?? stored.createdAt,
+            metadata,
+            metadataVersion: stored.metadataVersion,
+            agentState,
+            agentStateVersion: stored.agentStateVersion,
+            thinking: false,
+            thinkingAt: 0,
+            backgroundTaskCount: 0,
+            todos,
+            teamState,
+            model: stored.model,
+            modelReasoningEffort: stored.modelReasoningEffort,
+            effort: stored.effort,
+            permissionMode: undefined,
+            collaborationMode: undefined,
+            hidden: stored.hidden
+        }
+    }
+
+    hideSession(sessionId: string): void {
+        const session = this.sessions.get(sessionId) ?? this.refreshSession(sessionId)
+        if (!session) {
+            throw new Error('Session not found')
+        }
+        if (session.active) {
+            throw new Error('Cannot hide active session')
+        }
+
+        const updated = this.store.sessions.setSessionHidden(sessionId, true, session.namespace)
+        if (!updated) {
+            throw new Error('Failed to hide session')
+        }
+        session.hidden = true
+        this.publisher.emit({ type: 'session-updated', sessionId, namespace: session.namespace, data: { hidden: true } })
+    }
+
+    unhideSession(sessionId: string): void {
+        const session = this.sessions.get(sessionId) ?? this.refreshSession(sessionId)
+        if (!session) {
+            throw new Error('Session not found')
+        }
+
+        const updated = this.store.sessions.setSessionHidden(sessionId, false, session.namespace)
+        if (!updated) {
+            throw new Error('Failed to unhide session')
+        }
+        session.hidden = false
+        this.publisher.emit({ type: 'session-updated', sessionId, namespace: session.namespace, data: { hidden: false } })
     }
 
     async renameSession(sessionId: string, name: string): Promise<void> {

@@ -21,4 +21,5 @@ export const queryKeys = {
     prompts: ['prompts'] as const,
     slashCommandFavorites: (agentType: string) => ['slash-command-favorites', agentType] as const,
     globalEnv: (machineId: string) => ['global-env', machineId] as const,
+    hiddenSessions: ['hiddenSessions'] as const,
 }

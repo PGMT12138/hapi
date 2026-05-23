@@ -107,6 +107,8 @@ export default {
   'session.action.archive': 'Archive',
   'session.action.delete': 'Delete',
   'session.action.copy': 'Copy',
+  'session.action.hide': 'Hide',
+  'session.action.unhide': 'Unhide',
 
   // Dialogs
   'dialog.rename.title': 'Rename Session',
@@ -421,6 +423,23 @@ export default {
 
   // Misc
   'misc.noMachines': 'No machines available',
+
+  // Hidden Sessions
+  'hiddenSessions.title': 'Hidden Sessions',
+  'hiddenSessions.nav': 'Hidden Sessions',
+  'hiddenSessions.empty': 'No hidden sessions.',
+  'hiddenSessions.search.placeholder': 'Search hidden sessions…',
+  'hiddenSessions.search.noResults': 'No sessions match your search.',
+  'hiddenSessions.search.clear': 'Clear search',
+  'hiddenSessions.machine.all': 'All machines',
+  'hiddenSessions.agent': 'Agent',
+  'hiddenSessions.project': 'Project',
+  'hiddenSessions.machine': 'Machine',
+  'hiddenSessions.lastActive': 'Last active',
+  'hiddenSessions.unhide': 'Unhide',
+  'hiddenSessions.delete': 'Delete',
+  'hiddenSessions.delete.title': 'Delete Session',
+  'hiddenSessions.delete.description': 'Are you sure you want to delete "{name}"? This action cannot be undone.',
 
   // Slash commands - Claude
   'slash.claude.help': 'List all available commands',
