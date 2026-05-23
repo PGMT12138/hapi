@@ -40,6 +40,7 @@ import TerminalPage from '@/routes/sessions/terminal'
 import SettingsPage from '@/routes/settings'
 import ModelPresetsPage from '@/routes/model-presets'
 import PromptsPage from '@/routes/prompts'
+import HiddenSessionsPage from '@/routes/hidden-sessions'
 
 function BackIcon(props: { className?: string }) {
     return (
@@ -146,6 +147,26 @@ function ConfigIcon(props: { className?: string }) {
     )
 }
 
+function ClockIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+        </svg>
+    )
+}
+
 function getMachineTitle(machine: Machine): string {
     if (machine.metadata?.displayName) return machine.metadata.displayName
     if (machine.metadata?.host) return machine.metadata.host
@@ -192,6 +213,14 @@ function SessionsPage() {
                             {t('sessions.count', { n: sessions.length, m: projectCount })}
                         </div>
                         <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => navigate({ to: '/hidden-sessions' })}
+                                className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                                title={t('hiddenSessions.nav')}
+                            >
+                                <ClockIcon className="h-5 w-5" />
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => navigate({ to: '/model-presets' })}
@@ -684,6 +713,12 @@ const promptsRoute = createRoute({
     component: PromptsPage,
 })
 
+const hiddenSessionsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/hidden-sessions',
+    component: HiddenSessionsPage,
+})
+
 export const routeTree = rootRoute.addChildren([
     indexRoute,
     sessionsRoute.addChildren([
@@ -699,6 +734,7 @@ export const routeTree = rootRoute.addChildren([
     settingsRoute,
     modelPresetsRoute,
     promptsRoute,
+    hiddenSessionsRoute,
 ])
 
 type RouterHistory = Parameters<typeof createRouter>[0]['history']
