@@ -4,6 +4,7 @@ import type { ApiClient } from '@/api/client'
 import type { Machine, MachineDirectoryEntry } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
 import { useTranslation } from '@/lib/use-translation'
+import { OptionPicker } from '@/components/ui/OptionPicker'
 
 function FolderIcon(props: { className?: string }) {
     return (
@@ -29,16 +30,6 @@ function ChevronLeftIcon(props: { className?: string }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
             <polyline points="15 18 9 12 15 6" />
-        </svg>
-    )
-}
-
-function MachineIcon(props: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
         </svg>
     )
 }
@@ -269,25 +260,19 @@ export function WorkspaceBrowser(props: {
     const atRoot = !!(currentPath && selectedRoot && normalizePathForComparison(currentPath) === normalizePathForComparison(selectedRoot))
 
     const machineSelector = (
-        <div className="flex items-center gap-2">
-            <MachineIcon className="h-4 w-4 text-[var(--app-hint)] shrink-0" />
-            <select
-                value={machineId ?? ''}
-                onChange={e => setMachineId(e.target.value || null)}
-                disabled={machinesLoading}
-                className="flex-1 bg-transparent text-sm text-[var(--app-fg)] outline-none"
-            >
-                {machines.map(m => (
-                    <option key={m.id} value={m.id}>
-                        {getMachineTitle(m)}
-                        {getMachineRootsSummary(m) ? ` — ${getMachineRootsSummary(m)}` : ''}
-                    </option>
-                ))}
-                {machines.length === 0 && (
-                    <option value="">{machinesLoading ? t('loading') : t('misc.noMachines')}</option>
-                )}
-            </select>
-        </div>
+        <OptionPicker
+            value={machineId ?? ''}
+            onChange={(v) => setMachineId(v || null)}
+            disabled={machinesLoading}
+            loading={machinesLoading}
+            options={machines.map(m => ({
+                value: m.id,
+                label: getMachineTitle(m),
+                description: getMachineRootsSummary(m) || undefined,
+            }))}
+            emptyMessage={machinesLoading ? t('loading') : t('misc.noMachines')}
+            className="!px-0 !py-0"
+        />
     )
 
     // No machines connected
@@ -328,19 +313,15 @@ export function WorkspaceBrowser(props: {
                 {machineSelector}
 
                 {workspaceRoots.length > 1 && (
-                    <div className="mt-2">
-                        <select
-                            value={selectedRoot ?? ''}
-                            onChange={(e) => setSelectedRoot(e.target.value || null)}
-                            className="w-full bg-transparent text-xs text-[var(--app-hint)] outline-none"
-                        >
-                            {workspaceRoots.map((root) => (
-                                <option key={root} value={root}>
-                                    {root}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <OptionPicker
+                        value={selectedRoot ?? ''}
+                        onChange={(v) => setSelectedRoot(v || null)}
+                        options={workspaceRoots.map(root => ({
+                            value: root,
+                            label: root,
+                        }))}
+                        className="!px-0 !py-0 mt-1"
+                    />
                 )}
 
                 {currentPath && (

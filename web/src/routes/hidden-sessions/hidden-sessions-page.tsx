@@ -10,6 +10,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { isTelegramApp } from '@/hooks/useTelegram'
 import { getSessionTitle } from '@/components/SessionList'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { OptionPicker } from '@/components/ui/OptionPicker'
 import type { SessionSummary } from '@/types/api'
 import type { Machine } from '@/types/api'
 import type { ApiClient } from '@/api/client'
@@ -41,16 +42,6 @@ function XIcon(props: { className?: string }) {
             className={props.className}>
             <path d="M18 6 6 18" />
             <path d="m6 6 12 12" />
-        </svg>
-    )
-}
-
-function ChevronDownIcon(props: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            className={props.className}>
-            <polyline points="6 9 12 15 18 9" />
         </svg>
     )
 }
@@ -404,19 +395,19 @@ export default function HiddenSessionsPage() {
                                 </div>
 
                                 {uniqueMachines.length > 1 && (
-                                    <div className="relative">
-                                        <select
-                                            value={machineFilter}
-                                            onChange={(e) => setMachineFilter(e.target.value)}
-                                            className="w-full appearance-none rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] py-1.5 pl-3 pr-8 text-sm text-[var(--app-fg)] outline-none transition-colors focus:border-[var(--app-link)]"
-                                        >
-                                            <option value="all">{t('hiddenSessions.machine.all')}</option>
-                                            {uniqueMachines.map(m => (
-                                                <option key={m.id} value={m.id}>{m.label}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--app-hint)]" />
-                                    </div>
+                                    <OptionPicker
+                                        label={t('hiddenSessions.machine.all')}
+                                        value={machineFilter}
+                                        onChange={setMachineFilter}
+                                        options={[
+                                            { value: 'all' as string, label: t('hiddenSessions.machine.all') },
+                                            ...uniqueMachines.map(m => ({
+                                                value: m.id as string,
+                                                label: m.label,
+                                            })),
+                                        ]}
+                                        className="!px-0 !py-0"
+                                    />
                                 )}
                             </div>
 
