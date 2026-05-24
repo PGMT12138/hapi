@@ -233,6 +233,8 @@ function UnifiedButton(props: {
     controlsDisabled: boolean
     onSend: () => void
     onVoiceToggle: () => void
+    sttStatus?: 'idle' | 'recording' | 'recognizing'
+    onSttToggle?: () => void
 }) {
     const { t } = useTranslation()
 
@@ -241,13 +243,19 @@ function UnifiedButton(props: {
     const isConnected = props.voiceStatus === 'connected'
     const isVoiceActive = isConnecting || isConnected
     const hasText = props.canSend
+    const isSttRecording = props.sttStatus === 'recording'
+    const isSttRecognizing = props.sttStatus === 'recognizing'
 
     // Determine button behavior
     const handleClick = () => {
-        if (isVoiceActive) {
+        if (isSttRecording) {
+            props.onSttToggle?.() // Stop STT
+        } else if (isVoiceActive) {
             props.onVoiceToggle() // Stop voice
         } else if (hasText) {
             props.onSend() // Send message
+        } else if (props.onSttToggle) {
+            props.onSttToggle() // Start STT
         } else if (props.voiceEnabled) {
             props.onVoiceToggle() // Start voice
         }
@@ -258,7 +266,15 @@ function UnifiedButton(props: {
     let className: string
     let ariaLabel: string
 
-    if (isConnecting) {
+    if (isSttRecording) {
+        icon = <StopIcon />
+        className = 'bg-red-500 text-white'
+        ariaLabel = '停止录音'
+    } else if (isSttRecognizing) {
+        icon = <LoadingIcon />
+        className = 'bg-black text-white'
+        ariaLabel = '识别中...'
+    } else if (isConnecting) {
         icon = <LoadingIcon />
         className = 'bg-black text-white'
         ariaLabel = t('voice.connecting')
@@ -270,6 +286,10 @@ function UnifiedButton(props: {
         icon = <SendIcon />
         className = 'bg-black text-white'
         ariaLabel = t('composer.send')
+    } else if (props.onSttToggle) {
+        icon = <VoiceAssistantIcon />
+        className = 'bg-black text-white'
+        ariaLabel = '语音输入'
     } else if (props.voiceEnabled) {
         icon = <VoiceAssistantIcon />
         className = 'bg-black text-white'
@@ -280,7 +300,7 @@ function UnifiedButton(props: {
         ariaLabel = t('composer.send')
     }
 
-    const isDisabled = props.controlsDisabled || (!hasText && !props.voiceEnabled && !isVoiceActive)
+    const isDisabled = props.controlsDisabled || (!hasText && !props.voiceEnabled && !isVoiceActive && !props.onSttToggle)
 
     return (
         <button
@@ -322,9 +342,12 @@ export function ComposerButtons(props: {
     onPromptPicker?: () => void
     onSlashMenu?: () => void
     showSlashMenu?: boolean
+    sttStatus?: 'idle' | 'recording' | 'recognizing'
+    onSttToggle?: () => void
 }) {
     const { t } = useTranslation()
     const isVoiceConnected = props.voiceStatus === 'connected'
+    const isSttRecording = props.sttStatus === 'recording'
 
     return (
         <div className="flex items-center justify-between px-2 pb-2">
@@ -424,7 +447,7 @@ export function ComposerButtons(props: {
                     </button>
                 ) : null}
 
-                {isVoiceConnected && props.onVoiceMicToggle ? (
+                {isVoiceConnected && !isSttRecording && props.onVoiceMicToggle ? (
                     <button
                         type="button"
                         aria-label={props.voiceMicMuted ? t('voice.unmute') : t('voice.mute')}
@@ -448,6 +471,8 @@ export function ComposerButtons(props: {
                 controlsDisabled={props.controlsDisabled}
                 onSend={props.onSend}
                 onVoiceToggle={props.onVoiceToggle}
+                sttStatus={props.sttStatus}
+                onSttToggle={props.onSttToggle}
             />
         </div>
     )

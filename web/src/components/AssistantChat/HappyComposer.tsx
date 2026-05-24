@@ -84,6 +84,9 @@ export function HappyComposer(props: {
     voiceMicMuted?: boolean
     onVoiceToggle?: () => void
     onVoiceMicToggle?: () => void
+    // STT props
+    sttStatus?: 'idle' | 'recording' | 'recognizing'
+    onSttToggle?: () => void
 }) {
     const { t } = useTranslation()
     const {
@@ -121,7 +124,9 @@ export function HappyComposer(props: {
         voiceStatus = 'disconnected',
         voiceMicMuted = false,
         onVoiceToggle,
-        onVoiceMicToggle
+        onVoiceMicToggle,
+        sttStatus,
+        onSttToggle
     } = props
 
     // Use ?? so missing values fall back to default (destructuring defaults only handle undefined)
@@ -904,6 +909,7 @@ export function HappyComposer(props: {
                         collaborationMode={collaborationMode}
                         agentFlavor={agentFlavor}
                         voiceStatus={voiceStatus}
+                        sttStatus={sttStatus}
                     />
 
                     <div className="overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)]">
@@ -956,6 +962,8 @@ export function HappyComposer(props: {
                             onPromptPicker={() => setPromptPickerOpen(true)}
                             onSlashMenu={handleSlashMenuToggle}
                             showSlashMenu={showSlashMenu}
+                            sttStatus={sttStatus}
+                            onSttToggle={onSttToggle}
                         />
                     </div>
                 </ComposerPrimitive.Root>

@@ -19,6 +19,10 @@ import {
 import { useAppearance, getAppearanceOptions, type AppearancePreference, useTheme } from '@/hooks/useTheme'
 import { usePlatform } from '@/hooks/usePlatform'
 import { PROTOCOL_VERSION } from '@hapi/protocol'
+import { useAppContext } from '@/lib/app-context'
+import { useSttConfig } from '@/hooks/queries/useSttConfig'
+import { useSttConfigActions } from '@/hooks/mutations/useSttConfigActions'
+import { STT_DEFAULT_LANGUAGE, STT_DEFAULT_REGION } from '@hapi/protocol/stt'
 
 const locales: { value: Locale; nativeLabel: string }[] = [
     { value: 'en', nativeLabel: 'English' },
@@ -26,6 +30,16 @@ const locales: { value: Locale; nativeLabel: string }[] = [
 ]
 
 const voiceLanguages = getElevenLabsSupportedLanguages()
+
+const sttProviderOptions: { value: string; label: string }[] = [
+    { value: 'tencent', label: '腾讯云' },
+]
+
+const sttLanguageOptions: { value: string; label: string }[] = [
+    { value: 'auto', label: '自动检测' },
+    { value: 'zh', label: '中文' },
+    { value: 'en', label: '英文' },
+]
 
 function BackIcon(props: { className?: string }) {
     return (
@@ -152,6 +166,7 @@ export default function SettingsPage() {
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [isTerminalToolDisplayOpen, setIsTerminalToolDisplayOpen] = useState(false)
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
+    const [isSttOpen, setIsSttOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
     const appearanceContainerRef = useRef<HTMLDivElement>(null)
     const fontContainerRef = useRef<HTMLDivElement>(null)
@@ -159,6 +174,9 @@ export default function SettingsPage() {
     const chatContainerRef = useRef<HTMLDivElement>(null)
     const terminalToolDisplayContainerRef = useRef<HTMLDivElement>(null)
     const voiceContainerRef = useRef<HTMLDivElement>(null)
+    const sttContainerRef = useRef<HTMLDivElement>(null)
+    const sttProviderContainerRef = useRef<HTMLDivElement>(null)
+    const sttLanguageContainerRef = useRef<HTMLDivElement>(null)
     const { fontScale, setFontScale } = useFontScale()
     const { terminalFontSize, setTerminalFontSize } = useTerminalFontSize()
     const { composerEnterBehavior, setComposerEnterBehavior } = useComposerEnterBehavior()
@@ -177,6 +195,27 @@ export default function SettingsPage() {
     const [voiceLanguage, setVoiceLanguage] = useState<string | null>(() => {
         return localStorage.getItem('hapi-voice-lang')
     })
+
+    // STT config
+    const { api: sttApi } = useAppContext()
+    const { config } = useSttConfig(sttApi)
+    const { updateConfig } = useSttConfigActions(sttApi)
+    const [sttProvider, setSttProvider] = useState(config?.provider ?? 'tencent')
+    const [sttSecretId, setSttSecretId] = useState(config?.secretId ?? '')
+    const [sttSecretKey, setSttSecretKey] = useState(config?.secretKey ?? '')
+    const [sttLanguage, setSttLanguage] = useState(config?.language ?? 'zh')
+    const [showSecretKey, setShowSecretKey] = useState(false)
+    const [sttSaving, setSttSaving] = useState(false)
+
+    // Sync local STT form state when config loads/changes
+    useEffect(() => {
+        if (config) {
+            setSttProvider(config.provider)
+            setSttSecretId(config.secretId)
+            setSttSecretKey(config.secretKey)
+            setSttLanguage(config.language)
+        }
+    }, [config])
 
     const fontScaleOptions = getFontScaleOptions()
     const terminalFontSizeOptions = getTerminalFontSizeOptions()
@@ -233,7 +272,7 @@ export default function SettingsPage() {
 
     // Close dropdown when clicking outside
     useEffect(() => {
-        if (!isOpen && !isAppearanceOpen && !isFontOpen && !isTerminalFontOpen && !isChatOpen && !isTerminalToolDisplayOpen && !isVoiceOpen) return
+        if (!isOpen && !isAppearanceOpen && !isFontOpen && !isTerminalFontOpen && !isChatOpen && !isTerminalToolDisplayOpen && !isVoiceOpen && !isSttOpen) return
 
         const handleClickOutside = (event: MouseEvent) => {
             if (isOpen && containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -257,15 +296,22 @@ export default function SettingsPage() {
             if (isVoiceOpen && voiceContainerRef.current && !voiceContainerRef.current.contains(event.target as Node)) {
                 setIsVoiceOpen(false)
             }
+            if (isSttOpen) {
+                const allSttRefs = [sttProviderContainerRef, sttLanguageContainerRef]
+                const clickedInside = allSttRefs.some(ref => ref.current && ref.current.contains(event.target as Node))
+                if (!clickedInside) {
+                    setIsSttOpen(false)
+                }
+            }
         }
 
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [isOpen, isAppearanceOpen, isFontOpen, isTerminalFontOpen, isChatOpen, isTerminalToolDisplayOpen, isVoiceOpen])
+    }, [isOpen, isAppearanceOpen, isFontOpen, isTerminalFontOpen, isChatOpen, isTerminalToolDisplayOpen, isVoiceOpen, isSttOpen])
 
     // Close on escape key
     useEffect(() => {
-        if (!isOpen && !isAppearanceOpen && !isFontOpen && !isTerminalFontOpen && !isChatOpen && !isTerminalToolDisplayOpen && !isVoiceOpen) return
+        if (!isOpen && !isAppearanceOpen && !isFontOpen && !isTerminalFontOpen && !isChatOpen && !isTerminalToolDisplayOpen && !isVoiceOpen && !isSttOpen) return
 
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -276,12 +322,13 @@ export default function SettingsPage() {
                 setIsChatOpen(false)
                 setIsTerminalToolDisplayOpen(false)
                 setIsVoiceOpen(false)
+                setIsSttOpen(false)
             }
         }
 
         document.addEventListener('keydown', handleEscape)
         return () => document.removeEventListener('keydown', handleEscape)
-    }, [isOpen, isAppearanceOpen, isFontOpen, isTerminalFontOpen, isChatOpen, isTerminalToolDisplayOpen, isVoiceOpen])
+    }, [isOpen, isAppearanceOpen, isFontOpen, isTerminalFontOpen, isChatOpen, isTerminalToolDisplayOpen, isVoiceOpen, isSttOpen])
 
     return (
         <div className="flex h-full min-h-0 flex-col">
@@ -689,6 +736,197 @@ export default function SettingsPage() {
                                     })}
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Speech Input (STT) section */}
+                    <div className="border-b border-[var(--app-divider)]">
+                        <div className="px-3 py-2 text-xs font-semibold text-[var(--app-hint)] uppercase tracking-wide">
+                            语音输入
+                        </div>
+                        <div ref={sttProviderContainerRef} className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setIsSttOpen(!isSttOpen)}
+                                className="flex w-full items-center justify-between px-3 py-3 text-left transition-colors hover:bg-[var(--app-subtle-bg)]"
+                                aria-expanded={isSttOpen}
+                                aria-haspopup="listbox"
+                            >
+                                <span className="text-[var(--app-fg)]">服务商</span>
+                                <span className="flex items-center gap-1 text-[var(--app-hint)]">
+                                    <span>{sttProviderOptions.find(o => o.value === sttProvider)?.label ?? '腾讯云'}</span>
+                                    <ChevronDownIcon className={`transition-transform ${isSttOpen ? 'rotate-180' : ''}`} />
+                                </span>
+                            </button>
+
+                            {isSttOpen && (
+                                <div
+                                    className="absolute right-3 top-full mt-1 min-w-[160px] rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] shadow-lg overflow-hidden z-50"
+                                    role="listbox"
+                                    aria-label="服务商"
+                                >
+                                    {sttProviderOptions.map((opt) => {
+                                        const isSelected = sttProvider === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                role="option"
+                                                aria-selected={isSelected}
+                                                onClick={() => {
+                                                    setSttProvider(opt.value)
+                                                    setIsSttOpen(false)
+                                                }}
+                                                className={`flex items-center justify-between w-full px-3 py-2 text-base text-left transition-colors ${
+                                                    isSelected
+                                                        ? 'text-[var(--app-link)] bg-[var(--app-subtle-bg)]'
+                                                        : 'text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && (
+                                                    <span className="ml-2 text-[var(--app-link)]">
+                                                        <CheckIcon />
+                                                    </span>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                        <div className="px-3 py-2">
+                            <div className="mb-1 text-sm text-[var(--app-fg)]">SecretId</div>
+                            <input
+                                type="text"
+                                value={sttSecretId}
+                                onChange={(e) => setSttSecretId(e.target.value)}
+                                placeholder="输入 SecretId"
+                                className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                            />
+                        </div>
+                        <div className="px-3 py-2">
+                            <div className="mb-1 text-sm text-[var(--app-fg)]">SecretKey</div>
+                            <div className="relative">
+                                <input
+                                    type={showSecretKey ? 'text' : 'password'}
+                                    value={sttSecretKey}
+                                    onChange={(e) => setSttSecretKey(e.target.value)}
+                                    placeholder="输入 SecretKey"
+                                    className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 pr-10 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSecretKey(!showSecretKey)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-[var(--app-hint)] hover:text-[var(--app-fg)]"
+                                    aria-label={showSecretKey ? '隐藏' : '显示'}
+                                >
+                                    {showSecretKey ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                            <line x1="1" y1="1" x2="23" y2="23" />
+                                        </svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                        <div ref={sttLanguageContainerRef} className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setIsSttOpen(!isSttOpen)}
+                                className="flex w-full items-center justify-between px-3 py-3 text-left transition-colors hover:bg-[var(--app-subtle-bg)]"
+                                aria-expanded={isSttOpen}
+                                aria-haspopup="listbox"
+                            >
+                                <span className="text-[var(--app-fg)]">语言</span>
+                                <span className="flex items-center gap-1 text-[var(--app-hint)]">
+                                    <span>{sttLanguageOptions.find(o => o.value === sttLanguage)?.label ?? '中文'}</span>
+                                    <ChevronDownIcon className={`transition-transform ${isSttOpen ? 'rotate-180' : ''}`} />
+                                </span>
+                            </button>
+
+                            {isSttOpen && (
+                                <div
+                                    className="absolute right-3 top-full mt-1 min-w-[160px] rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] shadow-lg overflow-hidden z-50"
+                                    role="listbox"
+                                    aria-label="语言"
+                                >
+                                    {sttLanguageOptions.map((opt) => {
+                                        const isSelected = sttLanguage === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                role="option"
+                                                aria-selected={isSelected}
+                                                onClick={() => {
+                                                    setSttLanguage(opt.value)
+                                                    setIsSttOpen(false)
+                                                }}
+                                                className={`flex items-center justify-between w-full px-3 py-2 text-base text-left transition-colors ${
+                                                    isSelected
+                                                        ? 'text-[var(--app-link)] bg-[var(--app-subtle-bg)]'
+                                                        : 'text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && (
+                                                    <span className="ml-2 text-[var(--app-link)]">
+                                                        <CheckIcon />
+                                                    </span>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                        <div className="px-3 py-3">
+                            <button
+                                type="button"
+                                disabled={sttSaving}
+                                onClick={async () => {
+                                    setSttSaving(true)
+                                    try {
+                                        await updateConfig({
+                                            provider: sttProvider,
+                                            secretId: sttSecretId,
+                                            secretKey: sttSecretKey,
+                                            language: sttLanguage,
+                                            region: STT_DEFAULT_REGION,
+                                        })
+                                    } catch {
+                                        // error is handled by mutation
+                                    } finally {
+                                        setSttSaving(false)
+                                    }
+                                }}
+                                className="w-full rounded-lg bg-[var(--app-link)] px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {sttSaving ? '保存中...' : '保存'}
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 pb-3">
+                            <span
+                                className={`h-2 w-2 rounded-full ${
+                                    sttSecretId && sttSecretKey
+                                        ? 'bg-[#34C759]'
+                                        : 'bg-[#999]'
+                                }`}
+                            />
+                            <span className={`text-xs ${
+                                sttSecretId && sttSecretKey
+                                    ? 'text-[#34C759]'
+                                    : 'text-[#999]'
+                            }`}>
+                                {sttSecretId && sttSecretKey ? '已配置' : '未配置'}
+                            </span>
                         </div>
                     </div>
 

@@ -54,9 +54,20 @@ function getConnectionStatus(
     agentState: AgentState | null | undefined,
     voiceStatus: ConversationStatus | undefined,
     backgroundTaskCount: number,
-    t: (key: string) => string
+    t: (key: string) => string,
+    sttStatus?: 'idle' | 'recording' | 'recognizing'
 ): { text: string; color: string; dotColor: string; isPulsing: boolean } {
     const hasPermissions = agentState?.requests && Object.keys(agentState.requests).length > 0
+
+    // STT recording takes highest priority
+    if (sttStatus === 'recording') {
+        return {
+            text: '录音中...',
+            color: 'text-red-500',
+            dotColor: 'bg-red-500',
+            isPulsing: true
+        }
+    }
 
     // Voice connecting takes priority
     if (voiceStatus === 'connecting') {
@@ -143,14 +154,15 @@ export function StatusBar(props: {
     collaborationMode?: CodexCollaborationMode
     agentFlavor?: string | null
     voiceStatus?: ConversationStatus
+    sttStatus?: 'idle' | 'recording' | 'recognizing'
     parsedContext?: ParsedContextData | null
     contextFetching?: boolean
     onContextClick?: () => void
 }) {
     const { t } = useTranslation()
     const connectionStatus = useMemo(
-        () => getConnectionStatus(props.active, props.thinking, props.agentState, props.voiceStatus, props.backgroundTaskCount ?? 0, t),
-        [props.active, props.thinking, props.agentState, props.voiceStatus, props.backgroundTaskCount, t]
+        () => getConnectionStatus(props.active, props.thinking, props.agentState, props.voiceStatus, props.backgroundTaskCount ?? 0, t, props.sttStatus),
+        [props.active, props.thinking, props.agentState, props.voiceStatus, props.backgroundTaskCount, t, props.sttStatus]
     )
 
     const contextLabel = useMemo(() => {

@@ -28,12 +28,37 @@ import { createAttachmentAdapter } from '@/lib/attachmentAdapter'
 import { useTranslation } from '@/lib/use-translation'
 import { SessionHeader } from '@/components/SessionHeader'
 import { TeamPanel } from '@/components/TeamPanel'
+import { useAssistantApi } from '@assistant-ui/react'
 import { usePlatform } from '@/hooks/usePlatform'
 import { useSessionActions } from '@/hooks/mutations/useSessionActions'
 import { useCodexModels } from '@/hooks/queries/useCodexModels'
 import { useVoiceOptional } from '@/lib/voice-context'
+import { useStt } from '@/hooks/useStt'
+import { useAppContext } from '@/lib/app-context'
 import { RealtimeVoiceSession, registerSessionStore, registerVoiceHooksStore, voiceHooks } from '@/realtime'
 import { isRemoteTerminalSupported } from '@/utils/terminalSupport'
+
+/** Handles injecting STT results into the composer when recognition completes */
+function SttTextInjector(props: {
+    sttStatus: 'idle' | 'recording' | 'recognizing'
+    sttText: string
+    onSttReset: () => void
+}) {
+    const api = useAssistantApi()
+    const prevStatusRef = useRef(props.sttStatus)
+
+    useEffect(() => {
+        const wasActive = prevStatusRef.current === 'recording' || prevStatusRef.current === 'recognizing'
+        const nowIdle = props.sttStatus === 'idle'
+        if (wasActive && nowIdle && props.sttText) {
+            api.composer().setText(props.sttText)
+            props.onSttReset()
+        }
+        prevStatusRef.current = props.sttStatus
+    }, [props.sttStatus, props.sttText, props.onSttReset, api])
+
+    return null
+}
 
 function getOutlineTitle(session: Session): string {
     if (session.metadata?.name) {
@@ -154,6 +179,10 @@ export function SessionChat(props: {
     // Voice assistant integration
     const voice = useVoiceOptional()
 
+    // STT integration
+    const { token: sttToken, baseUrl: sttBaseUrl } = useAppContext()
+    const stt = useStt(props.api, sttBaseUrl, sttToken)
+
     // Register session store for voice client tools
     useEffect(() => {
         registerSessionStore({
@@ -250,6 +279,15 @@ export function SessionChat(props: {
         if (!voice) return
         voice.toggleMic()
     }, [voice])
+
+    const handleSttToggle = useCallback(() => {
+        if (stt.state.status === 'idle') {
+            stt.start()
+        } else if (stt.state.status === 'recording') {
+            stt.stop()
+        }
+        // If recognizing, do nothing — wait for result
+    }, [stt])
 
     // Track session id to clear caches when it changes
     const prevSessionIdRef = useRef<string | null>(null)
@@ -548,6 +586,11 @@ export function SessionChat(props: {
             <ModelNameContext.Provider value={modelNames}>
             <DurationContext.Provider value={durationMap}>
             <AssistantRuntimeProvider runtime={runtime}>
+                <SttTextInjector
+                    sttStatus={stt.state.status}
+                    sttText={stt.state.text}
+                    onSttReset={stt.reset}
+                />
                 <div className="relative flex min-h-0 flex-1 flex-col">
                     <HappyThread
                         key={props.session.id}
@@ -635,6 +678,8 @@ export function SessionChat(props: {
                         voiceMicMuted={voice?.micMuted}
                         onVoiceToggle={voice ? handleVoiceToggle : undefined}
                         onVoiceMicToggle={voice ? handleVoiceMicToggle : undefined}
+                        sttStatus={stt.state.status}
+                        onSttToggle={stt.isConfigured ? handleSttToggle : undefined}
                     />
                 </div>
             </AssistantRuntimeProvider>
