@@ -408,6 +408,8 @@ export default {
   'modelPresets.globalConfigDesc': '~/.claude/settings.json',
   'modelPresets.selectMachine': 'Select Machine',
   'modelPresets.presetSection': 'Model Presets',
+  'modelPresets.applyPreset': 'Apply Preset',
+  'modelPresets.selectPreset': 'Select a preset...',
 
   // Browse / Workspace
   'browse.title': 'Browse',

@@ -410,6 +410,8 @@ export default {
   'modelPresets.globalConfigDesc': '~/.claude/settings.json',
   'modelPresets.selectMachine': '选择机器',
   'modelPresets.presetSection': '模型预设',
+  'modelPresets.applyPreset': '应用预设',
+  'modelPresets.selectPreset': '选择预设...',
 
   // Browse / Workspace
   'browse.title': '浏览',
