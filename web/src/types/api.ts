@@ -288,3 +288,14 @@ export type SlashCommandFavorite = {
 export type SlashCommandFavoritesResponse = {
     favorites: SlashCommandFavorite[]
 }
+
+export interface SttConfig {
+    id: number
+    namespace: string
+    provider: string
+    secretId: string
+    secretKey: string
+    language: string
+    region: string
+    updatedAt: string
+}

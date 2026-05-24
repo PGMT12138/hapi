@@ -25,6 +25,7 @@ import type {
     SlashCommandsResponse,
     SkillsResponse,
     SpawnResponse,
+    SttConfig,
     UploadFileResponse,
     VisibilityPayload,
     SessionResponse,
@@ -604,6 +605,31 @@ export class ApiClient {
     async removeSlashCommandFavorite(agentType: string, commandName: string): Promise<{ ok: boolean }> {
         return await this.request(`/api/slash-command-favorites/${encodeURIComponent(agentType)}/${encodeURIComponent(commandName)}`, {
             method: 'DELETE'
+        })
+    }
+
+    // STT Config
+
+    async getSttConfig(): Promise<{ config: SttConfig | null }> {
+        return await this.request('/api/stt/config')
+    }
+
+    async updateSttConfig(data: {
+        provider: string
+        secretId: string
+        secretKey: string
+        language: string
+        region: string
+    }): Promise<{ config: SttConfig }> {
+        return await this.request('/api/stt/config', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        })
+    }
+
+    async deleteSttConfig(): Promise<{ ok: boolean }> {
+        return await this.request('/api/stt/config', {
+            method: 'DELETE',
         })
     }
 }

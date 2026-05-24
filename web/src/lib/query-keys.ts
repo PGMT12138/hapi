@@ -22,4 +22,5 @@ export const queryKeys = {
     slashCommandFavorites: (agentType: string) => ['slash-command-favorites', agentType] as const,
     globalEnv: (machineId: string) => ['global-env', machineId] as const,
     hiddenSessions: ['hiddenSessions'] as const,
+    sttConfig: ['stt-config'] as const,
 }
