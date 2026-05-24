@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 import WebSocket from 'ws'
 import type { SttProvider, SttSession, SttSessionConfig, SttResult } from './types'
 
@@ -10,6 +10,7 @@ interface TencentAsrMessage {
     result?: {
         voice_text_str: string
         is_end: number
+        slice_type: number
     }
 }
 
@@ -31,19 +32,7 @@ class TencentSttSession implements SttSession {
             this.ws = new WebSocket(url)
 
             this.ws.on('open', () => {
-                const startFrame = {
-                    type: 'start',
-                    engine_model_type: this.getEngineModel(),
-                    voice_format: 1,
-                    needvad: 1,
-                    hotword_id: '',
-                    filter_dirty: 1,
-                    filter_modal: 1,
-                    filter_punc: 1,
-                    convert_num_mode: 1,
-                    word_info: 0,
-                }
-                this.ws!.send(JSON.stringify(startFrame))
+                // No start frame needed for the v2 API - all params are in the URL
                 resolve()
             })
 
@@ -89,7 +78,6 @@ class TencentSttSession implements SttSession {
             return new Promise<void>((resolve, reject) => {
                 this.endResolve = resolve
                 this.endReject = reject
-                // Timeout after 5 seconds if no close event
                 setTimeout(() => {
                     this.cleanup()
                     resolve()
@@ -118,9 +106,10 @@ class TencentSttSession implements SttSession {
             }
 
             if (msg.result && this.resultCallback) {
+                // slice_type: 0=开始, 1=中间结果, 2=最终结果
                 this.resultCallback({
                     text: msg.result.voice_text_str,
-                    isFinal: msg.result.is_end === 1,
+                    isFinal: msg.result.is_end === 1 && msg.result.slice_type === 2,
                 })
             }
         } catch {
@@ -128,27 +117,49 @@ class TencentSttSession implements SttSession {
         }
     }
 
+    /**
+     * Build the signed WebSocket URL for Tencent Cloud ASR v2 API.
+     *
+     * Signing steps:
+     * 1. Collect all params except signature
+     * 2. Sort by key in dictionary order
+     * 3. Join as key1=value1&key2=value2&...
+     * 4. HMAC-SHA1 with secretKey, then base64 encode
+     */
     private buildSignedUrl(): string {
         const timestamp = Math.floor(Date.now() / 1000)
         const expired = timestamp + 86400
+        const nonce = Math.floor(Math.random() * 100000)
+        const voiceId = randomUUID().replace(/-/g, '').slice(0, 16)
 
-        const stringToSign = `${this.config.secretId}${timestamp}${expired}`
-        const signature = createHmac('sha1', this.config.secretKey)
-            .update(stringToSign)
-            .digest('base64')
+        const engineModel = this.getEngineModel()
 
-        const params = new URLSearchParams({
+        // All params except signature, sorted by key
+        const params: Record<string, string> = {
+            engine_model_type: engineModel,
+            expired: String(expired),
+            needvad: '1',
+            nonce: String(nonce),
             secretid: this.config.secretId,
             timestamp: String(timestamp),
-            expired: String(expired),
-            nonce: String(Math.floor(Math.random() * 100000)),
-            engine_model_type: this.getEngineModel(),
             voice_format: '1',
-            needvad: '1',
-            signature,
-        })
+            voice_id: voiceId,
+        }
 
-        return `wss://asr.cloud.tencent.com/asr/v2?${params.toString()}`
+        // Build signature string: sort keys, join as key=value&
+        const sortedKeys = Object.keys(params).sort()
+        const signStr = sortedKeys.map(k => `${k}=${params[k]}`).join('&')
+
+        // HMAC-SHA1 with secretKey, base64 encode
+        const signature = createHmac('sha1', this.config.secretKey)
+            .update(signStr)
+            .digest('base64')
+
+        // Build URL with all params including signature
+        const allParams = { ...params, signature }
+        const qs = new URLSearchParams(allParams).toString()
+
+        return `wss://asr.cloud.tencent.com/asr/v2?${qs}`
     }
 
     private getEngineModel(): string {
