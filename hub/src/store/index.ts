@@ -9,6 +9,7 @@ import { PromptStore } from './promptStore'
 import { PushStore } from './pushStore'
 import { SessionStore } from './sessionStore'
 import { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
+import { SttConfigStore } from './sttConfigStore'
 import { UserStore } from './userStore'
 
 export type {
@@ -19,6 +20,7 @@ export type {
     StoredPrompt,
     StoredSession,
     StoredSlashCommandFavorite,
+    StoredSttConfig,
     StoredUser,
     VersionedUpdateResult
 } from './types'
@@ -29,9 +31,10 @@ export { PromptStore } from './promptStore'
 export { PushStore } from './pushStore'
 export { SessionStore } from './sessionStore'
 export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
+export { SttConfigStore } from './sttConfigStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 12
+const SCHEMA_VERSION: number = 13
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -40,7 +43,8 @@ const REQUIRED_TABLES = [
     'push_subscriptions',
     'model_config_presets',
     'prompts',
-    'slash_command_favorites'
+    'slash_command_favorites',
+    'stt_configs'
 ] as const
 
 export class Store {
@@ -55,6 +59,7 @@ export class Store {
     readonly modelConfigPresets: ModelConfigPresetStore
     readonly prompts: PromptStore
     readonly slashCommandFavorites: SlashCommandFavoriteStore
+    readonly sttConfig: SttConfigStore
 
     constructor(dbPath: string) {
         this.dbPath = dbPath
@@ -99,6 +104,7 @@ export class Store {
         this.modelConfigPresets = new ModelConfigPresetStore(this.db)
         this.prompts = new PromptStore(this.db)
         this.slashCommandFavorites = new SlashCommandFavoriteStore(this.db)
+        this.sttConfig = new SttConfigStore(this.db)
     }
 
     private initSchema(): void {
@@ -119,6 +125,7 @@ export class Store {
             9: () => this.migrateFromV9ToV10(),
             10: () => this.migrateFromV10ToV11(),
             11: () => this.migrateFromV11ToV12(),
+            12: () => this.migrateFromV12ToV13(),
         })
 
         if (currentVersion === 0) {
@@ -276,6 +283,19 @@ export class Store {
             );
             CREATE INDEX IF NOT EXISTS idx_slash_command_favorites_namespace
                 ON slash_command_favorites(namespace, agent_type);
+
+            CREATE TABLE IF NOT EXISTS stt_configs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                namespace TEXT NOT NULL,
+                provider TEXT NOT NULL DEFAULT 'tencent',
+                secret_id TEXT NOT NULL DEFAULT '',
+                secret_key TEXT NOT NULL DEFAULT '',
+                language TEXT NOT NULL DEFAULT 'zh',
+                region TEXT NOT NULL DEFAULT 'ap-beijing',
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(namespace)
+            );
+            CREATE INDEX IF NOT EXISTS idx_stt_configs_namespace ON stt_configs(namespace);
         `)
     }
 
@@ -531,6 +551,23 @@ export class Store {
         if (!columns.has('hidden')) {
             this.db.exec('ALTER TABLE sessions ADD COLUMN hidden INTEGER DEFAULT 0')
         }
+    }
+
+    private migrateFromV12ToV13(): void {
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS stt_configs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                namespace TEXT NOT NULL,
+                provider TEXT NOT NULL DEFAULT 'tencent',
+                secret_id TEXT NOT NULL DEFAULT '',
+                secret_key TEXT NOT NULL DEFAULT '',
+                language TEXT NOT NULL DEFAULT 'zh',
+                region TEXT NOT NULL DEFAULT 'ap-beijing',
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(namespace)
+            );
+            CREATE INDEX IF NOT EXISTS idx_stt_configs_namespace ON stt_configs(namespace);
+        `)
     }
 
     private buildSchemaMismatchError(currentVersion: number): Error {

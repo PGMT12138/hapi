@@ -89,6 +89,17 @@ export type StoredSlashCommandFavorite = {
     createdAt: number
 }
 
+export interface StoredSttConfig {
+    id: number
+    namespace: string
+    provider: string
+    secretId: string
+    secretKey: string
+    language: string
+    region: string
+    updatedAt: string
+}
+
 export type VersionedUpdateResult<T> =
     | { result: 'success'; version: number; value: T }
     | { result: 'version-mismatch'; version: number; value: T }
