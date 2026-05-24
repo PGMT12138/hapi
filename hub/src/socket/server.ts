@@ -7,7 +7,9 @@ import { configuration } from '../configuration'
 import { constantTimeEquals } from '../utils/crypto'
 import { parseAccessToken } from '../utils/accessToken'
 import { registerCliHandlers } from './handlers/cli'
+import { registerSttHandlers } from './handlers/stt'
 import { registerTerminalHandlers } from './handlers/terminal'
+import { TencentCloudSttProvider } from '../stt'
 import { RpcRegistry } from './rpcRegistry'
 import type { SyncEvent } from '../sync/syncEngine'
 import { TerminalRegistry } from './terminalRegistry'
@@ -162,6 +164,41 @@ export function createSocketServer(deps: SocketServerDeps): {
         terminalRegistry,
         maxTerminalsPerSocket,
         maxTerminalsPerSession
+    }))
+
+    const sttNs = io.of('/stt')
+    const sttProvider = new TencentCloudSttProvider()
+
+    sttNs.use(async (socket, next) => {
+        const auth = socket.handshake.auth as Record<string, unknown> | undefined
+        const token = typeof auth?.token === 'string' ? auth.token : null
+        if (!token) {
+            return next(new Error('Missing token'))
+        }
+
+        try {
+            const verified = await jwtVerify(token, deps.jwtSecret, { algorithms: ['HS256'] })
+            const parsed = jwtPayloadSchema.safeParse(verified.payload)
+            if (!parsed.success) {
+                return next(new Error('Invalid token payload'))
+            }
+            socket.data.userId = parsed.data.uid
+            socket.data.namespace = parsed.data.ns
+            next()
+            return
+        } catch {
+            return next(new Error('Invalid token'))
+        }
+    })
+    sttNs.on('connection', (socket) => registerSttHandlers(socket, {
+        io,
+        sttProvider,
+        getSttConfig: (ns) => {
+            const secretId = process.env.TENCENT_SECRET_ID
+            const secretKey = process.env.TENCENT_SECRET_KEY
+            if (!secretId || !secretKey) return null
+            return { secretId, secretKey }
+        }
     }))
 
     return { io, engine, rpcRegistry }
