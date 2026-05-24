@@ -10,7 +10,7 @@ const sttProviderSchema = z.enum(['tencent'] as const satisfies ReadonlyArray<St
 const upsertSttConfigSchema = z.object({
     provider: sttProviderSchema,
     secretId: z.string().min(1),
-    secretKey: z.string().optional(),
+    secretKey: z.string().min(1),
     language: z.string().min(1),
     region: z.string().min(1)
 })

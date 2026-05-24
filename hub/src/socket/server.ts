@@ -194,10 +194,9 @@ export function createSocketServer(deps: SocketServerDeps): {
         io,
         sttProvider,
         getSttConfig: (ns) => {
-            const secretId = process.env.TENCENT_SECRET_ID
-            const secretKey = process.env.TENCENT_SECRET_KEY
-            if (!secretId || !secretKey) return null
-            return { secretId, secretKey }
+            const config = deps.store.sttConfig.get(ns)
+            if (!config || !config.secretId || !config.secretKey) return null
+            return { secretId: config.secretId, secretKey: config.secretKey }
         }
     }))
 
