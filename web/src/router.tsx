@@ -38,6 +38,7 @@ import FilesPage from '@/routes/sessions/files'
 import FilePage from '@/routes/sessions/file'
 import TerminalPage from '@/routes/sessions/terminal'
 import SettingsPage from '@/routes/settings'
+import VoiceSettingsPage from '@/routes/settings/voice'
 import ModelPresetsPage from '@/routes/model-presets'
 import PromptsPage from '@/routes/prompts'
 import HiddenSessionsPage from '@/routes/hidden-sessions'
@@ -701,6 +702,12 @@ const settingsRoute = createRoute({
     component: SettingsPage,
 })
 
+const voiceSettingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/settings/voice',
+    component: VoiceSettingsPage,
+})
+
 const modelPresetsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/model-presets',
@@ -732,6 +739,7 @@ export const routeTree = rootRoute.addChildren([
     ]),
     browseRoute,
     settingsRoute,
+    voiceSettingsRoute,
     modelPresetsRoute,
     promptsRoute,
     hiddenSessionsRoute,
