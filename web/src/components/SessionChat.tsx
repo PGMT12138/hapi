@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate } from '@tanstack/react-router'
 import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import type { ApiClient } from '@/api/client'
@@ -45,16 +46,22 @@ function SttTextInjector(props: {
     onSttReset: () => void
 }) {
     const api = useAssistantApi()
-    const prevStatusRef = useRef(props.sttStatus)
+    const wasActiveRef = useRef(false)
 
     useEffect(() => {
-        const wasActive = prevStatusRef.current === 'recording' || prevStatusRef.current === 'recognizing'
-        const nowIdle = props.sttStatus === 'idle'
-        if (wasActive && nowIdle && props.sttText) {
-            api.composer().setText(props.sttText)
+        const isActive = props.sttStatus === 'recording' || props.sttStatus === 'recognizing'
+        if (isActive) wasActiveRef.current = true
+
+        if (props.sttText && wasActiveRef.current) {
+            flushSync(() => {
+                api.composer().setText(props.sttText)
+            })
+        }
+
+        if (props.sttStatus === 'idle' && wasActiveRef.current) {
+            wasActiveRef.current = false
             props.onSttReset()
         }
-        prevStatusRef.current = props.sttStatus
     }, [props.sttStatus, props.sttText, props.onSttReset, api])
 
     return null
