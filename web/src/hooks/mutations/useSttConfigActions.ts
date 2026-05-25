@@ -12,6 +12,7 @@ export function useSttConfigActions(api: ApiClient | null) {
     const updateConfig = useMutation({
         mutationFn: async (data: {
             provider: string
+            appId: string
             secretId: string
             secretKey: string
             language: string

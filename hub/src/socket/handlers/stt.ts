@@ -7,10 +7,11 @@ import type { SocketServer, SocketWithData } from '../socketTypes'
 
 const sttStartSchema = z.object({
     language: z.enum(['zh', 'en', 'auto']).optional(),
+    mode: z.enum(['pcm', 'webm']).optional(),
 })
 
 const sttAudioSchema = z.object({
-    data: z.instanceof(ArrayBuffer),
+    data: z.union([z.instanceof(ArrayBuffer), z.instanceof(Uint8Array), z.instanceof(Buffer)]),
 })
 
 type SttSocket = SocketWithData
@@ -18,7 +19,7 @@ type SttSocket = SocketWithData
 export type SttHandlersDeps = {
     io: SocketServer
     sttProvider: SttProvider
-    getSttConfig: (namespace: string) => { secretId: string; secretKey: string } | null
+    getSttConfig: (namespace: string) => { appId: string; secretId: string; secretKey: string } | null
 }
 
 export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): void {
@@ -30,6 +31,7 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
     }
 
     socket.on('stt:start' as never, (data: unknown) => {
+        console.log('[STT-Handler] stt:start received')
         const parsed = sttStartSchema.safeParse(data)
         if (!parsed.success) {
             emitSttError('Invalid stt:start payload')
@@ -48,6 +50,7 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
         }
 
         const language: SttLanguage = parsed.data.language ?? STT_DEFAULT_LANGUAGE
+        const inputMimeType = parsed.data.mode === 'pcm' ? 'audio/pcm' : 'audio/webm'
 
         const manager = new SttSessionManager()
 
@@ -62,18 +65,27 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
             socket.emit('stt:result' as never, result as never)
         })
 
+        manager.onDone(() => {
+            console.log('[STT-Handler] Session done, emitting stt:done')
+            socket.emit('stt:done' as never)
+            cleanupSession(socket.id)
+        })
+
         manager.start(
             sttProvider,
             {
                 language,
                 region: STT_DEFAULT_REGION,
+                appId: sttConfig.appId,
                 secretId: sttConfig.secretId,
                 secretKey: sttConfig.secretKey,
             },
-            'audio/webm',
+            inputMimeType,
         ).then(() => {
+            console.log('[STT-Handler] Session started, emitting stt:started')
             socket.emit('stt:started' as never, { sessionId: socket.id } as never)
         }).catch((error: Error) => {
+            console.error('[STT-Handler] Session start failed:', error.message)
             emitSttError(error.message)
             cleanupSession(socket.id)
         })
@@ -82,6 +94,7 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
     socket.on('stt:audio' as never, (data: unknown) => {
         const parsed = sttAudioSchema.safeParse(data)
         if (!parsed.success) {
+            console.error('[STT-Handler] stt:audio validation failed:', parsed.error.message)
             return
         }
 
@@ -90,10 +103,15 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
             return
         }
 
-        manager.sendAudio(Buffer.from(parsed.data.data))
+        const rawData = parsed.data.data
+        const buffer = rawData instanceof ArrayBuffer
+            ? Buffer.from(rawData)
+            : Buffer.from(rawData as Uint8Array)
+        manager.sendAudio(buffer)
     })
 
     socket.on('stt:stop' as never, () => {
+        console.log('[STT-Handler] stt:stop received')
         const manager = activeSessions.get(socket.id)
         if (!manager) {
             return

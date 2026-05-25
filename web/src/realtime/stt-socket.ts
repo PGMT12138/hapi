@@ -6,7 +6,12 @@ type SttSocketInstance = Socket<SttServerEvents, SttClientEvents>
 let sttSocket: SttSocketInstance | null = null
 
 export function getSttSocket(serverUrl: string, token: string): SttSocketInstance {
-    if (sttSocket?.connected) return sttSocket
+    // Always clean up old socket if it exists
+    if (sttSocket) {
+        sttSocket.removeAllListeners()
+        sttSocket.disconnect()
+        sttSocket = null
+    }
 
     sttSocket = io(`${serverUrl}/stt`, {
         auth: { token },
@@ -19,6 +24,7 @@ export function getSttSocket(serverUrl: string, token: string): SttSocketInstanc
 
 export function disconnectSttSocket(): void {
     if (sttSocket) {
+        sttSocket.removeAllListeners()
         sttSocket.disconnect()
         sttSocket = null
     }

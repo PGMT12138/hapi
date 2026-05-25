@@ -12,27 +12,31 @@ interface TencentAsrMessage {
         is_end: number
         slice_type: number
     }
+    final?: number
 }
 
 class TencentSttSession implements SttSession {
     private ws: WebSocket | null = null
     private resultCallback: ((result: SttResult) => void) | null = null
     private errorCallback: ((error: Error) => void) | null = null
+    private doneCallback: (() => void) | null = null
     private endResolve: (() => void) | null = null
     private endReject: ((error: Error) => void) | null = null
     private ended = false
+    private currentPartialText = ''
 
     constructor(
         private readonly config: SttSessionConfig,
     ) {}
 
     async connect(): Promise<void> {
-        const url = this.buildSignedUrl()
+        const { url, signStr } = this.buildSignedUrl()
+        console.log(`[STT-Tencent] Connecting to ASR WebSocket...`)
         return new Promise<void>((resolve, reject) => {
             this.ws = new WebSocket(url)
 
             this.ws.on('open', () => {
-                // No start frame needed for the v2 API - all params are in the URL
+                console.log('[STT-Tencent] WebSocket connected')
                 resolve()
             })
 
@@ -41,6 +45,7 @@ class TencentSttSession implements SttSession {
             })
 
             this.ws.on('error', (err: Error) => {
+                console.error('[STT-Tencent] WebSocket error:', err.message)
                 if (this.errorCallback) {
                     this.errorCallback(err)
                 }
@@ -50,6 +55,7 @@ class TencentSttSession implements SttSession {
             })
 
             this.ws.on('close', () => {
+                console.log('[STT-Tencent] WebSocket closed')
                 if (this.endResolve) {
                     this.endResolve()
                 }
@@ -70,6 +76,7 @@ class TencentSttSession implements SttSession {
     async endSession(): Promise<void> {
         if (this.ended) return
         this.ended = true
+        console.log('[STT-Tencent] endSession called')
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             const endFrame = { type: 'end' }
@@ -94,9 +101,14 @@ class TencentSttSession implements SttSession {
         this.errorCallback = callback
     }
 
+    onDone(callback: () => void): void {
+        this.doneCallback = callback
+    }
+
     private handleMessage(data: WsData): void {
         try {
             const msg: TencentAsrMessage = JSON.parse(data.toString())
+            console.log(`[STT-Tencent] Message: code=${msg.code}${msg.result ? `, slice_type=${msg.result.slice_type}, text="${msg.result.voice_text_str}"` : ''}${msg.final !== undefined ? `, final=${msg.final}` : ''}`)
 
             if (msg.code !== 0) {
                 if (this.errorCallback) {
@@ -106,11 +118,33 @@ class TencentSttSession implements SttSession {
             }
 
             if (msg.result && this.resultCallback) {
-                // slice_type: 0=开始, 1=中间结果, 2=最终结果
-                this.resultCallback({
-                    text: msg.result.voice_text_str,
-                    isFinal: msg.result.is_end === 1 && msg.result.slice_type === 2,
-                })
+                if (msg.result.slice_type === 0) {
+                    this.currentPartialText = ''
+                }
+
+                const fullText = msg.result.voice_text_str
+                const isFinal = msg.result.is_end === 1 && msg.result.slice_type === 2
+
+                if (isFinal) {
+                    this.resultCallback({
+                        text: fullText,
+                        isFinal: true,
+                    })
+                    this.currentPartialText = ''
+                } else {
+                    const delta = fullText.slice(this.currentPartialText.length)
+                    this.resultCallback({
+                        text: delta,
+                        isFinal: false,
+                    })
+                    this.currentPartialText = fullText
+                }
+            }
+
+            if (msg.final === 1) {
+                this.cleanup()
+                this.doneCallback?.()
+                return
             }
         } catch {
             // Ignore malformed messages
@@ -120,13 +154,16 @@ class TencentSttSession implements SttSession {
     /**
      * Build the signed WebSocket URL for Tencent Cloud ASR v2 API.
      *
-     * Signing steps:
-     * 1. Collect all params except signature
-     * 2. Sort by key in dictionary order
-     * 3. Join as key1=value1&key2=value2&...
-     * 4. HMAC-SHA1 with secretKey, then base64 encode
+     * URL format: wss://asr.cloud.tencent.com/asr/v2/<appid>?<params>
+     *
+     * Signing steps (per Tencent docs):
+     * 1. Collect all params except signature, sort by key in dictionary order
+     * 2. Build signing string: asr.cloud.tencent.com/asr/v2/<appid>?key1=value1&key2=value2...
+     *    (the full URL without the wss:// protocol prefix)
+     * 3. HMAC-SHA1 with secretKey, then base64 encode → signature
+     * 4. URL-encode the signature value, then append to the full request URL
      */
-    private buildSignedUrl(): string {
+    private buildSignedUrl(): { url: string; signStr: string } {
         const timestamp = Math.floor(Date.now() / 1000)
         const expired = timestamp + 86400
         const nonce = Math.floor(Math.random() * 100000)
@@ -134,7 +171,6 @@ class TencentSttSession implements SttSession {
 
         const engineModel = this.getEngineModel()
 
-        // All params except signature, sorted by key
         const params: Record<string, string> = {
             engine_model_type: engineModel,
             expired: String(expired),
@@ -146,20 +182,23 @@ class TencentSttSession implements SttSession {
             voice_id: voiceId,
         }
 
-        // Build signature string: sort keys, join as key=value&
+        // Step 1: sort params by key
         const sortedKeys = Object.keys(params).sort()
-        const signStr = sortedKeys.map(k => `${k}=${params[k]}`).join('&')
+        const paramStr = sortedKeys.map(k => `${k}=${params[k]}`).join('&')
 
-        // HMAC-SHA1 with secretKey, base64 encode
+        // Step 2: build signing string (URL without protocol prefix)
+        const signStr = `asr.cloud.tencent.com/asr/v2/${this.config.appId}?${paramStr}`
+
+        // Step 3: HMAC-SHA1 with secretKey, base64 encode
         const signature = createHmac('sha1', this.config.secretKey)
             .update(signStr)
             .digest('base64')
 
-        // Build URL with all params including signature
-        const allParams = { ...params, signature }
-        const qs = new URLSearchParams(allParams).toString()
+        // Step 4: URL-encode the signature and build final URL
+        const encodedSig = encodeURIComponent(signature)
+        const url = `wss://asr.cloud.tencent.com/asr/v2/${this.config.appId}?${paramStr}&signature=${encodedSig}`
 
-        return `wss://asr.cloud.tencent.com/asr/v2?${qs}`
+        return { url, signStr }
     }
 
     private getEngineModel(): string {

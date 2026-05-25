@@ -170,6 +170,7 @@ export function createSocketServer(deps: SocketServerDeps): {
     const sttProvider = new TencentCloudSttProvider()
 
     sttNs.use(async (socket, next) => {
+        console.log(`[STT-Socket] Auth middleware triggered for ${socket.id}`)
         const auth = socket.handshake.auth as Record<string, unknown> | undefined
         const token = typeof auth?.token === 'string' ? auth.token : null
         if (!token) {
@@ -190,15 +191,18 @@ export function createSocketServer(deps: SocketServerDeps): {
             return next(new Error('Invalid token'))
         }
     })
-    sttNs.on('connection', (socket) => registerSttHandlers(socket, {
-        io,
-        sttProvider,
-        getSttConfig: (ns) => {
-            const config = deps.store.sttConfig.get(ns)
-            if (!config || !config.secretId || !config.secretKey) return null
-            return { secretId: config.secretId, secretKey: config.secretKey }
-        }
-    }))
+    sttNs.on('connection', (socket) => {
+        console.log(`[STT-Socket] Client connected: ${socket.id}, namespace: ${socket.data.namespace}`)
+        registerSttHandlers(socket, {
+            io,
+            sttProvider,
+            getSttConfig: (ns) => {
+                const config = deps.store.sttConfig.get(ns)
+                if (!config || !config.secretId || !config.secretKey || !config.appId) return null
+                return { appId: config.appId, secretId: config.secretId, secretKey: config.secretKey }
+            }
+        })
+    })
 
     return { io, engine, rpcRegistry }
 }

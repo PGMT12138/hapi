@@ -17,7 +17,7 @@ export interface SttResult {
 
 /** client → server 事件 */
 export interface SttClientEvents {
-    'stt:start': (data: { language: SttLanguage }) => void
+    'stt:start': (data: { language: SttLanguage; mode?: 'pcm' | 'webm' }) => void
     'stt:audio': (data: { data: ArrayBuffer }) => void
     'stt:stop': () => void
 }
@@ -26,8 +26,10 @@ export interface SttClientEvents {
 export interface SttServerEvents {
     'stt:started': (data: { sessionId: string }) => void
     'stt:result': (data: SttResult) => void
+    'stt:done': () => void
     'stt:error': (data: { message: string }) => void
 }
 
 export const STT_DEFAULT_LANGUAGE: SttLanguage = 'zh'
 export const STT_DEFAULT_REGION = 'ap-beijing'
+export const STT_DEFAULT_APPID = ''

@@ -9,7 +9,7 @@ export class SttConfigStore {
         return getSttConfigByNamespace(this.db, namespace)
     }
 
-    upsert(namespace: string, data: { provider: string; secretId: string; secretKey?: string; language: string; region: string }): StoredSttConfig {
+    upsert(namespace: string, data: { provider: string; appId?: string; secretId: string; secretKey?: string; language: string; region: string }): StoredSttConfig {
         return upsertSttConfig(this.db, namespace, data)
     }
 

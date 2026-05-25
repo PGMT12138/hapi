@@ -616,6 +616,7 @@ export class ApiClient {
 
     async updateSttConfig(data: {
         provider: string
+        appId: string
         secretId: string
         secretKey: string
         language: string

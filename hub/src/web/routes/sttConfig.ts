@@ -9,6 +9,7 @@ const sttProviderSchema = z.enum(['tencent'] as const satisfies ReadonlyArray<St
 
 const upsertSttConfigSchema = z.object({
     provider: sttProviderSchema,
+    appId: z.string().min(1),
     secretId: z.string().min(1),
     secretKey: z.string().min(1),
     language: z.string().min(1),
@@ -52,6 +53,7 @@ export function createSttConfigRoutes(store: Store): Hono<WebAppEnv> {
 
         const config = store.sttConfig.upsert(namespace, {
             provider: data.provider,
+            appId: data.appId,
             secretId: data.secretId,
             secretKey,
             language: data.language,

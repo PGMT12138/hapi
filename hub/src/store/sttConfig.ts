@@ -5,6 +5,7 @@ type DbSttConfigRow = {
     id: number
     namespace: string
     provider: string
+    app_id: string
     secret_id: string
     secret_key: string
     language: string
@@ -17,6 +18,7 @@ function toStoredSttConfig(row: DbSttConfigRow): StoredSttConfig {
         id: row.id,
         namespace: row.namespace,
         provider: row.provider,
+        appId: row.app_id,
         secretId: row.secret_id,
         secretKey: row.secret_key,
         language: row.language,
@@ -35,18 +37,20 @@ export function getSttConfigByNamespace(db: Database, namespace: string): Stored
 export function upsertSttConfig(
     db: Database,
     namespace: string,
-    data: { provider: string; secretId: string; secretKey?: string; language: string; region: string }
+    data: { provider: string; appId?: string; secretId: string; secretKey?: string; language: string; region: string }
 ): StoredSttConfig {
     const existing = getSttConfigByNamespace(db, namespace)
 
     if (existing) {
         const secretKey = data.secretKey ?? existing.secretKey
+        const appId = data.appId ?? existing.appId
         db.prepare(`
             UPDATE stt_configs
-            SET provider = @provider, secret_id = @secretId, secret_key = @secretKey, language = @language, region = @region, updated_at = datetime('now')
+            SET provider = @provider, app_id = @appId, secret_id = @secretId, secret_key = @secretKey, language = @language, region = @region, updated_at = datetime('now')
             WHERE namespace = @namespace
         `).run({
             provider: data.provider,
+            appId,
             secretId: data.secretId,
             secretKey,
             language: data.language,
@@ -55,11 +59,12 @@ export function upsertSttConfig(
         })
     } else {
         db.prepare(`
-            INSERT INTO stt_configs (namespace, provider, secret_id, secret_key, language, region, updated_at)
-            VALUES (@namespace, @provider, @secretId, @secretKey, @language, @region, datetime('now'))
+            INSERT INTO stt_configs (namespace, provider, app_id, secret_id, secret_key, language, region, updated_at)
+            VALUES (@namespace, @provider, @appId, @secretId, @secretKey, @language, @region, datetime('now'))
         `).run({
             namespace,
             provider: data.provider,
+            appId: data.appId ?? '',
             secretId: data.secretId,
             secretKey: data.secretKey ?? '',
             language: data.language,

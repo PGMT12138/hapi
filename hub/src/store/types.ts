@@ -93,6 +93,7 @@ export interface StoredSttConfig {
     id: number
     namespace: string
     provider: string
+    appId: string
     secretId: string
     secretKey: string
     language: string

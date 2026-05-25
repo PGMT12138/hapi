@@ -201,6 +201,7 @@ export default function SettingsPage() {
     const { config } = useSttConfig(sttApi)
     const { updateConfig } = useSttConfigActions(sttApi)
     const [sttProvider, setSttProvider] = useState(config?.provider ?? 'tencent')
+    const [sttAppId, setSttAppId] = useState(config?.appId ?? '')
     const [sttSecretId, setSttSecretId] = useState(config?.secretId ?? '')
     const [sttSecretKey, setSttSecretKey] = useState(config?.secretKey ?? '')
     const [sttLanguage, setSttLanguage] = useState(config?.language ?? 'zh')
@@ -211,6 +212,7 @@ export default function SettingsPage() {
     useEffect(() => {
         if (config) {
             setSttProvider(config.provider)
+            setSttAppId(config.appId)
             setSttSecretId(config.secretId)
             setSttSecretKey(config.secretKey)
             setSttLanguage(config.language)
@@ -796,6 +798,16 @@ export default function SettingsPage() {
                             )}
                         </div>
                         <div className="px-3 py-2">
+                            <div className="mb-1 text-sm text-[var(--app-fg)]">AppID</div>
+                            <input
+                                type="text"
+                                value={sttAppId}
+                                onChange={(e) => setSttAppId(e.target.value)}
+                                placeholder="输入 AppID"
+                                className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                            />
+                        </div>
+                        <div className="px-3 py-2">
                             <div className="mb-1 text-sm text-[var(--app-fg)]">SecretId</div>
                             <input
                                 type="text"
@@ -896,6 +908,7 @@ export default function SettingsPage() {
                                     try {
                                         await updateConfig({
                                             provider: sttProvider,
+                                            appId: sttAppId,
                                             secretId: sttSecretId,
                                             secretKey: sttSecretKey,
                                             language: sttLanguage,
@@ -915,17 +928,17 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-1.5 px-3 pb-3">
                             <span
                                 className={`h-2 w-2 rounded-full ${
-                                    sttSecretId && sttSecretKey
+                                    sttAppId && sttSecretId && sttSecretKey
                                         ? 'bg-[#34C759]'
                                         : 'bg-[#999]'
                                 }`}
                             />
                             <span className={`text-xs ${
-                                sttSecretId && sttSecretKey
+                                sttAppId && sttSecretId && sttSecretKey
                                     ? 'text-[#34C759]'
                                     : 'text-[#999]'
                             }`}>
-                                {sttSecretId && sttSecretKey ? '已配置' : '未配置'}
+                                {sttAppId && sttSecretId && sttSecretKey ? '已配置' : '未配置'}
                             </span>
                         </div>
                     </div>

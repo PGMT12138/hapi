@@ -1,6 +1,7 @@
 export interface SttSessionConfig {
     language: string
     region: string
+    appId: string
     secretId: string
     secretKey: string
 }
@@ -19,4 +20,5 @@ export interface SttSession {
     endSession(): Promise<void>
     onResult(callback: (result: SttResult) => void): void
     onError(callback: (error: Error) => void): void
+    onDone(callback: () => void): void
 }

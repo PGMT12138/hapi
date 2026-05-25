@@ -34,7 +34,7 @@ export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 export { SttConfigStore } from './sttConfigStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 13
+const SCHEMA_VERSION: number = 14
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -126,6 +126,7 @@ export class Store {
             10: () => this.migrateFromV10ToV11(),
             11: () => this.migrateFromV11ToV12(),
             12: () => this.migrateFromV12ToV13(),
+            13: () => this.migrateFromV13ToV14(),
         })
 
         if (currentVersion === 0) {
@@ -288,6 +289,7 @@ export class Store {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 namespace TEXT NOT NULL,
                 provider TEXT NOT NULL DEFAULT 'tencent',
+                app_id TEXT NOT NULL DEFAULT '',
                 secret_id TEXT NOT NULL DEFAULT '',
                 secret_key TEXT NOT NULL DEFAULT '',
                 language TEXT NOT NULL DEFAULT 'zh',
@@ -568,6 +570,19 @@ export class Store {
             );
             CREATE INDEX IF NOT EXISTS idx_stt_configs_namespace ON stt_configs(namespace);
         `)
+    }
+
+    private migrateFromV13ToV14(): void {
+        const columns = this.getSttConfigColumnNames()
+        if (columns.size === 0) return
+        if (!columns.has('app_id')) {
+            this.db.exec('ALTER TABLE stt_configs ADD COLUMN app_id TEXT NOT NULL DEFAULT \'\'')
+        }
+    }
+
+    private getSttConfigColumnNames(): Set<string> {
+        const rows = this.db.prepare('PRAGMA table_info(stt_configs)').all() as Array<{ name: string }>
+        return new Set(rows.map((row) => row.name))
     }
 
     private buildSchemaMismatchError(currentVersion: number): Error {
