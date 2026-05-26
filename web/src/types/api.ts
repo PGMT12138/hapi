@@ -296,6 +296,8 @@ export interface SttConfig {
     appId: string
     secretId: string
     secretKey: string
+    apiKey: string
+    apiSecret: string
     language: string
     region: string
     updatedAt: string
