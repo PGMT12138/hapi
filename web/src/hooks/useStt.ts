@@ -92,6 +92,8 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
     const recognizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const pcmChunksRef = useRef<Uint8Array[]>([])
     const sentenceRecognizingRef = useRef(false)
+    const sttConfigRef = useRef(config)
+    sttConfigRef.current = config
 
     // Track native bridge availability as state so permission changes trigger re-render
     const [bridgeAvailable, setBridgeAvailable] = useState(() => getNativeBridge() !== null)
@@ -182,13 +184,18 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
             socket.off('stt:started')
             socket.off('connect_error')
 
-            socket.on('stt:result', (result: { text: string; isFinal: boolean }) => {
+            socket.on('stt:result', (result: { text: string; isFinal: boolean; replace?: boolean }) => {
                 setState((prev) => {
                     if (result.isFinal) {
                         return {
                             ...prev,
                             confirmedText: prev.confirmedText + result.text,
                             currentText: '',
+                        }
+                    } else if (result.replace) {
+                        return {
+                            ...prev,
+                            currentText: result.text,
                         }
                     } else {
                         return {
@@ -392,6 +399,10 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
         cleanupAudio()
 
         // Run sentence recognition in background — replace text when done
+        // Xunfei uses real-time streaming with replace corrections; skip sentence recognition
+        const isXunfei = sttConfigRef.current?.provider === 'xunfei'
+        if (isXunfei) return
+
         if (pcmChunks.length > 0 && api && isConfigured) {
             const totalLen = pcmChunks.reduce((sum, c) => sum + c.length, 0)
             // Skip if audio is too short (< 0.3s)
