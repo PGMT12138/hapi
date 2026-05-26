@@ -195,7 +195,6 @@ export function createSocketServer(deps: SocketServerDeps): {
     sttNs.on('connection', (socket) => {
         console.log(`[STT-Socket] Client connected: ${socket.id}, namespace: ${socket.data.namespace}`)
         registerSttHandlers(socket, {
-            io,
             tencentProvider: tencentSttProvider,
             xunfeiProvider: xunfeiSttProvider,
             getSttConfig: (ns) => {

@@ -1,9 +1,9 @@
-import type { SttClientEvents, SttServerEvents, SttLanguage } from '@hapi/protocol/stt'
+import type { SttLanguage } from '@hapi/protocol/stt'
 import { z } from 'zod'
 import { STT_DEFAULT_LANGUAGE, STT_DEFAULT_REGION } from '@hapi/protocol/stt'
 import type { SttProvider } from '../../stt/types'
 import { SttSessionManager } from '../../stt/session'
-import type { SocketServer, SocketWithData } from '../socketTypes'
+import type { SocketWithData } from '../socketTypes'
 
 const sttStartSchema = z.object({
     language: z.enum(['zh', 'en', 'auto']).optional(),
@@ -17,7 +17,6 @@ const sttAudioSchema = z.object({
 type SttSocket = SocketWithData
 
 export type SttHandlersDeps = {
-    io: SocketServer
     tencentProvider: SttProvider
     xunfeiProvider: SttProvider
     getSttConfig: (namespace: string) => {
@@ -31,7 +30,7 @@ export type SttHandlersDeps = {
 }
 
 export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): void {
-    const { io, tencentProvider, xunfeiProvider, getSttConfig } = deps
+    const { tencentProvider, xunfeiProvider, getSttConfig } = deps
     const namespace = typeof socket.data.namespace === 'string' ? socket.data.namespace : null
 
     const emitSttError = (message: string) => {
