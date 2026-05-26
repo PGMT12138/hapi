@@ -88,18 +88,20 @@ export default function VoiceSettingsPage() {
 
     // STT config
     const { api: sttApi } = useAppContext()
-    const { config } = useSttConfig(sttApi)
-    const { updateConfig } = useSttConfigActions(sttApi)
+    const { configs, activeConfig } = useSttConfig(sttApi)
+    const { updateConfig, deleteConfig, setActive } = useSttConfigActions(sttApi)
     const [isSttProviderOpen, setIsSttProviderOpen] = useState(false)
     const [isSttLanguageOpen, setIsSttLanguageOpen] = useState(false)
-    const [sttProvider, setSttProvider] = useState(config?.provider ?? 'tencent')
-    const [sttAppId, setSttAppId] = useState(config?.appId ?? '')
-    const [sttSecretId, setSttSecretId] = useState(config?.secretId ?? '')
-    const [sttSecretKey, setSttSecretKey] = useState(config?.secretKey ?? '')
-    const [sttLanguage, setSttLanguage] = useState(config?.language ?? 'zh')
+    const [sttProvider, setSttProvider] = useState(activeConfig?.provider ?? 'tencent')
+    const [sttAppId, setSttAppId] = useState('')
+    const [sttSecretId, setSttSecretId] = useState('')
+    const [sttSecretKey, setSttSecretKey] = useState('')
+    const [sttLanguage, setSttLanguage] = useState(activeConfig?.language ?? 'zh')
     const [showSecretKey, setShowSecretKey] = useState(false)
-    const [sttApiKey, setSttApiKey] = useState(config?.apiKey ?? '')
-    const [sttApiSecret, setSttApiSecret] = useState(config?.apiSecret ?? '')
+    // 讯飞配置字段（独立于腾讯云）
+    const [sttAppId_XF, setSttAppId_XF] = useState('')
+    const [sttApiKey, setSttApiKey] = useState('')
+    const [sttApiSecret, setSttApiSecret] = useState('')
     const [showApiKey, setShowApiKey] = useState(false)
     const [showApiSecret, setShowApiSecret] = useState(false)
     const [sttSaving, setSttSaving] = useState(false)
@@ -107,16 +109,30 @@ export default function VoiceSettingsPage() {
     const sttLanguageContainerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        if (config) {
-            setSttProvider(config.provider)
-            setSttAppId(config.appId)
-            setSttSecretId(config.secretId)
-            setSttSecretKey(config.secretKey)
-            setSttLanguage(config.language)
-            setSttApiKey(config.apiKey)
-            setSttApiSecret(config.apiSecret)
+        // 从 configs 数组中找到各服务商的配置
+        const tencentConfig = configs.find(c => c.provider === 'tencent')
+        const xunfeiConfig = configs.find(c => c.provider === 'xunfei')
+
+        if (tencentConfig) {
+            setSttProvider(tencentConfig.active ? 'tencent' : sttProvider)
+            setSttAppId(tencentConfig.appId)
+            setSttSecretId(tencentConfig.secretId)
+            setSttSecretKey(tencentConfig.secretKey)
+            setSttLanguage(tencentConfig.language)
         }
-    }, [config])
+        if (xunfeiConfig) {
+            setSttAppId_XF(xunfeiConfig.appId)
+            setSttApiKey(xunfeiConfig.apiKey)
+            setSttApiSecret(xunfeiConfig.apiSecret)
+            if (xunfeiConfig.active) setSttProvider('xunfei')
+        }
+        // 设置默认语言
+        const active = configs.find(c => c.active === 1)
+        if (active) setSttLanguage(active.language)
+    }, [configs])
+
+    const isTencentConfigured = !!configs.find(c => c.provider === 'tencent' && c.appId && c.secretId && c.secretKey)
+    const isXunfeiConfigured = !!configs.find(c => c.provider === 'xunfei' && c.appId && c.apiKey && c.apiSecret)
 
     const currentVoiceLanguage = voiceLanguages.find((lang) => lang.code === voiceLanguage)
 
@@ -283,14 +299,6 @@ export default function VoiceSettingsPage() {
                                                 onClick={() => {
                                                     setSttProvider(opt.value)
                                                     setIsSttProviderOpen(false)
-                                                    // 清空另一个服务商的凭证字段
-                                                    if (opt.value === 'tencent') {
-                                                        setSttApiKey('')
-                                                        setSttApiSecret('')
-                                                    } else {
-                                                        setSttSecretId('')
-                                                        setSttSecretKey('')
-                                                    }
                                                 }}
                                                 className={`flex items-center justify-between w-full px-3 py-2 text-base text-left transition-colors ${
                                                     isSelected
@@ -314,8 +322,14 @@ export default function VoiceSettingsPage() {
                             <div className="mb-1 text-sm text-[var(--app-fg)]">AppID</div>
                             <input
                                 type="text"
-                                value={sttAppId}
-                                onChange={(e) => setSttAppId(e.target.value)}
+                                value={sttProvider === 'tencent' ? sttAppId : sttAppId_XF}
+                                onChange={(e) => {
+                                    if (sttProvider === 'tencent') {
+                                        setSttAppId(e.target.value)
+                                    } else {
+                                        setSttAppId_XF(e.target.value)
+                                    }
+                                }}
                                 placeholder="输入 AppID"
                                 className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
                             />
@@ -491,13 +505,14 @@ export default function VoiceSettingsPage() {
                                     try {
                                         await updateConfig({
                                             provider: sttProvider,
-                                            appId: sttAppId,
-                                            secretId: sttSecretId,
-                                            secretKey: sttSecretKey,
-                                            apiKey: sttApiKey,
-                                            apiSecret: sttApiSecret,
+                                            appId: sttProvider === 'tencent' ? sttAppId : sttAppId_XF,
+                                            secretId: sttProvider === 'tencent' ? sttSecretId : undefined,
+                                            secretKey: sttProvider === 'tencent' ? sttSecretKey : undefined,
+                                            apiKey: sttProvider === 'xunfei' ? sttApiKey : undefined,
+                                            apiSecret: sttProvider === 'xunfei' ? sttApiSecret : undefined,
                                             language: sttLanguage,
                                             region: STT_DEFAULT_REGION,
+                                            active: true,
                                         })
                                     } catch {
                                         // error is handled by mutation
@@ -510,21 +525,16 @@ export default function VoiceSettingsPage() {
                                 {sttSaving ? '保存中...' : '保存'}
                             </button>
                         </div>
-                        <div className="flex items-center gap-1.5 px-3 pb-3">
-                            <span
-                                className={`h-2 w-2 rounded-full ${
-                                    sttAppId && (sttProvider === 'tencent' ? (sttSecretId && sttSecretKey) : (sttApiKey && sttApiSecret))
-                                        ? 'bg-[#34C759]'
-                                        : 'bg-[#999]'
-                                }`}
-                            />
-                            <span className={`text-xs ${
-                                sttAppId && (sttProvider === 'tencent' ? (sttSecretId && sttSecretKey) : (sttApiKey && sttApiSecret))
-                                    ? 'text-[#34C759]'
-                                    : 'text-[#999]'
-                            }`}>
-                                {sttAppId && (sttProvider === 'tencent' ? (sttSecretId && sttSecretKey) : (sttApiKey && sttApiSecret)) ? '已配置' : '未配置'}
-                            </span>
+                        <div className="flex items-center gap-1.5 px-3 pb-3 flex-wrap">
+                            {configs.map(cfg => (
+                                <div key={cfg.provider} className="flex items-center gap-1">
+                                    <span className={`h-2 w-2 rounded-full ${cfg.active ? 'bg-[#34C759]' : 'bg-[#999]'}`} />
+                                    <span className={`text-xs ${cfg.active ? 'text-[#34C759]' : 'text-[#999]'}`}>
+                                        {cfg.provider === 'tencent' ? '腾讯云' : '讯飞'}
+                                        {cfg.active ? ' (活跃)' : ''}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
