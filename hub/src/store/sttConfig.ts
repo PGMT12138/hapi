@@ -8,6 +8,8 @@ type DbSttConfigRow = {
     app_id: string
     secret_id: string
     secret_key: string
+    api_key: string
+    api_secret: string
     language: string
     region: string
     updated_at: string
@@ -21,6 +23,8 @@ function toStoredSttConfig(row: DbSttConfigRow): StoredSttConfig {
         appId: row.app_id,
         secretId: row.secret_id,
         secretKey: row.secret_key,
+        apiKey: row.api_key,
+        apiSecret: row.api_secret,
         language: row.language,
         region: row.region,
         updatedAt: row.updated_at
@@ -37,36 +41,51 @@ export function getSttConfigByNamespace(db: Database, namespace: string): Stored
 export function upsertSttConfig(
     db: Database,
     namespace: string,
-    data: { provider: string; appId?: string; secretId: string; secretKey?: string; language: string; region: string }
+    data: {
+        provider: string
+        appId?: string
+        secretId?: string
+        secretKey?: string
+        apiKey?: string
+        apiSecret?: string
+        language: string
+        region: string
+    }
 ): StoredSttConfig {
     const existing = getSttConfigByNamespace(db, namespace)
 
     if (existing) {
         const secretKey = data.secretKey ?? existing.secretKey
         const appId = data.appId ?? existing.appId
+        const apiKey = data.apiKey ?? existing.apiKey
+        const apiSecret = data.apiSecret ?? existing.apiSecret
         db.prepare(`
             UPDATE stt_configs
-            SET provider = @provider, app_id = @appId, secret_id = @secretId, secret_key = @secretKey, language = @language, region = @region, updated_at = datetime('now')
+            SET provider = @provider, app_id = @appId, secret_id = @secretId, secret_key = @secretKey, api_key = @apiKey, api_secret = @apiSecret, language = @language, region = @region, updated_at = datetime('now')
             WHERE namespace = @namespace
         `).run({
             provider: data.provider,
             appId,
-            secretId: data.secretId,
+            secretId: data.secretId ?? '',
             secretKey,
+            apiKey,
+            apiSecret,
             language: data.language,
             region: data.region,
             namespace
         })
     } else {
         db.prepare(`
-            INSERT INTO stt_configs (namespace, provider, app_id, secret_id, secret_key, language, region, updated_at)
-            VALUES (@namespace, @provider, @appId, @secretId, @secretKey, @language, @region, datetime('now'))
+            INSERT INTO stt_configs (namespace, provider, app_id, secret_id, secret_key, api_key, api_secret, language, region, updated_at)
+            VALUES (@namespace, @provider, @appId, @secretId, @secretKey, @apiKey, @apiSecret, @language, @region, datetime('now'))
         `).run({
             namespace,
             provider: data.provider,
             appId: data.appId ?? '',
-            secretId: data.secretId,
+            secretId: data.secretId ?? '',
             secretKey: data.secretKey ?? '',
+            apiKey: data.apiKey ?? '',
+            apiSecret: data.apiSecret ?? '',
             language: data.language,
             region: data.region
         })
