@@ -34,7 +34,7 @@ export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 export { SttConfigStore } from './sttConfigStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 14
+const SCHEMA_VERSION: number = 15
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -127,6 +127,7 @@ export class Store {
             11: () => this.migrateFromV11ToV12(),
             12: () => this.migrateFromV12ToV13(),
             13: () => this.migrateFromV13ToV14(),
+            14: () => this.migrateFromV14ToV15(),
         })
 
         if (currentVersion === 0) {
@@ -292,6 +293,8 @@ export class Store {
                 app_id TEXT NOT NULL DEFAULT '',
                 secret_id TEXT NOT NULL DEFAULT '',
                 secret_key TEXT NOT NULL DEFAULT '',
+                api_key TEXT NOT NULL DEFAULT '',
+                api_secret TEXT NOT NULL DEFAULT '',
                 language TEXT NOT NULL DEFAULT 'zh',
                 region TEXT NOT NULL DEFAULT 'ap-beijing',
                 updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -577,6 +580,17 @@ export class Store {
         if (columns.size === 0) return
         if (!columns.has('app_id')) {
             this.db.exec('ALTER TABLE stt_configs ADD COLUMN app_id TEXT NOT NULL DEFAULT \'\'')
+        }
+    }
+
+    private migrateFromV14ToV15(): void {
+        const columns = this.getSttConfigColumnNames()
+        if (columns.size === 0) return
+        if (!columns.has('api_key')) {
+            this.db.exec("ALTER TABLE stt_configs ADD COLUMN api_key TEXT NOT NULL DEFAULT ''")
+        }
+        if (!columns.has('api_secret')) {
+            this.db.exec("ALTER TABLE stt_configs ADD COLUMN api_secret TEXT NOT NULL DEFAULT ''")
         }
     }
 

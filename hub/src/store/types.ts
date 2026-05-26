@@ -96,6 +96,8 @@ export interface StoredSttConfig {
     appId: string
     secretId: string
     secretKey: string
+    apiKey: string      // 讯飞 APIKey
+    apiSecret: string   // 讯飞 APISecret
     language: string
     region: string
     updatedAt: string
