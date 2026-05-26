@@ -31,6 +31,11 @@ export function createSttRoutes(store: Store): Hono<WebAppEnv> {
             return c.json({ error: 'STT is not configured for this namespace' }, 400)
         }
 
+        // 讯飞不实现一句话识别，直接返回空文本
+        if (sttConfig.provider === 'xunfei') {
+            return c.json({ text: '', audioDuration: 0 })
+        }
+
         const { audio: base64Audio, language = STT_DEFAULT_LANGUAGE } = parsed.data
 
         let pcmBuffer: Buffer
