@@ -34,7 +34,7 @@ export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 export { SttConfigStore } from './sttConfigStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 15
+const SCHEMA_VERSION: number = 16
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -128,6 +128,7 @@ export class Store {
             12: () => this.migrateFromV12ToV13(),
             13: () => this.migrateFromV13ToV14(),
             14: () => this.migrateFromV14ToV15(),
+            15: () => this.migrateFromV15ToV16(),
         })
 
         if (currentVersion === 0) {
@@ -297,8 +298,9 @@ export class Store {
                 api_secret TEXT NOT NULL DEFAULT '',
                 language TEXT NOT NULL DEFAULT 'zh',
                 region TEXT NOT NULL DEFAULT 'ap-beijing',
+                active INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-                UNIQUE(namespace)
+                UNIQUE(namespace, provider)
             );
             CREATE INDEX IF NOT EXISTS idx_stt_configs_namespace ON stt_configs(namespace);
         `)
@@ -592,6 +594,32 @@ export class Store {
         if (!columns.has('api_secret')) {
             this.db.exec("ALTER TABLE stt_configs ADD COLUMN api_secret TEXT NOT NULL DEFAULT ''")
         }
+    }
+
+    private migrateFromV15ToV16(): void {
+        // SQLite 不支持直接修改 UNIQUE 约束，需要重建表
+        this.db.exec(`
+            CREATE TABLE stt_configs_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                namespace TEXT NOT NULL,
+                provider TEXT NOT NULL DEFAULT 'tencent',
+                app_id TEXT NOT NULL DEFAULT '',
+                secret_id TEXT NOT NULL DEFAULT '',
+                secret_key TEXT NOT NULL DEFAULT '',
+                api_key TEXT NOT NULL DEFAULT '',
+                api_secret TEXT NOT NULL DEFAULT '',
+                language TEXT NOT NULL DEFAULT 'zh',
+                region TEXT NOT NULL DEFAULT 'ap-beijing',
+                active INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(namespace, provider)
+            );
+            INSERT INTO stt_configs_new (namespace, provider, app_id, secret_id, secret_key, api_key, api_secret, language, region, active, updated_at)
+                SELECT namespace, provider, app_id, secret_id, secret_key, api_key, api_secret, language, region, 1, updated_at FROM stt_configs;
+            DROP TABLE stt_configs;
+            ALTER TABLE stt_configs_new RENAME TO stt_configs;
+            CREATE INDEX IF NOT EXISTS idx_stt_configs_namespace ON stt_configs(namespace);
+        `)
     }
 
     private getSttConfigColumnNames(): Set<string> {

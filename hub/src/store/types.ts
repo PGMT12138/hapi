@@ -100,6 +100,7 @@ export interface StoredSttConfig {
     apiSecret: string   // 讯飞 APISecret
     language: string
     region: string
+    active: number
     updatedAt: string
 }
 
