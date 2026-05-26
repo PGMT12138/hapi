@@ -198,7 +198,7 @@ export function createSocketServer(deps: SocketServerDeps): {
             tencentProvider: tencentSttProvider,
             xunfeiProvider: xunfeiSttProvider,
             getSttConfig: (ns) => {
-                const config = deps.store.sttConfig.get(ns)
+                const config = deps.store.sttConfig.getActive(ns)
                 if (!config || !config.appId) return null
                 return {
                     provider: config.provider,

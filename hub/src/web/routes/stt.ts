@@ -26,7 +26,7 @@ export function createSttRoutes(store: Store): Hono<WebAppEnv> {
             return c.json({ error: 'Invalid body' }, 400)
         }
 
-        const sttConfig = store.sttConfig.get(namespace)
+        const sttConfig = store.sttConfig.getActive(namespace)
         if (!sttConfig) {
             return c.json({ error: 'STT is not configured for this namespace' }, 400)
         }
