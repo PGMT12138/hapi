@@ -57,11 +57,14 @@ export function createSttRoutes(store: Store): Hono<WebAppEnv> {
         try {
             const result = await recognizeSentence(
                 {
+                    provider: sttConfig.provider,
                     language,
                     region: sttConfig.region,
                     appId: sttConfig.appId,
                     secretId: sttConfig.secretId,
                     secretKey: sttConfig.secretKey,
+                    apiKey: sttConfig.apiKey,
+                    apiSecret: sttConfig.apiSecret,
                 },
                 pcmBuffer,
                 language,

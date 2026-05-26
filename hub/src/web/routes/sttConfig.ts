@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { STT_DEFAULT_LANGUAGE, STT_DEFAULT_REGION } from '@hapi/protocol/stt'
 import type { SttProvider } from '@hapi/protocol/stt'
 import type { Store } from '../../store'
 import type { WebAppEnv } from '../middleware/auth'
