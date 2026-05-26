@@ -5,18 +5,26 @@ import type { SttProvider } from '@hapi/protocol/stt'
 import type { Store } from '../../store'
 import type { WebAppEnv } from '../middleware/auth'
 
-const sttProviderSchema = z.enum(['tencent'] as const satisfies ReadonlyArray<SttProvider>)
+const sttProviderSchema = z.enum(['tencent', 'xunfei'] as const satisfies ReadonlyArray<SttProvider>)
 
 const upsertSttConfigSchema = z.object({
     provider: sttProviderSchema,
     appId: z.string().min(1),
-    secretId: z.string().min(1),
-    secretKey: z.string().min(1),
+    secretId: z.string().optional(),
+    secretKey: z.string().optional(),
+    apiKey: z.string().optional(),
+    apiSecret: z.string().optional(),
     language: z.string().min(1),
     region: z.string().min(1)
-})
+}).refine(
+    (data) => data.provider === 'tencent' ? !!(data.secretId && data.secretKey) : true,
+    { message: 'secretId and secretKey are required for tencent provider', path: ['secretId'] }
+).refine(
+    (data) => data.provider === 'xunfei' ? !!(data.apiKey && data.apiSecret) : true,
+    { message: 'apiKey and apiSecret are required for xunfei provider', path: ['apiKey'] }
+)
 
-function maskSecretKey(key: string): string {
+function maskSecret(key: string): string {
     if (key.length <= 4) return '****'
     return '****' + key.slice(-4)
 }
@@ -33,7 +41,9 @@ export function createSttConfigRoutes(store: Store): Hono<WebAppEnv> {
         return c.json({
             config: {
                 ...config,
-                secretKey: maskSecretKey(config.secretKey)
+                secretKey: config.secretKey ? maskSecret(config.secretKey) : undefined,
+                apiKey: config.apiKey ? maskSecret(config.apiKey) : undefined,
+                apiSecret: config.apiSecret ? maskSecret(config.apiSecret) : undefined
             }
         })
     })
@@ -48,14 +58,18 @@ export function createSttConfigRoutes(store: Store): Hono<WebAppEnv> {
         const namespace = c.get('namespace')
         const data = parsed.data
 
-        // If secretKey starts with "****", don't update it - keep existing value
+        // If masked secrets start with "****", don't update them - keep existing values
         const secretKey = data.secretKey?.startsWith('****') ? undefined : data.secretKey
+        const apiKey = data.apiKey?.startsWith('****') ? undefined : data.apiKey
+        const apiSecret = data.apiSecret?.startsWith('****') ? undefined : data.apiSecret
 
         const config = store.sttConfig.upsert(namespace, {
             provider: data.provider,
             appId: data.appId,
             secretId: data.secretId,
             secretKey,
+            apiKey,
+            apiSecret,
             language: data.language,
             region: data.region
         })
@@ -63,7 +77,9 @@ export function createSttConfigRoutes(store: Store): Hono<WebAppEnv> {
         return c.json({
             config: {
                 ...config,
-                secretKey: maskSecretKey(config.secretKey)
+                secretKey: config.secretKey ? maskSecret(config.secretKey) : undefined,
+                apiKey: config.apiKey ? maskSecret(config.apiKey) : undefined,
+                apiSecret: config.apiSecret ? maskSecret(config.apiSecret) : undefined
             }
         })
     })
