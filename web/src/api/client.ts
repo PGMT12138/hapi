@@ -610,19 +610,20 @@ export class ApiClient {
 
     // STT Config
 
-    async getSttConfig(): Promise<{ config: SttConfig | null }> {
+    async getSttConfig(): Promise<{ configs: SttConfig[] }> {
         return await this.request('/api/stt/config')
     }
 
     async updateSttConfig(data: {
         provider: string
         appId: string
-        secretId: string
-        secretKey: string
-        apiKey: string
-        apiSecret: string
+        secretId?: string
+        secretKey?: string
+        apiKey?: string
+        apiSecret?: string
         language: string
         region: string
+        active?: boolean
     }): Promise<{ config: SttConfig }> {
         return await this.request('/api/stt/config', {
             method: 'PUT',
@@ -630,9 +631,16 @@ export class ApiClient {
         })
     }
 
-    async deleteSttConfig(): Promise<{ ok: boolean }> {
-        return await this.request('/api/stt/config', {
+    async deleteSttConfig(provider: string): Promise<{ ok: boolean }> {
+        return await this.request(`/api/stt/config?provider=${encodeURIComponent(provider)}`, {
             method: 'DELETE',
+        })
+    }
+
+    async setActiveSttConfig(provider: string): Promise<{ config: SttConfig }> {
+        return await this.request('/api/stt/config/active', {
+            method: 'PATCH',
+            body: JSON.stringify({ provider }),
         })
     }
 }

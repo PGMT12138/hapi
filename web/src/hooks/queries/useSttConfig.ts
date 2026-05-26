@@ -4,7 +4,8 @@ import type { SttConfig } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
 
 export function useSttConfig(api: ApiClient | null): {
-    config: SttConfig | null
+    configs: SttConfig[]
+    activeConfig: SttConfig | null
     isLoading: boolean
     error: string | null
 } {
@@ -17,8 +18,12 @@ export function useSttConfig(api: ApiClient | null): {
         enabled: Boolean(api),
     })
 
+    const configs = query.data?.configs ?? []
+    const activeConfig = configs.find(c => c.active === 1) ?? null
+
     return {
-        config: query.data?.config ?? null,
+        configs,
+        activeConfig,
         isLoading: query.isLoading,
         error: query.error instanceof Error ? query.error.message : query.error ? 'Failed to load STT config' : null,
     }

@@ -298,6 +298,7 @@ export interface SttConfig {
     secretKey: string
     apiKey: string
     apiSecret: string
+    active: number
     language: string
     region: string
     updatedAt: string

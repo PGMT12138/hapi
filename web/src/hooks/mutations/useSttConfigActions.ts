@@ -13,12 +13,13 @@ export function useSttConfigActions(api: ApiClient | null) {
         mutationFn: async (data: {
             provider: string
             appId: string
-            secretId: string
-            secretKey: string
-            apiKey: string
-            apiSecret: string
+            secretId?: string
+            secretKey?: string
+            apiKey?: string
+            apiSecret?: string
             language: string
             region: string
+            active?: boolean
         }) => {
             if (!api) throw new Error('API unavailable')
             return await api.updateSttConfig(data)
@@ -27,9 +28,17 @@ export function useSttConfigActions(api: ApiClient | null) {
     })
 
     const deleteConfig = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (provider: string) => {
             if (!api) throw new Error('API unavailable')
-            return await api.deleteSttConfig()
+            return await api.deleteSttConfig(provider)
+        },
+        onSuccess: invalidate,
+    })
+
+    const setActive = useMutation({
+        mutationFn: async (provider: string) => {
+            if (!api) throw new Error('API unavailable')
+            return await api.setActiveSttConfig(provider)
         },
         onSuccess: invalidate,
     })
@@ -37,6 +46,7 @@ export function useSttConfigActions(api: ApiClient | null) {
     return {
         updateConfig: updateConfig.mutateAsync,
         deleteConfig: deleteConfig.mutateAsync,
-        isPending: updateConfig.isPending || deleteConfig.isPending,
+        setActive: setActive.mutateAsync,
+        isPending: updateConfig.isPending || deleteConfig.isPending || setActive.isPending,
     }
 }
