@@ -89,7 +89,7 @@ export default function VoiceSettingsPage() {
     // STT config
     const { api: sttApi } = useAppContext()
     const { configs, activeConfig } = useSttConfig(sttApi)
-    const { updateConfig, deleteConfig, setActive } = useSttConfigActions(sttApi)
+    const { updateConfig, setActive } = useSttConfigActions(sttApi)
     const [isSttProviderOpen, setIsSttProviderOpen] = useState(false)
     const [isSttLanguageOpen, setIsSttLanguageOpen] = useState(false)
     const [sttProvider, setSttProvider] = useState(activeConfig?.provider ?? 'tencent')
@@ -105,34 +105,30 @@ export default function VoiceSettingsPage() {
     const [showApiKey, setShowApiKey] = useState(false)
     const [showApiSecret, setShowApiSecret] = useState(false)
     const [sttSaving, setSttSaving] = useState(false)
+    const [sttActivating, setSttActivating] = useState(false)
     const sttProviderContainerRef = useRef<HTMLDivElement>(null)
     const sttLanguageContainerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // 从 configs 数组中找到各服务商的配置
         const tencentConfig = configs.find(c => c.provider === 'tencent')
         const xunfeiConfig = configs.find(c => c.provider === 'xunfei')
+        const activeConfig = configs.find(c => c.active === 1)
 
+        if (activeConfig) {
+            setSttProvider(activeConfig.provider)
+            setSttLanguage(activeConfig.language)
+        }
         if (tencentConfig) {
-            setSttProvider(tencentConfig.active ? 'tencent' : sttProvider)
             setSttAppId(tencentConfig.appId)
             setSttSecretId(tencentConfig.secretId)
             setSttSecretKey(tencentConfig.secretKey)
-            setSttLanguage(tencentConfig.language)
         }
         if (xunfeiConfig) {
             setSttAppId_XF(xunfeiConfig.appId)
             setSttApiKey(xunfeiConfig.apiKey)
             setSttApiSecret(xunfeiConfig.apiSecret)
-            if (xunfeiConfig.active) setSttProvider('xunfei')
         }
-        // 设置默认语言
-        const active = configs.find(c => c.active === 1)
-        if (active) setSttLanguage(active.language)
     }, [configs])
-
-    const isTencentConfigured = !!configs.find(c => c.provider === 'tencent' && c.appId && c.secretId && c.secretKey)
-    const isXunfeiConfigured = !!configs.find(c => c.provider === 'xunfei' && c.appId && c.apiKey && c.apiSecret)
 
     const currentVoiceLanguage = voiceLanguages.find((lang) => lang.code === voiceLanguage)
 
@@ -496,7 +492,7 @@ export default function VoiceSettingsPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="px-3 py-3">
+                        <div className="flex gap-2 px-3 py-3">
                             <button
                                 type="button"
                                 disabled={sttSaving}
@@ -512,7 +508,6 @@ export default function VoiceSettingsPage() {
                                             apiSecret: sttProvider === 'xunfei' ? sttApiSecret : undefined,
                                             language: sttLanguage,
                                             region: STT_DEFAULT_REGION,
-                                            active: true,
                                         })
                                     } catch {
                                         // error is handled by mutation
@@ -520,9 +515,40 @@ export default function VoiceSettingsPage() {
                                         setSttSaving(false)
                                     }
                                 }}
-                                className="w-full rounded-lg border border-[var(--app-link)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--app-link)] transition-colors hover:bg-[var(--app-link)] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex-1 rounded-lg border border-[var(--app-border)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition-colors hover:bg-[var(--app-subtle-bg)] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {sttSaving ? '保存中...' : '保存'}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={sttActivating}
+                                onClick={async () => {
+                                    const appId = sttProvider === 'tencent' ? sttAppId : sttAppId_XF
+                                    const hasCredentials = sttProvider === 'tencent'
+                                        ? !!(appId && sttSecretId && sttSecretKey)
+                                        : !!(appId && sttApiKey && sttApiSecret)
+                                    if (!hasCredentials) {
+                                        alert(sttProvider === 'tencent'
+                                            ? '请先填写完整的腾讯云配置（AppID、SecretId、SecretKey）'
+                                            : '请先填写完整的讯飞配置（AppID、APIKey、APISecret）')
+                                        return
+                                    }
+                                    setSttActivating(true)
+                                    try {
+                                        await setActive(sttProvider)
+                                    } catch {
+                                        // error is handled by mutation
+                                    } finally {
+                                        setSttActivating(false)
+                                    }
+                                }}
+                                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                    activeConfig?.provider === sttProvider
+                                        ? 'border border-[#34C759] bg-transparent text-[#34C759]'
+                                        : 'border border-[var(--app-link)] bg-[var(--app-link)] text-white hover:opacity-90'
+                                }`}
+                            >
+                                {sttActivating ? '启用中...' : activeConfig?.provider === sttProvider ? '已启用' : '启用'}
                             </button>
                         </div>
                         <div className="flex items-center gap-1.5 px-3 pb-3 flex-wrap">
