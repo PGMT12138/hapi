@@ -17,6 +17,7 @@ export function getSttSocket(serverUrl: string, token: string): SttSocketInstanc
         auth: { token },
         transports: ['websocket'],
         reconnection: false,
+        autoConnect: false,
     })
 
     return sttSocket

@@ -43,6 +43,7 @@ import { isRemoteTerminalSupported } from '@/utils/terminalSupport'
 function SttTextInjector(props: {
     sttStatus: 'idle' | 'recording' | 'recognizing'
     sttText: string
+    sttError: string | null
     onSttReset: () => void
 }) {
     const api = useAssistantApi()
@@ -60,9 +61,11 @@ function SttTextInjector(props: {
 
         if (props.sttStatus === 'idle' && wasActiveRef.current) {
             wasActiveRef.current = false
-            props.onSttReset()
+            if (!props.sttError) {
+                props.onSttReset()
+            }
         }
-    }, [props.sttStatus, props.sttText, props.onSttReset, api])
+    }, [props.sttStatus, props.sttText, props.sttError, props.onSttReset, api])
 
     return null
 }
@@ -288,13 +291,21 @@ export function SessionChat(props: {
     }, [voice])
 
     const handleSttToggle = useCallback(() => {
+        if (!stt.isConfigured) {
+            navigate({ to: '/settings/voice' })
+            return
+        }
+        if (!stt.isAvailable) {
+            alert('当前环境不支持语音输入。请通过 HTTPS 访问，或在 Chrome 浏览器中使用。')
+            return
+        }
         if (stt.state.status === 'idle') {
             stt.start()
         } else if (stt.state.status === 'recording') {
             stt.stop()
         }
         // If recognizing, do nothing — wait for result
-    }, [stt])
+    }, [stt, navigate])
 
     // Track session id to clear caches when it changes
     const prevSessionIdRef = useRef<string | null>(null)
@@ -596,6 +607,7 @@ export function SessionChat(props: {
                 <SttTextInjector
                     sttStatus={stt.state.status}
                     sttText={stt.state.text}
+                    sttError={stt.state.error}
                     onSttReset={stt.reset}
                 />
                 <div className="relative flex min-h-0 flex-1 flex-col">
@@ -686,7 +698,7 @@ export function SessionChat(props: {
                         onVoiceToggle={voice ? handleVoiceToggle : undefined}
                         onVoiceMicToggle={voice ? handleVoiceMicToggle : undefined}
                         sttStatus={stt.state.status}
-                        onSttToggle={stt.isConfigured ? handleSttToggle : undefined}
+                        onSttToggle={handleSttToggle}
                     />
                 </div>
             </AssistantRuntimeProvider>

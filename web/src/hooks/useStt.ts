@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SttLanguage, SttSessionStatus } from '@hapi/protocol/stt'
 import { disconnectSttSocket } from '@/realtime/stt-socket'
 import { useSttConfig } from './queries/useSttConfig'
@@ -10,6 +10,13 @@ interface SttState {
     confirmedText: string
     currentText: string
     error: string | null
+}
+
+interface NativeSttAudioBridge {
+    isAvailable(): boolean
+    start(): boolean
+    stop(): void
+    requestPermission(): void
 }
 
 function downsampleAndConvertTo16BitPCM(
@@ -44,6 +51,28 @@ function downsampleAndConvertTo16BitPCM(
     return output
 }
 
+function getNativeBridge(): NativeSttAudioBridge | null {
+    const w = window as unknown as { SttAudioBridge?: NativeSttAudioBridge }
+    if (w.SttAudioBridge && w.SttAudioBridge.isAvailable()) {
+        return w.SttAudioBridge
+    }
+    return null
+}
+
+function isInWebView(): boolean {
+    return typeof (window as unknown as { SttAudioBridge?: unknown }).SttAudioBridge !== 'undefined'
+}
+
+function decodeBase64ToArrayBuffer(b64: string): ArrayBuffer {
+    const bin = atob(b64)
+    const buf = new ArrayBuffer(bin.length)
+    const view = new Uint8Array(buf)
+    for (let i = 0; i < bin.length; i++) {
+        view[i] = bin.charCodeAt(i)
+    }
+    return buf
+}
+
 export function useStt(api: ApiClient | null, serverUrl: string, token: string) {
     const { config } = useSttConfig(api)
     const [state, setState] = useState<SttState>({
@@ -59,8 +88,31 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const streamRef = useRef<MediaStream | null>(null)
     const socketRef = useRef<Socket | null>(null)
-    const pcmModeRef = useRef(false)
+    const nativeBridgeRef = useRef<NativeSttAudioBridge | null>(null)
     const recognizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Track native bridge availability as state so permission changes trigger re-render
+    const [bridgeAvailable, setBridgeAvailable] = useState(() => getNativeBridge() !== null)
+    const webViewEnv = isInWebView()
+
+    // Listen for permission grant notifications from native side
+    useEffect(() => {
+        if (!webViewEnv) return
+
+        const handler = () => {
+            const available = getNativeBridge() !== null
+            setBridgeAvailable(available)
+            if (available) {
+                setState(prev => prev.error?.includes('麦克风权限') ? { ...prev, error: null } : prev)
+            }
+        }
+
+        window.addEventListener('__hapiAudioPermissionGranted', handler)
+        return () => window.removeEventListener('__hapiAudioPermissionGranted', handler)
+    }, [webViewEnv])
+
+    let nativeBridge = getNativeBridge()
+    const hasNativeBridge = webViewEnv ? bridgeAvailable : (nativeBridge !== null)
 
     const hasUserMedia = typeof navigator !== 'undefined'
         && typeof navigator.mediaDevices?.getUserMedia === 'function'
@@ -70,26 +122,51 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
 
     const hasMediaRecorder = typeof MediaRecorder !== 'undefined'
 
-    const isAvailable = hasUserMedia && (hasAudioContext || hasMediaRecorder)
+    // In WebView, only use native bridge — getUserMedia is broken on many Android devices
+    const isAvailable = webViewEnv
+        ? hasNativeBridge
+        : (hasUserMedia && (hasAudioContext || hasMediaRecorder))
 
     const isConfigured = Boolean(config?.appId && config?.secretId && config?.secretKey)
 
     const text = state.confirmedText + state.currentText
 
     const start = useCallback(async () => {
-        if (!isAvailable || !isConfigured) return
+        if (!isAvailable) {
+            if (webViewEnv) {
+                // In WebView, unavailability means permission not granted
+                const bridge = (window as unknown as { SttAudioBridge?: NativeSttAudioBridge }).SttAudioBridge
+                if (bridge) {
+                    bridge.requestPermission()
+                    setState(prev => ({ ...prev, error: '请在弹出的对话框中授予麦克风权限，然后重试' }))
+                } else {
+                    setState(prev => ({ ...prev, error: '当前环境不支持语音输入' }))
+                }
+            } else {
+                setState(prev => ({ ...prev, error: '当前环境不支持语音输入，请使用 HTTPS 或 Chrome 浏览器' }))
+            }
+            return
+        }
+        if (!isConfigured) return
+
+        clearRecognizingTimeout()
+        disconnectSttSocket()
+        cleanupAudio()
 
         setState({ status: 'recording', confirmedText: '', currentText: '', error: null })
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    channelCount: 1,
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                },
-            })
-            streamRef.current = stream
+            let stream: MediaStream | null = null
+
+            // In WebView, always use native bridge — getUserMedia is broken on many devices
+            if (webViewEnv) {
+                nativeBridgeRef.current = nativeBridge
+            } else if (hasNativeBridge) {
+                nativeBridgeRef.current = nativeBridge
+            } else {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                streamRef.current = stream
+            }
 
             const { getSttSocket } = await import('@/realtime/stt-socket')
             const socket = getSttSocket(serverUrl, token)
@@ -104,14 +181,12 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
             socket.on('stt:result', (result: { text: string; isFinal: boolean }) => {
                 setState((prev) => {
                     if (result.isFinal) {
-                        // 一句话结束：将当前句文本移入已确认区，清空当前句
                         return {
                             ...prev,
                             confirmedText: prev.confirmedText + result.text,
                             currentText: '',
                         }
                     } else {
-                        // 中间结果：追加 delta 到当前句
                         return {
                             ...prev,
                             currentText: prev.currentText + result.text,
@@ -147,8 +222,7 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
                 socket.connect()
             })
 
-            const usePcm = hasAudioContext
-            pcmModeRef.current = usePcm
+            const usePcm = webViewEnv || hasNativeBridge || hasAudioContext
 
             socket.emit('stt:start', {
                 language: (config?.language ?? 'zh') as SttLanguage,
@@ -156,7 +230,9 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
             })
 
             await new Promise<void>((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('STT session startup timeout')), 10_000)
+                const timeout = setTimeout(() => {
+                    reject(new Error('STT session startup timeout'))
+                }, 10_000)
                 socket.once('stt:started', () => {
                     clearTimeout(timeout)
                     resolve()
@@ -167,26 +243,56 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
                 })
             })
 
-            if (usePcm) {
+            if (webViewEnv || hasNativeBridge) {
+                startNativeCapture(socket)
+            } else if (usePcm && stream) {
                 startPcmCapture(stream, socket)
-            } else {
+            } else if (stream) {
                 startMediaRecorderCapture(stream, socket)
             }
         } catch (error) {
+            const err = error instanceof Error ? error : new Error('Failed to start recording')
+            const domName = error instanceof DOMException ? ` (${error.name})` : ''
             setState({
                 status: 'idle',
                 confirmedText: '',
                 currentText: '',
-                error: error instanceof Error ? error.message : 'Failed to start recording',
+                error: `${err.message}${domName}`,
             })
             cleanupAudio()
         }
-    }, [isAvailable, isConfigured, config?.language, serverUrl, token, hasAudioContext])
+    }, [isAvailable, isConfigured, config?.language, serverUrl, token, hasNativeBridge, hasAudioContext, nativeBridge, webViewEnv])
+
+    function startNativeCapture(socket: Socket) {
+        const bridge = nativeBridgeRef.current
+        if (!bridge) throw new Error('Native audio bridge not available')
+
+        // Register callback for native audio data
+        const w = window as unknown as {
+            __onSttAudioData?: (b64: string) => void
+        }
+        w.__onSttAudioData = (b64: string) => {
+            if (socket.connected) {
+                const buffer = decodeBase64ToArrayBuffer(b64)
+                socket.emit('stt:audio', { data: buffer })
+            }
+        }
+
+        const started = bridge.start()
+        if (!started) {
+            w.__onSttAudioData = undefined
+            throw new Error('原生音频录制启动失败，请检查麦克风是否被其他应用占用')
+        }
+    }
 
     function startPcmCapture(stream: MediaStream, socket: Socket) {
         const AudioCtx = AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
         const audioContext = new AudioCtx()
         audioContextRef.current = audioContext
+
+        if (audioContext.state === 'suspended') {
+            audioContext.resume()
+        }
 
         const source = audioContext.createMediaStreamSource(stream)
         sourceRef.current = source
@@ -228,6 +334,12 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
     }
 
     const stop = useCallback(async () => {
+        // Stop native bridge if active
+        const bridge = nativeBridgeRef.current
+        if (bridge) {
+            bridge.stop()
+        }
+
         const recorder = mediaRecorderRef.current
         if (recorder && recorder.state !== 'inactive') {
             recorder.stop()
@@ -241,7 +353,6 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
                 status: 'recognizing',
             }))
 
-            // 兜底超时：如果服务器没有发 stt:done，10秒后强制结束
             recognizingTimeoutRef.current = setTimeout(() => {
                 setState((prev) => {
                     if (prev.status === 'recognizing') {
@@ -277,6 +388,13 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
     }
 
     function cleanupAudio() {
+        const bridge = nativeBridgeRef.current
+        if (bridge) {
+            bridge.stop()
+            nativeBridgeRef.current = null
+        }
+        const w = window as unknown as { __onSttAudioData?: unknown }
+        w.__onSttAudioData = undefined
         processorRef.current?.disconnect()
         sourceRef.current?.disconnect()
         audioContextRef.current?.close()

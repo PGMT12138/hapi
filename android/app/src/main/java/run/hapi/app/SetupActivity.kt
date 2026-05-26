@@ -19,6 +19,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import run.hapi.app.data.AppPreferences
 import run.hapi.app.sse.SseService
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 class SetupActivity : AppCompatActivity() {
 
@@ -93,7 +98,17 @@ class SetupActivity : AppCompatActivity() {
 
     private suspend fun authenticate(serverUrl: String, apiToken: String): String {
         return withContext(Dispatchers.IO) {
-            val client = OkHttpClient()
+            val trustManagers = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            })
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, trustManagers, SecureRandom())
+            val client = OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.socketFactory, trustManagers[0] as X509TrustManager)
+                .hostnameVerifier { _, _ -> true }
+                .build()
             val body = JSONObject().apply {
                 put("accessToken", apiToken)
             }
