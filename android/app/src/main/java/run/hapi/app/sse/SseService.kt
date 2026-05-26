@@ -25,7 +25,12 @@ import okhttp3.sse.EventSources
 import org.json.JSONObject
 import run.hapi.app.HapiApp
 import run.hapi.app.notify.NotificationHelper
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 class SseService : LifecycleService() {
 
@@ -38,6 +43,20 @@ class SseService : LifecycleService() {
         private const val MAX_BACKOFF_MS = 30_000L
         private const val JITTER_MS = 500L
         private const val JWT_REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000L
+
+        private val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        })
+
+        private fun buildTlsOkHttp(): OkHttpClient.Builder {
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, trustAllCerts, SecureRandom())
+            return OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+                .hostnameVerifier { _, _ -> true }
+        }
     }
 
     private lateinit var notificationHelper: NotificationHelper
@@ -53,11 +72,11 @@ class SseService : LifecycleService() {
         super.onCreate()
         notificationHelper = NotificationHelper(this)
         notificationHelper.createChannels()
-        client = OkHttpClient.Builder()
+        client = buildTlsOkHttp()
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .connectTimeout(10, TimeUnit.SECONDS)
             .build()
-        authClient = OkHttpClient.Builder()
+        authClient = buildTlsOkHttp()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .writeTimeout(10, TimeUnit.SECONDS)

@@ -33,3 +33,17 @@ export interface SttServerEvents {
 export const STT_DEFAULT_LANGUAGE: SttLanguage = 'zh'
 export const STT_DEFAULT_REGION = 'ap-beijing'
 export const STT_DEFAULT_APPID = ''
+
+// --- 一句话识别 (Sentence Recognition) ---
+
+/** 一句话识别请求 */
+export interface SttSentenceRequest {
+    audio: string  // base64 encoded PCM/ WAV audio
+    language: SttLanguage
+    format?: 'pcm' | 'wav'
+}
+
+/** 一句话识别响应 */
+export interface SttSentenceResponse {
+    text: string
+}

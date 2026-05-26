@@ -163,9 +163,6 @@ export class PushNotificationChannel implements NotificationChannel {
     }
 
     async sendSessionCompletion(session: Session, _reason: string): Promise<void> {
-        if (!session.active) {
-            return
-        }
 
         const agentName = getAgentName(session)
         const name = getSessionName(session)

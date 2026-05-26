@@ -90,6 +90,8 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
     const socketRef = useRef<Socket | null>(null)
     const nativeBridgeRef = useRef<NativeSttAudioBridge | null>(null)
     const recognizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const pcmChunksRef = useRef<Uint8Array[]>([])
+    const sentenceRecognizingRef = useRef(false)
 
     // Track native bridge availability as state so permission changes trigger re-render
     const [bridgeAvailable, setBridgeAvailable] = useState(() => getNativeBridge() !== null)
@@ -154,6 +156,8 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
         cleanupAudio()
 
         setState({ status: 'recording', confirmedText: '', currentText: '', error: null })
+        pcmChunksRef.current = []
+        sentenceRecognizingRef.current = false
 
         try {
             let stream: MediaStream | null = null
@@ -276,6 +280,13 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
                 const buffer = decodeBase64ToArrayBuffer(b64)
                 socket.emit('stt:audio', { data: buffer })
             }
+            // Buffer PCM for sentence recognition
+            const binary = atob(b64)
+            const bytes = new Uint8Array(binary.length)
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i)
+            }
+            pcmChunksRef.current.push(bytes)
         }
 
         const started = bridge.start()
@@ -303,8 +314,12 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
         processor.onaudioprocess = (e) => {
             const inputData = e.inputBuffer.getChannelData(0)
             const pcm16 = downsampleAndConvertTo16BitPCM(inputData, audioContext.sampleRate, 16000)
-            if (pcm16.length > 0 && socket.connected) {
-                socket.emit('stt:audio', { data: pcm16.buffer as ArrayBuffer })
+            if (pcm16.length > 0) {
+                if (socket.connected) {
+                    socket.emit('stt:audio', { data: pcm16.buffer as ArrayBuffer })
+                }
+                // Buffer PCM for sentence recognition
+                pcmChunksRef.current.push(new Uint8Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength))
             }
         }
 
@@ -345,6 +360,10 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
             recorder.stop()
         }
 
+        // Capture PCM chunks before cleanup
+        const pcmChunks = pcmChunksRef.current
+        pcmChunksRef.current = []
+
         const socket = socketRef.current
         if (socket?.connected) {
             socket.emit('stt:stop')
@@ -371,12 +390,86 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
         }
 
         cleanupAudio()
-    }, [])
+
+        // Run sentence recognition in background — replace text when done
+        if (pcmChunks.length > 0 && api && isConfigured) {
+            const totalLen = pcmChunks.reduce((sum, c) => sum + c.length, 0)
+            // Skip if audio is too short (< 0.3s)
+            if (totalLen < 16000 * 2 * 0.3) return
+
+            // Cap at ~60s of 16kHz 16-bit mono
+            const maxBytes = 16000 * 2 * 60
+            let chunks = pcmChunks
+            if (totalLen > maxBytes) {
+                chunks = []
+                let accumulated = 0
+                for (const c of pcmChunks) {
+                    if (accumulated + c.length > maxBytes) {
+                        const remaining = maxBytes - accumulated
+                        if (remaining > 0) chunks.push(c.slice(0, remaining))
+                        break
+                    }
+                    chunks.push(c)
+                    accumulated += c.length
+                }
+            }
+
+            sentenceRecognizingRef.current = true
+            try {
+                const merged = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0))
+                let offset = 0
+                for (const c of chunks) {
+                    merged.set(c, offset)
+                    offset += c.length
+                }
+
+                // Convert Uint8Array to base64 in chunks to avoid stack overflow
+                let base64Audio = ''
+                const chunkSize = 8192
+                for (let i = 0; i < merged.length; i += chunkSize) {
+                    const slice = merged.subarray(i, Math.min(i + chunkSize, merged.length))
+                    base64Audio += String.fromCharCode(...slice)
+                }
+                base64Audio = btoa(base64Audio)
+
+                const res = await fetch(`${serverUrl}/api/stt/recognize`, {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json',
+                        'authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        audio: base64Audio,
+                        language: config?.language ?? 'zh',
+                        format: 'pcm',
+                    }),
+                })
+
+                if (res.ok) {
+                    const data = await res.json() as { text?: string; error?: string }
+                    if (data.text && sentenceRecognizingRef.current) {
+                        setState(prev => {
+                            if (prev.status === 'idle' || prev.status === 'recognizing') {
+                                return { status: 'idle', confirmedText: data.text!, currentText: '', error: null }
+                            }
+                            return prev
+                        })
+                    }
+                }
+            } catch {
+                // Sentence recognition failed — keep real-time result
+            } finally {
+                sentenceRecognizingRef.current = false
+            }
+        }
+    }, [api, isConfigured, config?.language, serverUrl, token])
 
     const reset = useCallback(() => {
         clearRecognizingTimeout()
         disconnectSttSocket()
         cleanupAudio()
+        pcmChunksRef.current = []
+        sentenceRecognizingRef.current = false
         setState({ status: 'idle', confirmedText: '', currentText: '', error: null })
     }, [])
 
