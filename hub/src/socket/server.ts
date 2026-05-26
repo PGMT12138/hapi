@@ -9,7 +9,7 @@ import { parseAccessToken } from '../utils/accessToken'
 import { registerCliHandlers } from './handlers/cli'
 import { registerSttHandlers } from './handlers/stt'
 import { registerTerminalHandlers } from './handlers/terminal'
-import { TencentCloudSttProvider } from '../stt'
+import { TencentCloudSttProvider, XunfeiSttProvider } from '../stt'
 import { RpcRegistry } from './rpcRegistry'
 import type { SyncEvent } from '../sync/syncEngine'
 import { TerminalRegistry } from './terminalRegistry'
@@ -167,7 +167,8 @@ export function createSocketServer(deps: SocketServerDeps): {
     }))
 
     const sttNs = io.of('/stt')
-    const sttProvider = new TencentCloudSttProvider()
+    const tencentSttProvider = new TencentCloudSttProvider()
+    const xunfeiSttProvider = new XunfeiSttProvider()
 
     sttNs.use(async (socket, next) => {
         console.log(`[STT-Socket] Auth middleware triggered for ${socket.id}`)
@@ -195,11 +196,19 @@ export function createSocketServer(deps: SocketServerDeps): {
         console.log(`[STT-Socket] Client connected: ${socket.id}, namespace: ${socket.data.namespace}`)
         registerSttHandlers(socket, {
             io,
-            sttProvider,
+            tencentProvider: tencentSttProvider,
+            xunfeiProvider: xunfeiSttProvider,
             getSttConfig: (ns) => {
                 const config = deps.store.sttConfig.get(ns)
-                if (!config || !config.secretId || !config.secretKey || !config.appId) return null
-                return { appId: config.appId, secretId: config.secretId, secretKey: config.secretKey }
+                if (!config || !config.appId) return null
+                return {
+                    provider: config.provider,
+                    appId: config.appId,
+                    secretId: config.secretId,
+                    secretKey: config.secretKey,
+                    apiKey: config.apiKey,
+                    apiSecret: config.apiSecret,
+                }
             }
         })
     })

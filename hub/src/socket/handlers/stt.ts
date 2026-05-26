@@ -18,12 +18,20 @@ type SttSocket = SocketWithData
 
 export type SttHandlersDeps = {
     io: SocketServer
-    sttProvider: SttProvider
-    getSttConfig: (namespace: string) => { appId: string; secretId: string; secretKey: string } | null
+    tencentProvider: SttProvider
+    xunfeiProvider: SttProvider
+    getSttConfig: (namespace: string) => {
+        provider: string
+        appId: string
+        secretId: string
+        secretKey: string
+        apiKey: string
+        apiSecret: string
+    } | null
 }
 
 export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): void {
-    const { io, sttProvider, getSttConfig } = deps
+    const { io, tencentProvider, xunfeiProvider, getSttConfig } = deps
     const namespace = typeof socket.data.namespace === 'string' ? socket.data.namespace : null
 
     const emitSttError = (message: string) => {
@@ -52,6 +60,8 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
         const language: SttLanguage = parsed.data.language ?? STT_DEFAULT_LANGUAGE
         const inputMimeType = parsed.data.mode === 'pcm' ? 'audio/pcm' : 'audio/webm'
 
+        const provider = sttConfig.provider === 'xunfei' ? xunfeiProvider : tencentProvider
+
         const manager = new SttSessionManager()
 
         activeSessions.set(socket.id, manager)
@@ -72,13 +82,16 @@ export function registerSttHandlers(socket: SttSocket, deps: SttHandlersDeps): v
         })
 
         manager.start(
-            sttProvider,
+            provider,
             {
+                provider: sttConfig.provider,
                 language,
                 region: STT_DEFAULT_REGION,
                 appId: sttConfig.appId,
                 secretId: sttConfig.secretId,
                 secretKey: sttConfig.secretKey,
+                apiKey: sttConfig.apiKey,
+                apiSecret: sttConfig.apiSecret,
             },
             inputMimeType,
         ).then(() => {
