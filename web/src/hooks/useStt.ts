@@ -74,7 +74,7 @@ function decodeBase64ToArrayBuffer(b64: string): ArrayBuffer {
 }
 
 export function useStt(api: ApiClient | null, serverUrl: string, token: string) {
-    const { config } = useSttConfig(api)
+    const { activeConfig } = useSttConfig(api)
     const [state, setState] = useState<SttState>({
         status: 'idle',
         confirmedText: '',
@@ -92,8 +92,8 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
     const recognizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const pcmChunksRef = useRef<Uint8Array[]>([])
     const sentenceRecognizingRef = useRef(false)
-    const sttConfigRef = useRef(config)
-    sttConfigRef.current = config
+    const sttConfigRef = useRef(activeConfig)
+    sttConfigRef.current = activeConfig
 
     // Track native bridge availability as state so permission changes trigger re-render
     const [bridgeAvailable, setBridgeAvailable] = useState(() => getNativeBridge() !== null)
@@ -131,7 +131,10 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
         ? hasNativeBridge
         : (hasUserMedia && (hasAudioContext || hasMediaRecorder))
 
-    const isConfigured = Boolean(config?.appId && config?.secretId && config?.secretKey)
+    const isConfigured = Boolean(activeConfig?.appId && (
+        (activeConfig.provider === 'tencent' && activeConfig.secretId && activeConfig.secretKey) ||
+        (activeConfig.provider === 'xunfei' && activeConfig.apiKey && activeConfig.apiSecret)
+    ))
 
     const text = state.confirmedText + state.currentText
 
@@ -236,7 +239,7 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
             const usePcm = webViewEnv || hasNativeBridge || hasAudioContext
 
             socket.emit('stt:start', {
-                language: (config?.language ?? 'zh') as SttLanguage,
+                language: (activeConfig?.language ?? 'zh') as SttLanguage,
                 mode: usePcm ? 'pcm' as const : 'webm' as const,
             })
 
@@ -272,7 +275,7 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
             })
             cleanupAudio()
         }
-    }, [isAvailable, isConfigured, config?.language, serverUrl, token, hasNativeBridge, hasAudioContext, nativeBridge, webViewEnv])
+    }, [isAvailable, isConfigured, activeConfig?.language, serverUrl, token, hasNativeBridge, hasAudioContext, nativeBridge, webViewEnv])
 
     function startNativeCapture(socket: Socket) {
         const bridge = nativeBridgeRef.current
@@ -451,7 +454,7 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
                     },
                     body: JSON.stringify({
                         audio: base64Audio,
-                        language: config?.language ?? 'zh',
+                        language: activeConfig?.language ?? 'zh',
                         format: 'pcm',
                     }),
                 })
@@ -473,7 +476,7 @@ export function useStt(api: ApiClient | null, serverUrl: string, token: string) 
                 sentenceRecognizingRef.current = false
             }
         }
-    }, [api, isConfigured, config?.language, serverUrl, token])
+    }, [api, isConfigured, activeConfig?.language, serverUrl, token])
 
     const reset = useCallback(() => {
         clearRecognizingTimeout()
