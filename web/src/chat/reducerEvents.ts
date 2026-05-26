@@ -22,24 +22,12 @@ function parseClaudeUsageLimit(text: string): AgentEvent | null {
     return null
 }
 
-const loggedContextIds = new Set<string>()
-
 export function parseMessageAsEvent(msg: NormalizedMessage): AgentEvent | null {
     if (msg.isSidechain) return null
     if (msg.role !== 'agent') return null
 
     for (const content of msg.content) {
         if (content.type === 'text') {
-            if (content.text.includes('## Context Usage') && !loggedContextIds.has(msg.id)) {
-                loggedContextIds.add(msg.id)
-                const modelMatch = content.text.match(/\*\*Model:\*\*\s*(.+)/)
-                const tokensMatch = content.text.match(/\*\*Tokens:\*\*\s*(.+)/)
-                const ts = msg.createdAt ? new Date(msg.createdAt).toLocaleString('sv-SE').substring(0, 19) : '?'
-                console.log(
-                    `%c[Context] ${ts} | id=${msg.id.substring(0, 8)} | model=${(modelMatch?.[1] ?? '?').trim()} | tokens=${(tokensMatch?.[1] ?? '?').trim()}`,
-                    'color: #6cb6ff; font-weight: bold'
-                )
-            }
             const limitEvent = parseClaudeUsageLimit(content.text)
             if (limitEvent !== null) {
                 return limitEvent

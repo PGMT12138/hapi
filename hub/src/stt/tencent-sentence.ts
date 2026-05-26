@@ -72,26 +72,41 @@ export interface SentenceRecognitionResult {
     audioDuration: number
 }
 
+export interface RecognizeOptions {
+    format?: 'pcm' | 'wav'
+}
+
 /**
  * Call Tencent Cloud SentenceRecognition API.
  * Accepts raw PCM s16le 16kHz mono audio buffer.
- * Internally wraps it into a WAV header before base64-encoding.
+ * Sends as raw PCM (VoiceFormat='pcm') by default — WAV wrapping is unnecessary
+ * and can cause the API to return empty Result despite computing AudioDuration.
  */
 export async function recognizeSentence(
     config: SttSessionConfig,
     pcmAudio: Buffer,
     language: string,
+    options: RecognizeOptions = {},
 ): Promise<SentenceRecognitionResult> {
-    // Wrap PCM in WAV so the API can parse it
-    const wavBuffer = wrapPcmInWav(pcmAudio, 16000, 1, 16)
-    const base64Audio = wavBuffer.toString('base64')
+    let audioData: Buffer
+    let voiceFormat: string
+
+    if (options.format === 'wav') {
+        audioData = wrapPcmInWav(pcmAudio, 16000, 1, 16)
+        voiceFormat = 'wav'
+    } else {
+        audioData = pcmAudio
+        voiceFormat = 'pcm'
+    }
+
+    const base64Audio = audioData.toString('base64')
 
     const body = {
         EngSerViceType: getEngineModel(language),
         SourceType: 1,
-        VoiceFormat: 'wav',
+        VoiceFormat: voiceFormat,
         Data: base64Audio,
-        DataLen: wavBuffer.length,
+        DataLen: audioData.length,
         ConvertNumMode: 1,
     }
 
@@ -118,12 +133,14 @@ export async function recognizeSentence(
         }
     }
 
+    const text = json.Response.Result ?? ''
+    console.log(`[STT-Sentence] format=${voiceFormat} audioBytes=${audioData.length} audioDuration=${json.Response.AudioDuration ?? 0} text="${text}" requestId=${json.Response.RequestId}`)
     if (json.Response.Error) {
         throw new Error(`SentenceRecognition error [${json.Response.Error.Code}]: ${json.Response.Error.Message}`)
     }
 
     return {
-        text: json.Response.Result ?? '',
+        text,
         audioDuration: json.Response.AudioDuration ?? 0,
     }
 }

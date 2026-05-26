@@ -60,6 +60,7 @@ export function createSttRoutes(store: Store): Hono<WebAppEnv> {
                 },
                 pcmBuffer,
                 language,
+                { format: parsed.data.format },
             )
             return c.json({ text: result.text, audioDuration: result.audioDuration })
         } catch (err) {
