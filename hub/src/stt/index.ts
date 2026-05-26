@@ -1,5 +1,6 @@
 export type { SttProvider, SttSession, SttSessionConfig, SttResult } from './types'
 export { TencentCloudSttProvider } from './tencent'
+export { XunfeiSttProvider } from './xunfei'
 export { recognizeSentence, type SentenceRecognitionResult } from './tencent-sentence'
 export { SttSessionManager } from './session'
 export { AudioTranscoder, detectInputFormat } from './transcoder'
