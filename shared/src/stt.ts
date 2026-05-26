@@ -1,5 +1,5 @@
 /** STT 配置供应商 */
-export type SttProvider = 'tencent'
+export type SttProvider = 'tencent' | 'xunfei'
 
 /** STT 识别语言 */
 export type SttLanguage = 'zh' | 'en' | 'auto'
@@ -11,6 +11,8 @@ export type SttSessionStatus = 'idle' | 'recording' | 'recognizing'
 export interface SttResult {
     text: string
     isFinal: boolean
+    /** 为 true 时 text 为完整文本，前端应替换而非追加 */
+    replace?: boolean
 }
 
 // --- Socket.IO 事件类型 ---
