@@ -15,6 +15,8 @@ export function useSttConfigActions(api: ApiClient | null) {
             appId: string
             secretId: string
             secretKey: string
+            apiKey: string
+            apiSecret: string
             language: string
             region: string
         }) => {

@@ -11,6 +11,7 @@ const voiceLanguages = getElevenLabsSupportedLanguages()
 
 const sttProviderOptions: { value: string; label: string }[] = [
     { value: 'tencent', label: '腾讯云' },
+    { value: 'xunfei', label: '讯飞' },
 ]
 
 const sttLanguageOptions: { value: string; label: string }[] = [
@@ -97,6 +98,10 @@ export default function VoiceSettingsPage() {
     const [sttSecretKey, setSttSecretKey] = useState(config?.secretKey ?? '')
     const [sttLanguage, setSttLanguage] = useState(config?.language ?? 'zh')
     const [showSecretKey, setShowSecretKey] = useState(false)
+    const [sttApiKey, setSttApiKey] = useState(config?.apiKey ?? '')
+    const [sttApiSecret, setSttApiSecret] = useState(config?.apiSecret ?? '')
+    const [showApiKey, setShowApiKey] = useState(false)
+    const [showApiSecret, setShowApiSecret] = useState(false)
     const [sttSaving, setSttSaving] = useState(false)
     const sttProviderContainerRef = useRef<HTMLDivElement>(null)
     const sttLanguageContainerRef = useRef<HTMLDivElement>(null)
@@ -108,6 +113,8 @@ export default function VoiceSettingsPage() {
             setSttSecretId(config.secretId)
             setSttSecretKey(config.secretKey)
             setSttLanguage(config.language)
+            setSttApiKey(config.apiKey)
+            setSttApiSecret(config.apiSecret)
         }
     }, [config])
 
@@ -276,6 +283,14 @@ export default function VoiceSettingsPage() {
                                                 onClick={() => {
                                                     setSttProvider(opt.value)
                                                     setIsSttProviderOpen(false)
+                                                    // 清空另一个服务商的凭证字段
+                                                    if (opt.value === 'tencent') {
+                                                        setSttApiKey('')
+                                                        setSttApiSecret('')
+                                                    } else {
+                                                        setSttSecretId('')
+                                                        setSttSecretKey('')
+                                                    }
                                                 }}
                                                 className={`flex items-center justify-between w-full px-3 py-2 text-base text-left transition-colors ${
                                                     isSelected
@@ -305,47 +320,117 @@ export default function VoiceSettingsPage() {
                                 className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
                             />
                         </div>
-                        <div className="px-3 py-2">
-                            <div className="mb-1 text-sm text-[var(--app-fg)]">SecretId</div>
-                            <input
-                                type="text"
-                                value={sttSecretId}
-                                onChange={(e) => setSttSecretId(e.target.value)}
-                                placeholder="输入 SecretId"
-                                className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
-                            />
-                        </div>
-                        <div className="px-3 py-2">
-                            <div className="mb-1 text-sm text-[var(--app-fg)]">SecretKey</div>
-                            <div className="relative">
+                        {sttProvider === 'tencent' && (
+                            <div className="px-3 py-2">
+                                <div className="mb-1 text-sm text-[var(--app-fg)]">SecretId</div>
                                 <input
-                                    type={showSecretKey ? 'text' : 'password'}
-                                    value={sttSecretKey}
-                                    onChange={(e) => setSttSecretKey(e.target.value)}
-                                    placeholder="输入 SecretKey"
-                                    className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 pr-10 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                                    type="text"
+                                    value={sttSecretId}
+                                    onChange={(e) => setSttSecretId(e.target.value)}
+                                    placeholder="输入 SecretId"
+                                    className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSecretKey(!showSecretKey)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-[var(--app-hint)] hover:text-[var(--app-fg)]"
-                                    aria-label={showSecretKey ? '隐藏' : '显示'}
-                                >
-                                    {showSecretKey ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                                            <line x1="1" y1="1" x2="23" y2="23" />
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                            <circle cx="12" cy="12" r="3" />
-                                        </svg>
-                                    )}
-                                </button>
                             </div>
-                        </div>
+                        )}
+                        {sttProvider === 'tencent' && (
+                            <div className="px-3 py-2">
+                                <div className="mb-1 text-sm text-[var(--app-fg)]">SecretKey</div>
+                                <div className="relative">
+                                    <input
+                                        type={showSecretKey ? 'text' : 'password'}
+                                        value={sttSecretKey}
+                                        onChange={(e) => setSttSecretKey(e.target.value)}
+                                        placeholder="输入 SecretKey"
+                                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 pr-10 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSecretKey(!showSecretKey)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-[var(--app-hint)] hover:text-[var(--app-fg)]"
+                                        aria-label={showSecretKey ? '隐藏' : '显示'}
+                                    >
+                                        {showSecretKey ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                                <line x1="1" y1="1" x2="23" y2="23" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        {sttProvider === 'xunfei' && (
+                            <div className="px-3 py-2">
+                                <div className="mb-1 text-sm text-[var(--app-fg)]">APIKey</div>
+                                <div className="relative">
+                                    <input
+                                        type={showApiKey ? 'text' : 'password'}
+                                        value={sttApiKey}
+                                        onChange={(e) => setSttApiKey(e.target.value)}
+                                        placeholder="输入 APIKey"
+                                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 pr-10 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowApiKey(!showApiKey)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-[var(--app-hint)] hover:text-[var(--app-fg)]"
+                                        aria-label={showApiKey ? '隐藏' : '显示'}
+                                    >
+                                        {showApiKey ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                                <line x1="1" y1="1" x2="23" y2="23" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        {sttProvider === 'xunfei' && (
+                            <div className="px-3 py-2">
+                                <div className="mb-1 text-sm text-[var(--app-fg)]">APISecret</div>
+                                <div className="relative">
+                                    <input
+                                        type={showApiSecret ? 'text' : 'password'}
+                                        value={sttApiSecret}
+                                        onChange={(e) => setSttApiSecret(e.target.value)}
+                                        placeholder="输入 APISecret"
+                                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 pr-10 text-sm text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none focus:border-[var(--app-link)]"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowApiSecret(!showApiSecret)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded text-[var(--app-hint)] hover:text-[var(--app-fg)]"
+                                        aria-label={showApiSecret ? '隐藏' : '显示'}
+                                    >
+                                        {showApiSecret ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                                <line x1="1" y1="1" x2="23" y2="23" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <div ref={sttLanguageContainerRef} className="relative">
                             <button
                                 type="button"
@@ -409,6 +494,8 @@ export default function VoiceSettingsPage() {
                                             appId: sttAppId,
                                             secretId: sttSecretId,
                                             secretKey: sttSecretKey,
+                                            apiKey: sttApiKey,
+                                            apiSecret: sttApiSecret,
                                             language: sttLanguage,
                                             region: STT_DEFAULT_REGION,
                                         })
@@ -426,17 +513,17 @@ export default function VoiceSettingsPage() {
                         <div className="flex items-center gap-1.5 px-3 pb-3">
                             <span
                                 className={`h-2 w-2 rounded-full ${
-                                    sttAppId && sttSecretId && sttSecretKey
+                                    sttAppId && (sttProvider === 'tencent' ? (sttSecretId && sttSecretKey) : (sttApiKey && sttApiSecret))
                                         ? 'bg-[#34C759]'
                                         : 'bg-[#999]'
                                 }`}
                             />
                             <span className={`text-xs ${
-                                sttAppId && sttSecretId && sttSecretKey
+                                sttAppId && (sttProvider === 'tencent' ? (sttSecretId && sttSecretKey) : (sttApiKey && sttApiSecret))
                                     ? 'text-[#34C759]'
                                     : 'text-[#999]'
                             }`}>
-                                {sttAppId && sttSecretId && sttSecretKey ? '已配置' : '未配置'}
+                                {sttAppId && (sttProvider === 'tencent' ? (sttSecretId && sttSecretKey) : (sttApiKey && sttApiSecret)) ? '已配置' : '未配置'}
                             </span>
                         </div>
                     </div>

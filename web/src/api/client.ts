@@ -619,6 +619,8 @@ export class ApiClient {
         appId: string
         secretId: string
         secretKey: string
+        apiKey: string
+        apiSecret: string
         language: string
         region: string
     }): Promise<{ config: SttConfig }> {
