@@ -495,6 +495,36 @@ export class ApiClient {
         )
     }
 
+    async getCcSkills(machineId: string): Promise<{ success: boolean; skills?: Array<{ name: string; description?: string; overrideState: string | null }>; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-skills`)
+    }
+
+    async updateCcSkillOverride(machineId: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-skills/${encodeURIComponent(name)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ enabled })
+        })
+    }
+
+    async getCcMcpServers(machineId: string): Promise<{ success: boolean; servers?: Array<{ name: string; type: string; url?: string; command?: string; enabled: boolean }>; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers`)
+    }
+
+    async updateCcMcpServerStatus(machineId: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers/${encodeURIComponent(name)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ enabled })
+        })
+    }
+
+    async getCcSkillDetail(machineId: string, name: string): Promise<{ success: boolean; detail?: { name: string; description?: string; content: string; files: string[]; path: string }; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-skills/${encodeURIComponent(name)}/detail`)
+    }
+
+    async getCcMcpServerDetail(machineId: string, name: string): Promise<{ success: boolean; detail?: { name: string; type: string; url?: string; command?: string; args?: string[]; enabled: boolean; config: Record<string, unknown>; tools?: Array<{ name: string; description?: string }> }; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers/${encodeURIComponent(name)}/detail`)
+    }
+
     async renameSession(sessionId: string, name: string): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}`, {
             method: 'PATCH',

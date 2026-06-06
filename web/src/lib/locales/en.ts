@@ -390,8 +390,8 @@ export default {
   'prompts.searchPlaceholder': 'Search prompts…',
 
   // Model Presets
-  'modelPresets.title': 'Model Management',
-  'modelPresets.nav': 'Model Management',
+  'modelPresets.title': 'Models & Extensions',
+  'modelPresets.nav': 'Models & Extensions',
   'modelPresets.empty': 'No presets yet',
   'modelPresets.add': 'Add Preset',
   'modelPresets.name': 'Name',
@@ -410,6 +410,24 @@ export default {
   'modelPresets.presetSection': 'Model Presets',
   'modelPresets.applyPreset': 'Apply Preset',
   'modelPresets.selectPreset': 'Select a preset...',
+
+  // Extensions
+  'extensions.title': 'Extensions',
+  'extensions.nav': 'Extensions',
+  'extensions.selectMachine': 'Select machine',
+  'extensions.noMachines': 'No machines online',
+  'extensions.machineOffline': 'Machine is offline',
+  'extensions.skillsTab': 'Skills',
+  'extensions.mcpTab': 'MCP Servers',
+  'extensions.noSkills': 'No skills found',
+  'extensions.noMcpServers': 'No MCP servers found',
+  'extensions.detail.description': 'Description',
+  'extensions.detail.path': 'Path',
+  'extensions.detail.files': 'Files',
+  'extensions.detail.content': 'Content',
+  'extensions.detail.command': 'Command',
+  'extensions.detail.config': 'Configuration',
+  'extensions.detail.tools': 'Tools',
 
   // Browse / Workspace
   'browse.title': 'Browse',

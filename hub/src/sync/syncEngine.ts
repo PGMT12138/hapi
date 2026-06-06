@@ -495,6 +495,30 @@ export class SyncEngine {
         return await this.rpcGateway.writeGlobalEnv(machineId, env)
     }
 
+    async listCcSkills(machineId: string) {
+        return await this.rpcGateway.listCcSkills(machineId)
+    }
+
+    async updateSkillOverride(machineId: string, name: string, enabled: boolean) {
+        return await this.rpcGateway.updateSkillOverride(machineId, name, enabled)
+    }
+
+    async listCcMcpServers(machineId: string) {
+        return await this.rpcGateway.listCcMcpServers(machineId)
+    }
+
+    async updateMcpServerStatus(machineId: string, name: string, enabled: boolean) {
+        return await this.rpcGateway.updateMcpServerStatus(machineId, name, enabled)
+    }
+
+    async getSkillDetail(machineId: string, name: string) {
+        return await this.rpcGateway.getSkillDetail(machineId, name)
+    }
+
+    async getMcpServerDetail(machineId: string, name: string) {
+        return await this.rpcGateway.getMcpServerDetail(machineId, name)
+    }
+
     async resumeSession(sessionId: string, namespace: string, opts?: { permissionMode?: PermissionMode }): Promise<ResumeSessionResult> {
         const access = this.sessionCache.resolveSessionAccess(sessionId, namespace)
         if (!access.ok) {

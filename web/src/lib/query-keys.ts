@@ -23,4 +23,8 @@ export const queryKeys = {
     globalEnv: (machineId: string) => ['global-env', machineId] as const,
     hiddenSessions: ['hiddenSessions'] as const,
     sttConfig: ['stt-config'] as const,
+    ccSkills: (machineId: string) => ['cc-skills', machineId] as const,
+    ccMcpServers: (machineId: string) => ['cc-mcp-servers', machineId] as const,
+    ccSkillDetail: (machineId: string, name: string) => ['cc-skill-detail', machineId, name] as const,
+    ccMcpServerDetail: (machineId: string, name: string) => ['cc-mcp-server-detail', machineId, name] as const,
 }

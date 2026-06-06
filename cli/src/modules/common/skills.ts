@@ -8,6 +8,14 @@ export interface SkillSummary {
     description?: string;
 }
 
+export interface SkillDetail {
+    name: string;
+    description?: string;
+    content: string;
+    files: string[];
+    path: string;
+}
+
 export interface ListSkillsRequest {
 }
 
@@ -183,4 +191,56 @@ export async function listSkills(workingDirectory?: string): Promise<SkillSummar
     }
 
     return [...dedupedSkills.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function findAllSkillDirs(workingDirectory?: string): Promise<Map<string, string>> {
+    const projectRoots = await listProjectSkillsRoots(workingDirectory);
+    const userRoots = getUserSkillsRoots();
+    const adminRoot = getAdminSkillsRoot();
+    const allRoots = [
+        ...projectRoots,
+        ...userRoots,
+        adminRoot,
+    ];
+
+    const allDirs = (await Promise.all(
+        allRoots.map(async (root) => await listTopLevelSkillDirs(root, { includeCodexSystem: isCodexSkillsRoot(root) }))
+    )).flat();
+
+    const nameToDir = new Map<string, string>();
+    for (const dir of allDirs) {
+        const filePath = join(dir, 'SKILL.md');
+        try {
+            const content = await readFile(filePath, 'utf-8');
+            const parsed = parseFrontmatter(content);
+            const name = (typeof parsed.frontmatter?.name === 'string' ? parsed.frontmatter.name.trim() : '') || basename(dir);
+            if (name && !nameToDir.has(name)) {
+                nameToDir.set(name, dir);
+            }
+        } catch {
+            // skip unreadable
+        }
+    }
+    return nameToDir;
+}
+
+export async function getSkillDetail(name: string, workingDirectory?: string): Promise<SkillDetail | null> {
+    const nameToDir = await findAllSkillDirs(workingDirectory);
+    const dir = nameToDir.get(name);
+    if (!dir) return null;
+
+    const skillMdPath = join(dir, 'SKILL.md');
+    const content = await readFile(skillMdPath, 'utf-8');
+    const parsed = parseFrontmatter(content);
+    const description = typeof parsed.frontmatter?.description === 'string' ? parsed.frontmatter.description.trim() : undefined;
+
+    const fileEntries = await readdir(dir, { withFileTypes: true, recursive: true });
+    const files = fileEntries
+        .filter(e => e.isFile() && !e.name.startsWith('.'))
+        .map(e => {
+            const relativePath = e.parentPath ? e.parentPath.replace(dir + '/', '') : '';
+            return relativePath ? `${relativePath}/${e.name}` : e.name;
+        });
+
+    return { name, description, content, files, path: dir };
 }

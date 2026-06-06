@@ -278,6 +278,30 @@ export class RpcGateway {
         return await this.machineRpc(machineId, 'write-global-env', { env }) as { success: boolean; error?: string }
     }
 
+    async listCcSkills(machineId: string): Promise<{ success: boolean; skills?: Array<{ name: string; description?: string; overrideState: string | null }>; error?: string }> {
+        return await this.machineRpc(machineId, 'list-cc-skills', {}) as { success: boolean; skills?: Array<{ name: string; description?: string; overrideState: string | null }>; error?: string }
+    }
+
+    async updateSkillOverride(machineId: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'update-skill-override', { name, enabled }) as { success: boolean; error?: string }
+    }
+
+    async listCcMcpServers(machineId: string): Promise<{ success: boolean; servers?: Array<{ name: string; type: string; url?: string; command?: string; enabled: boolean }>; error?: string }> {
+        return await this.machineRpc(machineId, 'list-cc-mcp-servers', {}) as { success: boolean; servers?: Array<{ name: string; type: string; url?: string; command?: string; enabled: boolean }>; error?: string }
+    }
+
+    async updateMcpServerStatus(machineId: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'update-mcp-server-status', { name, enabled }) as { success: boolean; error?: string }
+    }
+
+    async getSkillDetail(machineId: string, name: string): Promise<{ success: boolean; detail?: { name: string; description?: string; content: string; files: string[]; path: string }; error?: string }> {
+        return await this.machineRpc(machineId, 'get-cc-skill-detail', { name }) as { success: boolean; detail?: { name: string; description?: string; content: string; files: string[]; path: string }; error?: string }
+    }
+
+    async getMcpServerDetail(machineId: string, name: string): Promise<{ success: boolean; detail?: { name: string; type: string; url?: string; command?: string; args?: string[]; enabled: boolean; config: Record<string, unknown>; tools?: Array<{ name: string; description?: string }> }; error?: string }> {
+        return await this.machineRpc(machineId, 'get-cc-mcp-server-detail', { name }) as { success: boolean; detail?: { name: string; type: string; url?: string; command?: string; args?: string[]; enabled: boolean; config: Record<string, unknown>; tools?: Array<{ name: string; description?: string }> }; error?: string }
+    }
+
     private async sessionRpc(sessionId: string, method: string, params: unknown): Promise<unknown> {
         return await this.rpcCall(`${sessionId}:${method}`, params)
     }

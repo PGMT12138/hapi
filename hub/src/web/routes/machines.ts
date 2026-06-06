@@ -248,5 +248,167 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
     })
 
+    app.get('/machines/:id/cc-skills', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        try {
+            const result = await engine.listCcSkills(machineId)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to list CC skills' }, 500)
+        }
+    })
+
+    app.patch('/machines/:id/cc-skills/:name', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const skillName = c.req.param('name')
+        const body = await c.req.json().catch(() => null)
+        const parsed = z.object({
+            enabled: z.boolean()
+        }).safeParse(body)
+        if (!parsed.success) {
+            return c.json({ success: false, error: 'Invalid body' }, 400)
+        }
+
+        try {
+            const result = await engine.updateSkillOverride(machineId, skillName, parsed.data.enabled)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update skill override' }, 500)
+        }
+    })
+
+    app.get('/machines/:id/cc-mcp-servers', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        try {
+            const result = await engine.listCcMcpServers(machineId)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to list CC MCP servers' }, 500)
+        }
+    })
+
+    app.patch('/machines/:id/cc-mcp-servers/:name', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const serverName = c.req.param('name')
+        const body = await c.req.json().catch(() => null)
+        const parsed = z.object({ enabled: z.boolean() }).safeParse(body)
+        if (!parsed.success) {
+            return c.json({ success: false, error: 'Invalid body' }, 400)
+        }
+
+        try {
+            const result = await engine.updateMcpServerStatus(machineId, serverName, parsed.data.enabled)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update MCP server status' }, 500)
+        }
+    })
+
+    app.get('/machines/:id/cc-skills/:name/detail', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const skillName = c.req.param('name')
+        try {
+            const result = await engine.getSkillDetail(machineId, skillName)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get skill detail' }, 500)
+        }
+    })
+
+    app.get('/machines/:id/cc-mcp-servers/:name/detail', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const serverName = c.req.param('name')
+        try {
+            const result = await engine.getMcpServerDetail(machineId, serverName)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get MCP server detail' }, 500)
+        }
+    })
+
     return app
 }

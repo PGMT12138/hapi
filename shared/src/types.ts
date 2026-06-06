@@ -33,3 +33,22 @@ export type {
 } from './modes'
 
 export type { ClaudeModelPreset, GeminiModelPreset } from './models'
+
+/** 'off' = blocked via permissions.deny Skill(name); null = active (default) */
+export type CcSkillOverrideState = 'off'
+
+export interface CcSkill {
+    name: string
+    description?: string
+    overrideState: CcSkillOverrideState | null
+}
+
+export type CcMcpServerType = 'http' | 'stdio' | 'sse' | 'ws'
+
+export interface CcMcpServer {
+    name: string
+    type: CcMcpServerType
+    url?: string
+    command?: string
+    enabled: boolean
+}

@@ -392,8 +392,8 @@ export default {
   'prompts.searchPlaceholder': '搜索提示词…',
 
   // Model Presets
-  'modelPresets.title': '模型管理',
-  'modelPresets.nav': '模型管理',
+  'modelPresets.title': '模型与扩展',
+  'modelPresets.nav': '模型与扩展',
   'modelPresets.empty': '暂无预设',
   'modelPresets.add': '添加预设',
   'modelPresets.name': '名称',
@@ -412,6 +412,24 @@ export default {
   'modelPresets.presetSection': '模型预设',
   'modelPresets.applyPreset': '应用预设',
   'modelPresets.selectPreset': '选择预设...',
+
+  // Extensions
+  'extensions.title': '扩展管理',
+  'extensions.nav': '扩展管理',
+  'extensions.selectMachine': '选择机器',
+  'extensions.noMachines': '没有在线的机器',
+  'extensions.machineOffline': '机器离线',
+  'extensions.skillsTab': 'Skills',
+  'extensions.mcpTab': 'MCP 服务器',
+  'extensions.noSkills': '没有发现 Skills',
+  'extensions.noMcpServers': '没有发现 MCP 服务器',
+  'extensions.detail.description': '描述',
+  'extensions.detail.path': '路径',
+  'extensions.detail.files': '文件',
+  'extensions.detail.content': '内容',
+  'extensions.detail.command': '命令',
+  'extensions.detail.config': '配置',
+  'extensions.detail.tools': '工具',
 
   // Browse / Workspace
   'browse.title': '浏览',
