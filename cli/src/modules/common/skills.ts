@@ -5,6 +5,7 @@ import { parse as parseYaml } from 'yaml';
 
 export interface SkillSummary {
     name: string;
+    folderName: string;
     description?: string;
 }
 
@@ -111,7 +112,7 @@ function extractSkillSummary(skillDir: string, fileContent: string): SkillSummar
         ? parsed.frontmatter.description.trim()
         : undefined;
 
-    return { name, description };
+    return { name, folderName: basename(skillDir), description };
 }
 
 async function listTopLevelSkillDirs(skillsRoot: string, options: { includeCodexSystem?: boolean } = {}): Promise<string[]> {

@@ -206,7 +206,7 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
             const result: CcSkill[] = skills.map(skill => ({
                 name: skill.name,
                 description: skill.description,
-                overrideState: isSkillDisabled(overrides, skill.name) ? 'off' as const : null
+                overrideState: isSkillDisabled(overrides, skill.folderName) ? 'off' as const : null
             }))
             return { success: true, skills: result }
         } catch (error) {
@@ -218,14 +218,18 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
     rpcHandlerManager.registerHandler<UpdateSkillOverrideRequest, UpdateResponse>('update-skill-override', async (data) => {
         try {
             settingsWriteLock = settingsWriteLock.catch(() => {}).then(async () => {
+                const skills = await listSkills(undefined)
+                const skill = skills.find(s => s.name === data.name)
+                const overrideKey = skill?.folderName || data.name
+
                 const filePath = getGlobalSettingsPath()
                 const settings = await readJsonFile<SettingsFile>(filePath)
                 if (!settings.skillOverrides) settings.skillOverrides = {}
 
                 if (!data.enabled) {
-                    settings.skillOverrides[data.name] = 'off'
+                    settings.skillOverrides[overrideKey] = 'off'
                 } else {
-                    delete settings.skillOverrides[data.name]
+                    delete settings.skillOverrides[overrideKey]
                     if (Object.keys(settings.skillOverrides).length === 0) {
                         delete settings.skillOverrides
                     }
