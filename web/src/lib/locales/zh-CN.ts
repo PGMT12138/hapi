@@ -433,6 +433,12 @@ export default {
   'extensions.detail.tools': '工具',
   'extensions.scopeGlobal': '全局',
   'extensions.scopeProject': '项目级',
+  'extensions.pluginsTab': '插件',
+  'extensions.noPlugins': '没有发现插件',
+  'extensions.detail.author': '作者',
+  'extensions.detail.homepage': '主页',
+  'extensions.detail.installedAt': '安装时间',
+  'extensions.detail.skills': 'Skills',
 
   // Browse / Workspace
   'browse.title': '浏览',

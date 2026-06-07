@@ -1,12 +1,12 @@
 import { logger } from '@/ui/logger'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, writeFile, readdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { RpcHandlerManager } from '@/api/rpc/RpcHandlerManager'
 import { rpcError } from '../rpcResponses'
 import { listClaudeCodeSkills, listSkills, getSkillDetail } from '../skills'
-import type { CcSkill, CcMcpServer } from '@hapi/protocol/types'
+import type { CcSkill, CcMcpServer, CcPlugin } from '@hapi/protocol/types'
 
 interface SettingsFile {
     permissions?: {
@@ -15,6 +15,7 @@ interface SettingsFile {
     }
     skillOverrides?: Record<string, string>
     deniedMcpServers?: Array<{ serverName?: string; serverUrl?: string; serverCommand?: string[] }>
+    enabledPlugins?: Record<string, boolean>
     [key: string]: unknown
 }
 
@@ -96,6 +97,69 @@ interface McpServerDetailResponse {
 interface McpTool {
     name: string
     description?: string
+}
+
+interface InstalledPluginsFile {
+    version: number
+    plugins: Record<string, Array<{
+        scope: string
+        installPath: string
+        version: string
+        installedAt?: string
+        lastUpdated?: string
+        gitCommitSha?: string
+    }>>
+}
+
+interface PluginManifest {
+    name?: string
+    description?: string
+    version?: string
+    author?: string | { name?: string; email?: string }
+    homepage?: string
+    repository?: string
+    license?: string
+    [key: string]: unknown
+}
+
+interface ListCcPluginsResponse {
+    success: boolean
+    plugins?: CcPlugin[]
+    error?: string
+}
+
+interface GetPluginDetailRequest {
+    name: string
+}
+
+interface UpdatePluginStatusRequest {
+    name: string
+    enabled: boolean
+}
+
+interface PluginDetailResponse {
+    success: boolean
+    detail?: {
+        name: string
+        description?: string
+        version?: string
+        author?: string
+        homepage?: string
+        license?: string
+        installedAt?: string
+        lastUpdated?: string
+        installPath: string
+        hasMcp: boolean
+        mcpConfig?: Record<string, unknown>
+        skills: Array<{ name: string; description?: string }>
+        files: string[]
+    }
+    error?: string
+}
+
+interface UpdateResponse {
+    success: boolean
+    error?: string
 }
 
 async function fetchMcpToolsHttp(url: string): Promise<McpTool[]> {
@@ -191,6 +255,56 @@ function isDeniedByServerName(denied: SettingsFile['deniedMcpServers'], serverNa
 function isSkillDisabled(skillOverrides: Record<string, string> | undefined, skillName: string): boolean {
     if (!skillOverrides) return false
     return skillOverrides[skillName] === 'off'
+}
+
+function getPluginsBasePath(): string {
+    const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude')
+    return join(configDir, 'plugins')
+}
+
+async function readPluginManifest(installPath: string): Promise<PluginManifest | null> {
+    const manifestPath = join(installPath, '.claude-plugin', 'plugin.json')
+    if (!existsSync(manifestPath)) return null
+    try {
+        return await readJsonFile<PluginManifest>(manifestPath)
+    } catch {
+        return null
+    }
+}
+
+async function countSkillsInDir(dir: string): Promise<number> {
+    const skillsPath = join(dir, 'skills')
+    if (!existsSync(skillsPath)) return 0
+    try {
+        const entries = await readdir(skillsPath, { withFileTypes: true })
+        return entries.filter(e => (e.isDirectory() || e.isSymbolicLink()) && !e.name.startsWith('.')).length
+    } catch {
+        return 0
+    }
+}
+
+function hasMcpConfig(installPath: string): boolean {
+    return existsSync(join(installPath, '.mcp.json'))
+}
+
+async function listFilesRecursive(dir: string, basePath: string): Promise<string[]> {
+    const results: string[] = []
+    try {
+        const entries = await readdir(dir, { withFileTypes: true })
+        for (const entry of entries) {
+            if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+            const fullPath = join(dir, entry.name)
+            const relativePath = fullPath.replace(basePath + '/', '')
+            if (entry.isDirectory() || entry.isSymbolicLink()) {
+                results.push(...await listFilesRecursive(fullPath, basePath))
+            } else {
+                results.push(relativePath)
+            }
+        }
+    } catch {
+        // skip unreadable dirs
+    }
+    return results
 }
 
 let settingsWriteLock: Promise<void> = Promise.resolve()
@@ -354,6 +468,173 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
         } catch (error) {
             logger.debug('Failed to get MCP server detail:', error)
             return rpcError('Failed to get MCP server detail')
+        }
+    })
+
+    rpcHandlerManager.registerHandler<void, ListCcPluginsResponse>('list-cc-plugins', async () => {
+        try {
+            const pluginsPath = getPluginsBasePath()
+            const installedPath = join(pluginsPath, 'installed_plugins.json')
+            if (!existsSync(installedPath)) {
+                return { success: true, plugins: [] }
+            }
+            const [installed, settings] = await Promise.all([
+                readJsonFile<InstalledPluginsFile>(installedPath),
+                readJsonFile<SettingsFile>(getGlobalSettingsPath())
+            ])
+            const enabledPlugins = settings.enabledPlugins ?? {}
+            const plugins: CcPlugin[] = []
+
+            for (const [pluginKey, versions] of Object.entries(installed.plugins ?? {})) {
+                const latest = versions[versions.length - 1]
+                if (!latest) continue
+
+                const manifest = await readPluginManifest(latest.installPath)
+                const pluginName = manifest?.name || pluginKey.split('@')[0]
+                const author = typeof manifest?.author === 'object' ? manifest.author.name : manifest?.author
+
+                plugins.push({
+                    name: pluginName,
+                    description: manifest?.description,
+                    version: latest.version,
+                    author,
+                    homepage: manifest?.homepage || manifest?.repository,
+                    installedAt: latest.installedAt,
+                    lastUpdated: latest.lastUpdated,
+                    installPath: latest.installPath,
+                    hasMcp: hasMcpConfig(latest.installPath),
+                    skillCount: await countSkillsInDir(latest.installPath),
+                    enabled: enabledPlugins[pluginKey] !== false,
+                })
+            }
+
+            plugins.sort((a, b) => a.name.localeCompare(b.name))
+            return { success: true, plugins }
+        } catch (error) {
+            logger.debug('Failed to list CC plugins:', error)
+            return rpcError('Failed to list CC plugins')
+        }
+    })
+
+    rpcHandlerManager.registerHandler<GetPluginDetailRequest, PluginDetailResponse>('get-cc-plugin-detail', async (data) => {
+        try {
+            const pluginsPath = getPluginsBasePath()
+            const installedPath = join(pluginsPath, 'installed_plugins.json')
+            if (!existsSync(installedPath)) {
+                return rpcError('Plugin not found')
+            }
+            const installed = await readJsonFile<InstalledPluginsFile>(installedPath)
+
+            let targetEntry: { installPath: string; installedAt?: string; lastUpdated?: string; version: string } | undefined
+            for (const versions of Object.values(installed.plugins ?? {})) {
+                const latest = versions[versions.length - 1]
+                if (!latest) continue
+                const manifest = await readPluginManifest(latest.installPath)
+                const name = manifest?.name || ''
+                if (name === data.name) {
+                    targetEntry = latest
+                    break
+                }
+            }
+
+            if (!targetEntry) {
+                return rpcError('Plugin not found')
+            }
+
+            const manifest = await readPluginManifest(targetEntry.installPath)
+            const author = typeof manifest?.author === 'object' ? manifest.author.name : manifest?.author
+
+            let mcpConfig: Record<string, unknown> | undefined
+            if (hasMcpConfig(targetEntry.installPath)) {
+                try {
+                    mcpConfig = await readJsonFile<Record<string, unknown>>(join(targetEntry.installPath, '.mcp.json'))
+                } catch {
+                    // skip
+                }
+            }
+
+            const skillsDir = join(targetEntry.installPath, 'skills')
+            const skills: Array<{ name: string; description?: string }> = []
+            if (existsSync(skillsDir)) {
+                try {
+                    const entries = await readdir(skillsDir, { withFileTypes: true })
+                    for (const entry of entries) {
+                        if ((!entry.isDirectory() && !entry.isSymbolicLink()) || entry.name.startsWith('.')) continue
+                        const skillMd = join(skillsDir, entry.name, 'SKILL.md')
+                        if (existsSync(skillMd)) {
+                            const content = await readFile(skillMd, 'utf-8')
+                            const descMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---/)?.[0]
+                            let description: string | undefined
+                            if (descMatch) {
+                                const descLine = descMatch.match(/description:\s*['"]?(.+?)['"]?\s*$/m)
+                                if (descLine) description = descLine[1]
+                            }
+                            skills.push({ name: entry.name, description })
+                        }
+                    }
+                } catch {
+                    // skip
+                }
+            }
+
+            const files = await listFilesRecursive(targetEntry.installPath, targetEntry.installPath)
+
+            return {
+                success: true,
+                detail: {
+                    name: manifest?.name || data.name,
+                    description: manifest?.description,
+                    version: targetEntry.version,
+                    author,
+                    homepage: manifest?.homepage || manifest?.repository,
+                    license: manifest?.license,
+                    installedAt: targetEntry.installedAt,
+                    lastUpdated: targetEntry.lastUpdated,
+                    installPath: targetEntry.installPath,
+                    hasMcp: hasMcpConfig(targetEntry.installPath),
+                    mcpConfig,
+                    skills,
+                    files,
+                },
+            }
+        } catch (error) {
+            logger.debug('Failed to get plugin detail:', error)
+            return rpcError('Failed to get plugin detail')
+        }
+    })
+
+    rpcHandlerManager.registerHandler<UpdatePluginStatusRequest, UpdateResponse>('update-cc-plugin-status', async (data) => {
+        try {
+            settingsWriteLock = settingsWriteLock.catch(() => {}).then(async () => {
+                const pluginsPath = getPluginsBasePath()
+                const installedPath = join(pluginsPath, 'installed_plugins.json')
+                if (!existsSync(installedPath)) return
+
+                const installed = await readJsonFile<InstalledPluginsFile>(installedPath)
+                let pluginKey: string | null = null
+                for (const [key, versions] of Object.entries(installed.plugins ?? {})) {
+                    const latest = versions[versions.length - 1]
+                    if (!latest) continue
+                    const manifest = await readPluginManifest(latest.installPath)
+                    if ((manifest?.name || key.split('@')[0]) === data.name) {
+                        pluginKey = key
+                        break
+                    }
+                }
+                if (!pluginKey) return
+
+                const filePath = getGlobalSettingsPath()
+                const settings = await readJsonFile<SettingsFile>(filePath)
+                if (!settings.enabledPlugins) settings.enabledPlugins = {}
+
+                settings.enabledPlugins[pluginKey] = data.enabled
+                await writeJsonFile(filePath, settings)
+            })
+            await settingsWriteLock
+            return { success: true }
+        } catch (error) {
+            logger.debug('Failed to update plugin status:', error)
+            return rpcError('Failed to update plugin status')
         }
     })
 }

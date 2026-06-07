@@ -410,5 +410,80 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
     })
 
+    app.get('/machines/:id/cc-plugins', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        try {
+            const result = await engine.listCcPlugins(machineId)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to list plugins' }, 500)
+        }
+    })
+
+    app.get('/machines/:id/cc-plugins/:name/detail', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const pluginName = c.req.param('name')
+        try {
+            const result = await engine.getPluginDetail(machineId, pluginName)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to get plugin detail' }, 500)
+        }
+    })
+
+    app.patch('/machines/:id/cc-plugins/:name', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const pluginName = c.req.param('name')
+        const body = await c.req.json<{ enabled: boolean }>()
+        try {
+            const result = await engine.updatePluginStatus(machineId, pluginName, body.enabled)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update plugin status' }, 500)
+        }
+    })
+
     return app
 }

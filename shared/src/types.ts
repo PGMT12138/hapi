@@ -54,3 +54,17 @@ export interface CcMcpServer {
     command?: string
     enabled: boolean
 }
+
+export interface CcPlugin {
+    name: string
+    description?: string
+    version?: string
+    author?: string
+    homepage?: string
+    installedAt?: string
+    lastUpdated?: string
+    installPath: string
+    hasMcp: boolean
+    skillCount: number
+    enabled: boolean
+}

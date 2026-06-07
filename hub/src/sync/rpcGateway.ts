@@ -302,6 +302,18 @@ export class RpcGateway {
         return await this.machineRpc(machineId, 'get-cc-mcp-server-detail', { name }) as { success: boolean; detail?: { name: string; type: string; url?: string; command?: string; args?: string[]; enabled: boolean; config: Record<string, unknown>; tools?: Array<{ name: string; description?: string }> }; error?: string }
     }
 
+    async listCcPlugins(machineId: string): Promise<{ success: boolean; plugins?: Array<{ name: string; description?: string; version?: string; author?: string; homepage?: string; installedAt?: string; lastUpdated?: string; installPath: string; hasMcp: boolean; skillCount: number }>; error?: string }> {
+        return await this.machineRpc(machineId, 'list-cc-plugins', {}) as { success: boolean; plugins?: Array<{ name: string; description?: string; version?: string; author?: string; homepage?: string; installedAt?: string; lastUpdated?: string; installPath: string; hasMcp: boolean; skillCount: number }>; error?: string }
+    }
+
+    async getPluginDetail(machineId: string, name: string): Promise<{ success: boolean; detail?: { name: string; description?: string; version?: string; author?: string; homepage?: string; license?: string; installedAt?: string; lastUpdated?: string; installPath: string; hasMcp: boolean; mcpConfig?: Record<string, unknown>; skills: Array<{ name: string; description?: string }>; files: string[] }; error?: string }> {
+        return await this.machineRpc(machineId, 'get-cc-plugin-detail', { name }) as { success: boolean; detail?: { name: string; description?: string; version?: string; author?: string; homepage?: string; license?: string; installedAt?: string; lastUpdated?: string; installPath: string; hasMcp: boolean; mcpConfig?: Record<string, unknown>; skills: Array<{ name: string; description?: string }>; files: string[] }; error?: string }
+    }
+
+    async updatePluginStatus(machineId: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'update-cc-plugin-status', { name, enabled }) as { success: boolean; error?: string }
+    }
+
     private async sessionRpc(sessionId: string, method: string, params: unknown): Promise<unknown> {
         return await this.rpcCall(`${sessionId}:${method}`, params)
     }

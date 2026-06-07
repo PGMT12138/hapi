@@ -431,6 +431,12 @@ export default {
   'extensions.detail.tools': 'Tools',
   'extensions.scopeGlobal': 'Global',
   'extensions.scopeProject': 'Project',
+  'extensions.pluginsTab': 'Plugins',
+  'extensions.noPlugins': 'No plugins found',
+  'extensions.detail.author': 'Author',
+  'extensions.detail.homepage': 'Homepage',
+  'extensions.detail.installedAt': 'Installed',
+  'extensions.detail.skills': 'Skills',
 
   // Browse / Workspace
   'browse.title': 'Browse',

@@ -525,6 +525,21 @@ export class ApiClient {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers/${encodeURIComponent(name)}/detail`)
     }
 
+    async getCcPlugins(machineId: string): Promise<{ success: boolean; plugins?: Array<{ name: string; description?: string; version?: string; author?: string; homepage?: string; installedAt?: string; lastUpdated?: string; installPath: string; hasMcp: boolean; skillCount: number; enabled: boolean }>; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-plugins`)
+    }
+
+    async updateCcPluginStatus(machineId: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-plugins/${encodeURIComponent(name)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ enabled })
+        })
+    }
+
+    async getCcPluginDetail(machineId: string, name: string): Promise<{ success: boolean; detail?: { name: string; description?: string; version?: string; author?: string; homepage?: string; license?: string; installedAt?: string; lastUpdated?: string; installPath: string; hasMcp: boolean; mcpConfig?: Record<string, unknown>; skills: Array<{ name: string; description?: string }>; files: string[] }; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-plugins/${encodeURIComponent(name)}/detail`)
+    }
+
     async renameSession(sessionId: string, name: string): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}`, {
             method: 'PATCH',

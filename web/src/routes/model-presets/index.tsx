@@ -12,6 +12,8 @@ import { useCcSkills } from '@/hooks/queries/useCcSkills'
 import { useCcMcpServers } from '@/hooks/queries/useCcMcpServers'
 import { useCcExtensionActions } from '@/hooks/mutations/useCcExtensionActions'
 import { useCcSkillDetail, useCcMcpServerDetail } from '@/hooks/queries/useCcExtensionDetails'
+import { useCcPlugins, useCcPluginActions } from '@/hooks/queries/useCcPlugins'
+import { useCcPluginDetail } from '@/hooks/queries/useCcPluginDetails'
 import type { ModelConfigPreset } from '@/types/api'
 
 const ENV_FIELDS = [
@@ -45,7 +47,7 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 const inputClass = "w-full px-3 py-2 text-sm rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-[var(--app-link)] disabled:opacity-50"
 
-type TabType = 'presets' | 'skills' | 'mcp'
+type TabType = 'presets' | 'skills' | 'mcp' | 'plugins'
 
 function ToggleSwitch({ checked, disabled, onChange }: {
     checked: boolean
@@ -63,6 +65,80 @@ function ToggleSwitch({ checked, disabled, onChange }: {
         >
             <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
         </button>
+    )
+}
+
+function FileTree({ files, rootName }: { files: string[]; rootName: string }) {
+    const tree = buildTree(files)
+    return (
+        <div className="text-xs font-mono bg-[var(--app-subtle-bg)] rounded-lg p-2 max-h-60 overflow-auto">
+            <TreeNode node={{ name: rootName, children: tree, isFile: false }} depth={0} defaultExpanded />
+        </div>
+    )
+}
+
+interface TreeNodeData {
+    name: string
+    children: TreeNodeData[]
+    isFile: boolean
+}
+
+function buildTree(paths: string[]): TreeNodeData[] {
+    const root: TreeNodeData[] = []
+    for (const path of paths) {
+        const parts = path.split('/')
+        let current = root
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i]
+            const isFile = i === parts.length - 1
+            let existing = current.find(n => n.name === part)
+            if (!existing) {
+                existing = { name: part, children: [], isFile }
+                current.push(existing)
+            }
+            current = existing.children
+        }
+    }
+    const sortNodes = (nodes: TreeNodeData[]) => {
+        nodes.sort((a, b) => {
+            if (a.isFile !== b.isFile) return a.isFile ? 1 : -1
+            return a.name.localeCompare(b.name)
+        })
+        for (const n of nodes) sortNodes(n.children)
+    }
+    sortNodes(root)
+    return root
+}
+
+function TreeNode({ node, depth, defaultExpanded }: { node: TreeNodeData; depth: number; defaultExpanded?: boolean }) {
+    const [expanded, setExpanded] = useState(defaultExpanded ?? depth < 1)
+    const pl = depth * 16
+    if (node.isFile) {
+        return (
+            <div className="py-0.5 text-[var(--app-fg)]" style={{ paddingLeft: pl }}>
+                {node.name}
+            </div>
+        )
+    }
+    return (
+        <div>
+            <button
+                type="button"
+                onClick={() => setExpanded(v => !v)}
+                className="flex items-center gap-1 py-0.5 text-[var(--app-fg)] hover:text-[var(--app-link)] w-full text-left"
+                style={{ paddingLeft: pl }}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    className={`shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}>
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+                {node.name}
+            </button>
+            {expanded && node.children.map(child => (
+                <TreeNode key={child.name} node={child} depth={depth + 1} />
+            ))}
+        </div>
     )
 }
 
@@ -126,11 +202,7 @@ function SkillDetailModal({ name, machineId, onClose }: {
                             <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">
                                 {t('extensions.detail.files')} ({detail.files.length})
                             </div>
-                            <div className="flex flex-wrap gap-1.5">
-                                {detail.files.map(f => (
-                                    <span key={f} className="text-xs font-mono px-2 py-1 rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)]">{f}</span>
-                                ))}
-                            </div>
+                            <FileTree files={detail.files} rootName={detail.path.split('/').pop() || detail.path} />
                         </div>
                     )}
                     <div>
@@ -201,6 +273,99 @@ function McpServerDetailModal({ name, machineId, onClose }: {
                                             <span className="text-xs text-[var(--app-hint)] mt-0.5">{tool.description}</span>
                                         )}
                                     </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </DetailModal>
+    )
+}
+
+function PluginDetailModal({ name, machineId, onClose }: {
+    name: string
+    machineId: string
+    onClose: () => void
+}) {
+    const { t } = useTranslation()
+    const { api } = useAppContext()
+    const { detail, isLoading, error } = useCcPluginDetail(api, machineId, name)
+
+    return (
+        <DetailModal title={name} onClose={onClose}>
+            {isLoading ? (
+                <div className="text-sm text-[var(--app-hint)]">{t('misc.loading')}</div>
+            ) : error ? (
+                <div className="text-sm text-red-500">{error}</div>
+            ) : !detail ? (
+                <div className="text-sm text-[var(--app-hint)]">{t('extensions.noPlugins')}</div>
+            ) : (
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {detail.version && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--app-subtle-bg)] text-[var(--app-hint)]">v{detail.version}</span>
+                        )}
+                        {detail.hasMcp && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">MCP</span>
+                        )}
+                        {detail.skills.length > 0 && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">{detail.skills.length} Skills</span>
+                        )}
+                    </div>
+                    {detail.description && (
+                        <div>
+                            <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">{t('extensions.detail.description')}</div>
+                            <div className="text-sm text-[var(--app-fg)]">{detail.description}</div>
+                        </div>
+                    )}
+                    {detail.author && (
+                        <div>
+                            <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">{t('extensions.detail.author')}</div>
+                            <div className="text-sm text-[var(--app-fg)]">{detail.author}</div>
+                        </div>
+                    )}
+                    {detail.homepage && (
+                        <div>
+                            <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">{t('extensions.detail.homepage')}</div>
+                            <div className="text-xs font-mono text-[var(--app-link)] break-all">{detail.homepage}</div>
+                        </div>
+                    )}
+                    <div>
+                        <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">{t('extensions.detail.path')}</div>
+                        <div className="text-xs font-mono text-[var(--app-fg)] break-all">{detail.installPath}</div>
+                    </div>
+                    {detail.installedAt && (
+                        <div>
+                            <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">{t('extensions.detail.installedAt')}</div>
+                            <div className="text-xs text-[var(--app-fg)]">{new Date(detail.installedAt).toLocaleString()}</div>
+                        </div>
+                    )}
+                    {detail.skills.length > 0 && (
+                        <div>
+                            <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">
+                                {t('extensions.detail.skills')} ({detail.skills.length})
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                {detail.skills.map(skill => (
+                                    <div key={skill.name} className="flex flex-col px-2.5 py-1.5 rounded-lg bg-[var(--app-subtle-bg)]">
+                                        <span className="text-xs font-mono font-medium text-[var(--app-fg)]">{skill.name}</span>
+                                        {skill.description && (
+                                            <span className="text-xs text-[var(--app-hint)] mt-0.5 line-clamp-2">{skill.description}</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {detail.files.length > 0 && (
+                        <div>
+                            <div className="text-xs font-medium text-[var(--app-hint)] uppercase tracking-wide mb-1">
+                                {t('extensions.detail.files')} ({detail.files.length})
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-auto">
+                                {detail.files.map(f => (
+                                    <span key={f} className="text-xs font-mono px-2 py-1 rounded bg-[var(--app-subtle-bg)] text-[var(--app-fg)]">{f}</span>
                                 ))}
                             </div>
                         </div>
@@ -502,10 +667,12 @@ export default function ModelPresetsPage() {
     const { updateGlobalEnv, isPending: globalEnvPending } = useGlobalEnvActions(api, activeMachineId)
 
     const [activeTab, setActiveTab] = useState<TabType>('presets')
-    const [detailTarget, setDetailTarget] = useState<{ type: 'skill' | 'mcp'; name: string } | null>(null)
+    const [detailTarget, setDetailTarget] = useState<{ type: 'skill' | 'mcp' | 'plugin'; name: string } | null>(null)
 
     const { skills, isLoading: skillsLoading, error: skillsError } = useCcSkills(api, activeMachineId)
     const { servers, isLoading: serversLoading, error: serversError } = useCcMcpServers(api, activeMachineId)
+    const { plugins, isLoading: pluginsLoading, error: pluginsError } = useCcPlugins(api, activeMachineId)
+    const { updatePluginStatus, isPending: pluginPending } = useCcPluginActions(api, activeMachineId)
     const { updateSkillOverride, updateMcpServerStatus, isPending: extPending } = useCcExtensionActions(api, activeMachineId)
 
     const [showAdd, setShowAdd] = useState(false)
@@ -534,6 +701,14 @@ export default function ModelPresetsPage() {
             // Mutation failed
         }
     }, [updateMcpServerStatus])
+
+    const handlePluginToggle = useCallback(async (name: string, enabled: boolean) => {
+        try {
+            await updatePluginStatus({ name, enabled: !enabled })
+        } catch {
+            // Mutation failed
+        }
+    }, [updatePluginStatus])
 
     const handleAdd = useCallback(async () => {
         if (!addName.trim()) return
@@ -595,6 +770,7 @@ export default function ModelPresetsPage() {
         { key: 'presets', label: t('modelPresets.presetsTab') },
         { key: 'skills', label: t('extensions.skillsTab') },
         { key: 'mcp', label: t('extensions.mcpTab') },
+        { key: 'plugins', label: t('extensions.pluginsTab') },
     ]
 
     return (
@@ -785,6 +961,48 @@ export default function ModelPresetsPage() {
                                     ))}
                                 </div>
                             )}
+
+                            {activeTab === 'plugins' && activeMachineId && isOnline && (
+                                <div className="flex flex-col gap-1">
+                                    {pluginsLoading ? (
+                                        <div className="text-sm text-[var(--app-hint)]">{t('misc.loading')}</div>
+                                    ) : pluginsError ? (
+                                        <div className="text-sm text-red-500">{pluginsError}</div>
+                                    ) : plugins.length === 0 ? (
+                                        <div className="text-sm text-[var(--app-hint)]">{t('extensions.noPlugins')}</div>
+                                    ) : plugins.map(plugin => (
+                                        <div key={plugin.name}
+                                            onClick={() => setDetailTarget({ type: 'plugin', name: plugin.name })}
+                                            className={`flex items-center justify-between gap-3 px-3 py-3 border-b border-[var(--app-divider)] last:border-b-0 cursor-pointer hover:bg-[var(--app-subtle-bg)] transition-colors ${!plugin.enabled ? 'opacity-50' : ''}`}>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-[var(--app-fg)] truncate">{plugin.name}</span>
+                                                    {plugin.version && (
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--app-subtle-bg)] text-[var(--app-hint)]">v{plugin.version}</span>
+                                                    )}
+                                                    {plugin.hasMcp && (
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">MCP</span>
+                                                    )}
+                                                    {plugin.skillCount > 0 && (
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">{plugin.skillCount} Skills</span>
+                                                    )}
+                                                </div>
+                                                {plugin.description && (
+                                                    <div className="text-xs text-[var(--app-hint)] truncate mt-0.5">{plugin.description}</div>
+                                                )}
+                                                {plugin.author && (
+                                                    <div className="text-[10px] text-[var(--app-hint)] mt-0.5">by {plugin.author}</div>
+                                                )}
+                                            </div>
+                                            <ToggleSwitch
+                                                checked={plugin.enabled}
+                                                disabled={pluginPending}
+                                                onChange={() => { void handlePluginToggle(plugin.name, plugin.enabled) }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -816,7 +1034,9 @@ export default function ModelPresetsPage() {
             {detailTarget && activeMachineId && (
                 detailTarget.type === 'skill'
                     ? <SkillDetailModal name={detailTarget.name} machineId={activeMachineId} onClose={() => setDetailTarget(null)} />
-                    : <McpServerDetailModal name={detailTarget.name} machineId={activeMachineId} onClose={() => setDetailTarget(null)} />
+                    : detailTarget.type === 'mcp'
+                        ? <McpServerDetailModal name={detailTarget.name} machineId={activeMachineId} onClose={() => setDetailTarget(null)} />
+                        : <PluginDetailModal name={detailTarget.name} machineId={activeMachineId} onClose={() => setDetailTarget(null)} />
             )}
         </div>
     )

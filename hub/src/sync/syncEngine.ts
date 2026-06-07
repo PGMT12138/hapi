@@ -519,6 +519,18 @@ export class SyncEngine {
         return await this.rpcGateway.getMcpServerDetail(machineId, name)
     }
 
+    async listCcPlugins(machineId: string) {
+        return await this.rpcGateway.listCcPlugins(machineId)
+    }
+
+    async getPluginDetail(machineId: string, name: string) {
+        return await this.rpcGateway.getPluginDetail(machineId, name)
+    }
+
+    async updatePluginStatus(machineId: string, name: string, enabled: boolean) {
+        return await this.rpcGateway.updatePluginStatus(machineId, name, enabled)
+    }
+
     async resumeSession(sessionId: string, namespace: string, opts?: { permissionMode?: PermissionMode }): Promise<ResumeSessionResult> {
         const access = this.sessionCache.resolveSessionAccess(sessionId, namespace)
         if (!access.ok) {
