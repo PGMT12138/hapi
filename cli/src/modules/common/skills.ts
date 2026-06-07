@@ -121,7 +121,7 @@ async function listTopLevelSkillDirs(skillsRoot: string, options: { includeCodex
         const result: string[] = [];
 
         for (const entry of entries) {
-            if (!entry.isDirectory()) {
+            if (!entry.isDirectory() && !entry.isSymbolicLink()) {
                 continue;
             }
 
@@ -129,7 +129,7 @@ async function listTopLevelSkillDirs(skillsRoot: string, options: { includeCodex
                 if (options.includeCodexSystem && entry.name === '.system') {
                     const systemEntries = await readdir(join(skillsRoot, entry.name), { withFileTypes: true }).catch(() => []);
                     for (const systemEntry of systemEntries) {
-                        if (systemEntry.isDirectory() && !systemEntry.name.startsWith('.')) {
+                        if ((systemEntry.isDirectory() || systemEntry.isSymbolicLink()) && !systemEntry.name.startsWith('.')) {
                             result.push(join(skillsRoot, entry.name, systemEntry.name));
                         }
                     }
@@ -162,6 +162,61 @@ async function readSkillsFromDirs(skillDirs: string[]): Promise<SkillSummary[]> 
 
 function isCodexSkillsRoot(root: string): boolean {
     return root.endsWith(join('.codex', 'skills'));
+}
+
+export interface SkillWithScope extends SkillSummary {
+    scope: 'global' | 'project'
+    projectPath?: string
+}
+
+export async function listClaudeCodeSkills(workingDirectory?: string): Promise<SkillWithScope[]> {
+    const home = getHomeDirectory();
+    const globalClaudeRoot = join(home, '.claude', 'skills');
+
+    const projectClaudeRoots: string[] = [];
+    let projectPath: string | undefined;
+
+    if (workingDirectory) {
+        const resolvedWd = resolve(workingDirectory);
+        let current = resolvedWd;
+        const dirs: string[] = [];
+
+        while (true) {
+            dirs.push(join(current, '.claude', 'skills'));
+            if (await pathExists(join(current, '.git'))) {
+                projectPath = current;
+                break;
+            }
+            const parent = dirname(current);
+            if (parent === current) {
+                projectPath = resolvedWd;
+                break;
+            }
+            current = parent;
+        }
+
+        projectClaudeRoots.push(...dirs);
+    }
+
+    const [globalDirs, projectDirs] = await Promise.all([
+        listTopLevelSkillDirs(globalClaudeRoot),
+        Promise.all(projectClaudeRoots.map(r => listTopLevelSkillDirs(r))).then(d => d.flat()),
+    ]);
+
+    const [globalSkills, projectSkills] = await Promise.all([
+        readSkillsFromDirs(globalDirs),
+        readSkillsFromDirs(projectDirs),
+    ]);
+
+    const result = new Map<string, SkillWithScope>();
+    for (const skill of globalSkills) {
+        result.set(skill.name, { ...skill, scope: 'global' });
+    }
+    for (const skill of projectSkills) {
+        result.set(skill.name, { ...skill, scope: 'project', projectPath });
+    }
+
+    return [...result.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function listSkills(workingDirectory?: string): Promise<SkillSummary[]> {

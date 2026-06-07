@@ -592,7 +592,7 @@ export default function ModelPresetsPage() {
     const anyPending = isPending || globalEnvPending
 
     const tabs: { key: TabType; label: string }[] = [
-        { key: 'presets', label: t('modelPresets.title') },
+        { key: 'presets', label: t('modelPresets.presetsTab') },
         { key: 'skills', label: t('extensions.skillsTab') },
         { key: 'mcp', label: t('extensions.mcpTab') },
     ]
@@ -732,7 +732,15 @@ export default function ModelPresetsPage() {
                                             onClick={() => setDetailTarget({ type: 'skill', name: skill.name })}
                                             className="flex items-center justify-between gap-3 px-3 py-3 border-b border-[var(--app-divider)] last:border-b-0 cursor-pointer hover:bg-[var(--app-subtle-bg)] transition-colors">
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-medium text-[var(--app-fg)] truncate">{skill.name}</div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-[var(--app-fg)] truncate">{skill.name}</span>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${skill.scope === 'global' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300'}`}>
+                                                        {skill.scope === 'global' ? t('extensions.scopeGlobal') : t('extensions.scopeProject')}
+                                                    </span>
+                                                </div>
+                                                {skill.scope === 'project' && skill.projectPath && (
+                                                    <div className="text-[10px] text-[var(--app-hint)] truncate mt-0.5 font-mono">{skill.projectPath}</div>
+                                                )}
                                                 {skill.description && (
                                                     <div className="text-xs text-[var(--app-hint)] truncate mt-0.5">{skill.description}</div>
                                                 )}

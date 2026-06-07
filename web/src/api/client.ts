@@ -495,7 +495,7 @@ export class ApiClient {
         )
     }
 
-    async getCcSkills(machineId: string): Promise<{ success: boolean; skills?: Array<{ name: string; description?: string; overrideState: string | null }>; error?: string }> {
+    async getCcSkills(machineId: string): Promise<{ success: boolean; skills?: Array<{ name: string; description?: string; overrideState: string | null; scope: 'global' | 'project'; projectPath?: string }>; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-skills`)
     }
 

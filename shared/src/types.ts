@@ -41,6 +41,8 @@ export interface CcSkill {
     name: string
     description?: string
     overrideState: CcSkillOverrideState | null
+    scope: 'global' | 'project'
+    projectPath?: string
 }
 
 export type CcMcpServerType = 'http' | 'stdio' | 'sse' | 'ws'

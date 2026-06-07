@@ -5,7 +5,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import type { RpcHandlerManager } from '@/api/rpc/RpcHandlerManager'
 import { rpcError } from '../rpcResponses'
-import { listSkills, getSkillDetail } from '../skills'
+import { listClaudeCodeSkills, listSkills, getSkillDetail } from '../skills'
 import type { CcSkill, CcMcpServer } from '@hapi/protocol/types'
 
 interface SettingsFile {
@@ -199,14 +199,16 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
     rpcHandlerManager.registerHandler<void, ListCcSkillsResponse>('list-cc-skills', async () => {
         try {
             const [skills, settings] = await Promise.all([
-                listSkills(undefined),
+                listClaudeCodeSkills(process.cwd()),
                 readJsonFile<SettingsFile>(getGlobalSettingsPath())
             ])
             const overrides = settings.skillOverrides
             const result: CcSkill[] = skills.map(skill => ({
                 name: skill.name,
                 description: skill.description,
-                overrideState: isSkillDisabled(overrides, skill.folderName) ? 'off' as const : null
+                overrideState: isSkillDisabled(overrides, skill.folderName) ? 'off' as const : null,
+                scope: skill.scope,
+                projectPath: skill.projectPath,
             }))
             return { success: true, skills: result }
         } catch (error) {

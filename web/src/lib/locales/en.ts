@@ -390,8 +390,9 @@ export default {
   'prompts.searchPlaceholder': 'Search prompts…',
 
   // Model Presets
-  'modelPresets.title': 'Models & Extensions',
-  'modelPresets.nav': 'Models & Extensions',
+  'modelPresets.title': 'Agent Management',
+  'modelPresets.nav': 'Agent Management',
+  'modelPresets.presetsTab': 'Models',
   'modelPresets.empty': 'No presets yet',
   'modelPresets.add': 'Add Preset',
   'modelPresets.name': 'Name',
@@ -418,7 +419,7 @@ export default {
   'extensions.noMachines': 'No machines online',
   'extensions.machineOffline': 'Machine is offline',
   'extensions.skillsTab': 'Skills',
-  'extensions.mcpTab': 'MCP Servers',
+  'extensions.mcpTab': 'MCP',
   'extensions.noSkills': 'No skills found',
   'extensions.noMcpServers': 'No MCP servers found',
   'extensions.detail.description': 'Description',
@@ -428,6 +429,8 @@ export default {
   'extensions.detail.command': 'Command',
   'extensions.detail.config': 'Configuration',
   'extensions.detail.tools': 'Tools',
+  'extensions.scopeGlobal': 'Global',
+  'extensions.scopeProject': 'Project',
 
   // Browse / Workspace
   'browse.title': 'Browse',

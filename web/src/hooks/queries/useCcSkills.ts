@@ -6,6 +6,8 @@ interface CcSkill {
     name: string
     description?: string
     overrideState: string | null
+    scope: 'global' | 'project'
+    projectPath?: string
 }
 
 export function useCcSkills(api: ApiClient | null, machineId: string | null): {
