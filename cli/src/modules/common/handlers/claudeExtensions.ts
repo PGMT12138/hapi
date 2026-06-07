@@ -294,7 +294,7 @@ async function listFilesRecursive(dir: string, basePath: string): Promise<string
         for (const entry of entries) {
             if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
             const fullPath = join(dir, entry.name)
-            const relativePath = fullPath.replace(basePath + '/', '')
+            const relativePath = fullPath.replace(basePath + '/', '').replace(basePath + '\\', '').replace(/[/\\]/g, '/')
             if (entry.isDirectory() || entry.isSymbolicLink()) {
                 results.push(...await listFilesRecursive(fullPath, basePath))
             } else {

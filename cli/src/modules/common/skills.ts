@@ -291,12 +291,14 @@ export async function getSkillDetail(name: string, workingDirectory?: string): P
     const description = typeof parsed.frontmatter?.description === 'string' ? parsed.frontmatter.description.trim() : undefined;
 
     const fileEntries = await readdir(dir, { withFileTypes: true, recursive: true });
-    const prefix = dir.endsWith('/') ? dir : dir + '/';
+    const sep = dir.includes('\\') ? '\\' : '/';
+    const prefix = dir.endsWith(sep) ? dir : dir + sep;
     const files = fileEntries
         .filter(e => e.isFile() && !e.name.startsWith('.'))
         .map(e => {
-            const fullPath = e.parentPath ? `${e.parentPath}/${e.name}` : e.name;
-            return fullPath.startsWith(prefix) ? fullPath.slice(prefix.length) : e.name;
+            const parent = e.parentPath ? e.parentPath.replace(/[/\\]/g, sep) : '';
+            const fullPath = parent ? `${parent}${sep}${e.name}` : e.name;
+            return fullPath.startsWith(prefix) ? fullPath.slice(prefix.length).replace(/[/\\]/g, '/') : e.name;
         });
 
     return { name, description, content, files, path: dir };
