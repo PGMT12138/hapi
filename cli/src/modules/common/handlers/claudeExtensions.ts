@@ -281,7 +281,7 @@ async function fetchMcpToolsStdio(command: string, args: string[], env?: Record<
         let settled = false
         const timer = setTimeout(() => {
             if (!settled) { settled = true; proc.kill(); resolve([]) }
-        }, 10_000)
+        }, 60_000)
 
         const lines: string[] = []
         proc.stdout.on('data', (chunk: Buffer) => {
