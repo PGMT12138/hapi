@@ -162,30 +162,97 @@ interface UpdateResponse {
     error?: string
 }
 
-async function fetchMcpToolsHttp(url: string): Promise<McpTool[]> {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 10_000)
+function parseJsonOrSse(text: string, targetId: number): { result?: { tools?: Array<{ name?: string; description?: string }> }; error?: unknown } | null {
+    // Try plain JSON first
     try {
-        const res = await fetch(url, {
+        const json = JSON.parse(text) as { id?: number; error?: unknown }
+        if (json.id === targetId) return json
+        return null
+    } catch {}
+    // Parse SSE: extract data lines and match on JSON-RPC id inside data payload
+    let currentData = ''
+    for (const line of text.split('\n')) {
+        if (line.startsWith('data:')) {
+            currentData = line.slice(5).trim()
+        } else if (line === '' && currentData) {
+            try {
+                const json = JSON.parse(currentData) as { id?: number; error?: unknown }
+                if (json.id === targetId) return json
+            } catch {}
+            currentData = ''
+        }
+    }
+    if (currentData) {
+        try {
+            const json = JSON.parse(currentData) as { id?: number; error?: unknown }
+            if (json.id === targetId) return json
+        } catch {}
+    }
+    return null
+}
+
+async function fetchMcpToolsHttp(url: string, extraHeaders?: Record<string, string>): Promise<McpTool[]> {
+    const headers = {
+        'content-type': 'application/json',
+        'accept': 'application/json, text/event-stream',
+        ...extraHeaders,
+    }
+    const timeout = 10_000
+
+    try {
+        // Step 1: initialize
+        const initController = new AbortController()
+        const initTimer = setTimeout(() => initController.abort(), timeout)
+        const initRes = await fetch(url, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 jsonrpc: '2.0',
                 id: 1,
+                method: 'initialize',
+                params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'hapi', version: '1.0.0' } },
+            }),
+            signal: initController.signal,
+        })
+        clearTimeout(initTimer)
+        const initText = await initRes.text()
+        const initJson = parseJsonOrSse(initText, 1)
+        if (!initJson || initJson.error) return []
+
+        // Step 2: notifications/initialized (no id, no response expected)
+        const notifController = new AbortController()
+        const notifTimer = setTimeout(() => notifController.abort(), timeout)
+        await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+            signal: notifController.signal,
+        }).catch(() => {})
+        clearTimeout(notifTimer)
+
+        // Step 3: tools/list
+        const toolsController = new AbortController()
+        const toolsTimer = setTimeout(() => toolsController.abort(), timeout)
+        const toolsRes = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 2,
                 method: 'tools/list',
                 params: {},
             }),
-            signal: controller.signal,
+            signal: toolsController.signal,
         })
-        const json = await res.json() as { result?: { tools?: Array<{ name?: string; description?: string }> }; error?: unknown }
-        if (json.error) return []
-        return (json.result?.tools ?? [])
+        clearTimeout(toolsTimer)
+        const toolsText = await toolsRes.text()
+        const toolsJson = parseJsonOrSse(toolsText, 2)
+        if (!toolsJson || toolsJson.error) return []
+        return (toolsJson.result?.tools ?? [])
             .filter(t => typeof t.name === 'string')
             .map(t => ({ name: t.name!, description: t.description }))
     } catch {
         return []
-    } finally {
-        clearTimeout(timer)
     }
 }
 
@@ -193,19 +260,21 @@ async function fetchMcpToolsStdio(command: string, args: string[]): Promise<McpT
     const { spawn } = await import('child_process')
     return new Promise((resolve) => {
         const proc = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] })
-        let stdout = ''
         let settled = false
         const timer = setTimeout(() => {
             if (!settled) { settled = true; proc.kill(); resolve([]) }
         }, 10_000)
 
+        const lines: string[] = []
         proc.stdout.on('data', (chunk: Buffer) => {
-            stdout += chunk.toString()
-            if (!settled && stdout.includes('"id":1')) {
+            if (settled) return
+            lines.push(...chunk.toString().split('\n'))
+            const toolsLine = lines.find(l => l.includes('"id":2') && l.includes('"tools"'))
+            if (toolsLine) {
                 settled = true
                 clearTimeout(timer)
                 try {
-                    const json = JSON.parse(stdout.split('\n').find(l => l.includes('"id":1')) || '{}') as { result?: { tools?: Array<{ name?: string; description?: string }> } }
+                    const json = JSON.parse(toolsLine) as { result?: { tools?: Array<{ name?: string; description?: string }> } }
                     resolve((json.result?.tools ?? []).filter(t => typeof t.name === 'string').map(t => ({ name: t.name!, description: t.description })))
                 } catch {
                     resolve([])
@@ -224,7 +293,7 @@ async function fetchMcpToolsStdio(command: string, args: string[]): Promise<McpT
             params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'hapi', version: '1.0.0' } },
         }) + '\n')
         proc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n')
-        proc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }) + '\n')
+        proc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) + '\n')
     })
 }
 
@@ -439,12 +508,15 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
             }
             const serverType = (cfg.type === 'streamable-http' ? 'http' : cfg.type ?? 'stdio') as string
             const normalizedType = ['http', 'sse', 'ws'].includes(serverType) ? serverType : 'stdio'
-            const { type: _type, url: _url, command: _cmd, args: _args, ...rest } = cfg
+            const { type: _type, url: _url, command: _cmd, args: _args, headers: _headers, ...rest } = cfg
 
             let tools: McpTool[] = []
             try {
                 if (normalizedType === 'http' || normalizedType === 'sse') {
-                    tools = await fetchMcpToolsHttp(cfg.url ?? '')
+                    const mcpHeaders = typeof cfg.headers === 'object' && cfg.headers !== null
+                        ? Object.fromEntries(Object.entries(cfg.headers).filter(([, v]) => typeof v === 'string')) as Record<string, string>
+                        : undefined
+                    tools = await fetchMcpToolsHttp(cfg.url ?? '', mcpHeaders)
                 } else if (cfg.command) {
                     tools = await fetchMcpToolsStdio(cfg.command, cfg.args ?? [])
                 }
