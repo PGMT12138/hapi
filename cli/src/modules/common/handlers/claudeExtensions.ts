@@ -162,6 +162,23 @@ interface UpdateResponse {
     error?: string
 }
 
+const mcpToolsCache = new Map<string, { tools: McpTool[]; expiresAt: number }>()
+const MCP_TOOLS_CACHE_TTL = 5 * 60 * 1000
+
+function getCachedMcpTools(key: string): McpTool[] | undefined {
+    const entry = mcpToolsCache.get(key)
+    if (!entry) return undefined
+    if (Date.now() > entry.expiresAt) {
+        mcpToolsCache.delete(key)
+        return undefined
+    }
+    return entry.tools
+}
+
+function setCachedMcpTools(key: string, tools: McpTool[]): void {
+    mcpToolsCache.set(key, { tools, expiresAt: Date.now() + MCP_TOOLS_CACHE_TTL })
+}
+
 function parseJsonOrSse(text: string, targetId: number): { result?: { tools?: Array<{ name?: string; description?: string }> }; error?: unknown } | null {
     // Try plain JSON first
     try {
@@ -511,21 +528,26 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
             const normalizedType = ['http', 'sse', 'ws'].includes(serverType) ? serverType : 'stdio'
             const { type: _type, url: _url, command: _cmd, args: _args, headers: _headers, env: _env, ...rest } = cfg
 
-            let tools: McpTool[] = []
-            try {
-                if (normalizedType === 'http' || normalizedType === 'sse') {
-                    const mcpHeaders = typeof cfg.headers === 'object' && cfg.headers !== null
-                        ? Object.fromEntries(Object.entries(cfg.headers).filter(([, v]) => typeof v === 'string')) as Record<string, string>
-                        : undefined
-                    tools = await fetchMcpToolsHttp(cfg.url ?? '', mcpHeaders)
-                } else if (cfg.command) {
-                    const mcpEnv = typeof cfg.env === 'object' && cfg.env !== null
-                        ? Object.fromEntries(Object.entries(cfg.env).filter(([, v]) => typeof v === 'string')) as Record<string, string>
-                        : undefined
-                    tools = await fetchMcpToolsStdio(cfg.command, cfg.args ?? [], mcpEnv)
+            const cacheKey = `${data.name}:${cfg.command ?? ''}:${cfg.url ?? ''}:${(cfg.args ?? []).join(',')}`
+            let tools = getCachedMcpTools(cacheKey)
+            if (!tools) {
+                tools = []
+                try {
+                    if (normalizedType === 'http' || normalizedType === 'sse') {
+                        const mcpHeaders = typeof cfg.headers === 'object' && cfg.headers !== null
+                            ? Object.fromEntries(Object.entries(cfg.headers).filter(([, v]) => typeof v === 'string')) as Record<string, string>
+                            : undefined
+                        tools = await fetchMcpToolsHttp(cfg.url ?? '', mcpHeaders)
+                    } else if (cfg.command) {
+                        const mcpEnv = typeof cfg.env === 'object' && cfg.env !== null
+                            ? Object.fromEntries(Object.entries(cfg.env).filter(([, v]) => typeof v === 'string')) as Record<string, string>
+                            : undefined
+                        tools = await fetchMcpToolsStdio(cfg.command, cfg.args ?? [], mcpEnv)
+                    }
+                    if (tools.length > 0) setCachedMcpTools(cacheKey, tools)
+                } catch {
+                    // tools fetch is best-effort
                 }
-            } catch {
-                // tools fetch is best-effort
             }
 
             return {
