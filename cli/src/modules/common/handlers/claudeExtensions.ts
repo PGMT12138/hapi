@@ -256,10 +256,11 @@ async function fetchMcpToolsHttp(url: string, extraHeaders?: Record<string, stri
     }
 }
 
-async function fetchMcpToolsStdio(command: string, args: string[]): Promise<McpTool[]> {
+async function fetchMcpToolsStdio(command: string, args: string[], env?: Record<string, string>): Promise<McpTool[]> {
     const { spawn } = await import('child_process')
     return new Promise((resolve) => {
-        const proc = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] })
+        const procEnv = env ? { ...process.env, ...env } : process.env
+        const proc = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], env: procEnv })
         let settled = false
         const timer = setTimeout(() => {
             if (!settled) { settled = true; proc.kill(); resolve([]) }
@@ -508,7 +509,7 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
             }
             const serverType = (cfg.type === 'streamable-http' ? 'http' : cfg.type ?? 'stdio') as string
             const normalizedType = ['http', 'sse', 'ws'].includes(serverType) ? serverType : 'stdio'
-            const { type: _type, url: _url, command: _cmd, args: _args, headers: _headers, ...rest } = cfg
+            const { type: _type, url: _url, command: _cmd, args: _args, headers: _headers, env: _env, ...rest } = cfg
 
             let tools: McpTool[] = []
             try {
@@ -518,7 +519,10 @@ export function registerClaudeExtensionHandlers(rpcHandlerManager: RpcHandlerMan
                         : undefined
                     tools = await fetchMcpToolsHttp(cfg.url ?? '', mcpHeaders)
                 } else if (cfg.command) {
-                    tools = await fetchMcpToolsStdio(cfg.command, cfg.args ?? [])
+                    const mcpEnv = typeof cfg.env === 'object' && cfg.env !== null
+                        ? Object.fromEntries(Object.entries(cfg.env).filter(([, v]) => typeof v === 'string')) as Record<string, string>
+                        : undefined
+                    tools = await fetchMcpToolsStdio(cfg.command, cfg.args ?? [], mcpEnv)
                 }
             } catch {
                 // tools fetch is best-effort
