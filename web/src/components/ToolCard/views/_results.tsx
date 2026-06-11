@@ -420,8 +420,11 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
         return (
             <>
                 {path ? (
-                    <div className="mb-2 text-xs text-[var(--app-hint)] font-mono break-all">
-                        {basename(path)}
+                    <div className="mb-2 flex items-center gap-2">
+                        <span className="text-xs text-[var(--app-hint)] font-mono break-all">
+                            {basename(path)}
+                        </span>
+                        {file.filePath ? <DownloadButton filePath={file.filePath} /> : null}
                     </div>
                 ) : null}
                 <CodeBlock code={file.content} language="text" collapseLongContent={props.surface === 'inline'} />
