@@ -270,9 +270,18 @@ export class ApiClient {
             params.set('filename', filename)
         }
         const url = `/api/sessions/${encodeURIComponent(sessionId)}/download?${params.toString()}`
-        const response = await fetch(url)
+
+        const liveToken = this.getToken ? this.getToken() : null
+        const authToken = liveToken ?? this.token
+        const headers = new Headers()
+        if (authToken) {
+            headers.set('authorization', `Bearer ${authToken}`)
+        }
+
+        const response = await fetch(this.buildUrl(url), { headers })
         if (!response.ok) {
-            throw new Error(`Download failed: ${response.status}`)
+            const body = await response.text().catch(() => '')
+            throw new Error(`Download failed: HTTP ${response.status} ${response.statusText}${body ? `: ${body}` : ''}`)
         }
         const blob = await response.blob()
         const blobUrl = URL.createObjectURL(blob)
@@ -281,8 +290,10 @@ export class ApiClient {
         a.download = filename ?? path.split(/[/\\]/).pop() ?? 'file'
         document.body.appendChild(a)
         a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(blobUrl)
+        setTimeout(() => {
+            document.body.removeChild(a)
+            URL.revokeObjectURL(blobUrl)
+        }, 100)
     }
 
     async listSessionDirectory(sessionId: string, path?: string): Promise<ListDirectoryResponse> {

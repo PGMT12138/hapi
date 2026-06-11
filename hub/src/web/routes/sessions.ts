@@ -250,11 +250,12 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
 
             const buffer = Buffer.from(result.content, 'base64')
             const filename = parsed.data.filename ?? parsed.data.path.split(/[/\\]/).pop() ?? 'file'
+            const encodedFilename = encodeURIComponent(filename)
 
             return new Response(buffer, {
                 headers: {
                     'Content-Type': 'application/octet-stream',
-                    'Content-Disposition': `attachment; filename="${filename}"`,
+                    'Content-Disposition': `attachment; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`,
                     'Content-Length': String(buffer.length)
                 }
             })
