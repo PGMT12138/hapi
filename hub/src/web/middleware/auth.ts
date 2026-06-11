@@ -24,7 +24,8 @@ export function createAuthMiddleware(jwtSecret: Uint8Array): MiddlewareHandler<W
 
         const authorization = c.req.header('authorization')
         const tokenFromHeader = authorization?.startsWith('Bearer ') ? authorization.slice('Bearer '.length) : undefined
-        const tokenFromQuery = path === '/api/events' ? c.req.query().token : undefined
+        const allowQueryToken = path === '/api/events' || path.match(/^\/api\/sessions\/[^/]+\/download$/) !== null
+        const tokenFromQuery = allowQueryToken ? c.req.query().token : undefined
         const token = tokenFromHeader ?? tokenFromQuery
 
         if (!token) {
