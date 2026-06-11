@@ -263,6 +263,28 @@ export class ApiClient {
         return await this.request<FileReadResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/file?${params.toString()}`)
     }
 
+    async downloadFile(sessionId: string, path: string, filename?: string): Promise<void> {
+        const params = new URLSearchParams()
+        params.set('path', path)
+        if (filename) {
+            params.set('filename', filename)
+        }
+        const url = `/api/sessions/${encodeURIComponent(sessionId)}/download?${params.toString()}`
+        const response = await fetch(url)
+        if (!response.ok) {
+            throw new Error(`Download failed: ${response.status}`)
+        }
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = filename ?? path.split(/[/\\]/).pop() ?? 'file'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(blobUrl)
+    }
+
     async listSessionDirectory(sessionId: string, path?: string): Promise<ListDirectoryResponse> {
         const params = new URLSearchParams()
         if (path) {
