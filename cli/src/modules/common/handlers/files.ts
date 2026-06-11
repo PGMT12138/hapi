@@ -32,11 +32,6 @@ export function registerFileHandlers(rpcHandlerManager: RpcHandlerManager, worki
     rpcHandlerManager.registerHandler<ReadFileRequest, ReadFileResponse>('readFile', async (data) => {
         logger.debug('Read file request:', data.path)
 
-        const validation = validatePath(data.path, workingDirectory)
-        if (!validation.valid) {
-            return rpcError(validation.error ?? 'Invalid file path')
-        }
-
         try {
             const resolvedPath = resolve(workingDirectory, data.path)
             const buffer = await readFile(resolvedPath)

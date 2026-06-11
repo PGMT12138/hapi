@@ -3,9 +3,8 @@ import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ChecklistList, extractTodoChecklist } from '@/components/ToolCard/checklist'
-import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny } from '@/lib/toolInputUtils'
-import { DownloadButton } from '@/components/ToolCard/DownloadButton'
+import { ResultDownloadChip } from '@/components/ToolCard/DownloadButton'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
     const regex = /<tool_use_error>(.*?)<\/tool_use_error>/s
@@ -408,23 +407,26 @@ const LineListResultView: ToolViewComponent = (props: ToolViewProps) => {
 }
 
 const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
-    const result = props.block.tool.result
+    const { result, state, input } = props.block.tool
+    const inputFilePath = extractFilePathFromInput(input)
+    const canDownload = state === 'completed' && inputFilePath !== null
 
     if (result === undefined || result === null) {
-        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+        return (
+            <div className="flex items-center justify-between gap-2">
+                <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
+                {canDownload ? <ResultDownloadChip filePath={inputFilePath!} /> : null}
+            </div>
+        )
     }
 
     const file = extractReadFileContent(result)
     if (file) {
-        const path = file.filePath ? resolveDisplayPath(file.filePath, props.metadata) : null
         return (
             <>
-                {path ? (
-                    <div className="mb-2 flex items-center gap-2">
-                        <span className="text-xs text-[var(--app-hint)] font-mono break-all">
-                            {basename(path)}
-                        </span>
-                        {file.filePath ? <DownloadButton filePath={file.filePath} /> : null}
+                {(file.filePath || canDownload) ? (
+                    <div className="flex justify-start mb-1">
+                        <ResultDownloadChip filePath={file.filePath ?? inputFilePath!} />
                     </div>
                 ) : null}
                 <CodeBlock code={file.content} language="text" collapseLongContent={props.surface === 'inline'} />
@@ -437,6 +439,11 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
     if (text) {
         return (
             <>
+                {canDownload ? (
+                    <div className="flex justify-start mb-1">
+                        <ResultDownloadChip filePath={inputFilePath!} />
+                    </div>
+                ) : null}
                 {renderText(text, { mode: 'code', language: 'text', collapseLongContent: props.surface === 'inline' })}
                 <RawJsonDevOnly value={result} />
             </>
@@ -445,7 +452,10 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     return (
         <>
-            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+            <div className="flex items-center justify-between gap-2">
+                <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                {canDownload ? <ResultDownloadChip filePath={inputFilePath!} /> : null}
+            </div>
             <RawJsonDevOnly value={result} />
         </>
     )
@@ -459,9 +469,9 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
     if (result === undefined || result === null) {
         if (state === 'completed') {
             return (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
                     <div className="text-sm text-[var(--app-hint)]">Done</div>
-                    {canDownload ? <DownloadButton filePath={filePath!} /> : null}
+                    {canDownload ? <ResultDownloadChip filePath={filePath!} /> : null}
                 </div>
             )
         }
@@ -474,14 +484,14 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
         const { mode, language } = getMutationResultRenderMode(text, state)
         return (
             <>
+                {canDownload ? (
+                    <div className="flex justify-start mb-1">
+                        <ResultDownloadChip filePath={filePath!} />
+                    </div>
+                ) : null}
                 <div className={`text-sm ${className}`}>
                     {renderText(text, { mode, language, collapseLongContent: props.surface === 'inline' })}
                 </div>
-                {canDownload ? (
-                    <div className="mt-2">
-                        <DownloadButton filePath={filePath!} />
-                    </div>
-                ) : null}
                 <RawJsonDevOnly value={result} />
             </>
         )
@@ -489,11 +499,11 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     return (
         <>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
                 <div className="text-sm text-[var(--app-hint)]">
                     {state === 'completed' ? 'Done' : '(no output)'}
                 </div>
-                {canDownload ? <DownloadButton filePath={filePath!} /> : null}
+                {canDownload ? <ResultDownloadChip filePath={filePath!} /> : null}
             </div>
             <RawJsonDevOnly value={result} />
         </>
