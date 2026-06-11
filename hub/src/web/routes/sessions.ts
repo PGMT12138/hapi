@@ -44,6 +44,11 @@ const uploadDeleteSchema = z.object({
     path: z.string().min(1)
 })
 
+const downloadSchema = z.object({
+    path: z.string().min(1),
+    filename: z.string().min(1).optional()
+})
+
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 function estimateBase64Bytes(base64: string): number {
@@ -218,6 +223,43 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to delete upload'
             }, 500)
+        }
+    })
+
+    app.get('/sessions/:id/download', async (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const sessionResult = requireSessionFromParam(c, engine)
+        if (sessionResult instanceof Response) {
+            return sessionResult
+        }
+
+        const parsed = downloadSchema.safeParse(c.req.query())
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid parameters' }, 400)
+        }
+
+        try {
+            const result = await engine.readSessionFile(sessionResult.sessionId, parsed.data.path)
+            if (!result.success || !result.content) {
+                return c.json({ error: result.error ?? 'Failed to read file' }, 500)
+            }
+
+            const buffer = Buffer.from(result.content, 'base64')
+            const filename = parsed.data.filename ?? parsed.data.path.split(/[/\\]/).pop() ?? 'file'
+
+            return new Response(buffer, {
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Disposition': `attachment; filename="${filename}"`,
+                    'Content-Length': String(buffer.length)
+                }
+            })
+        } catch (error) {
+            return c.json({ error: error instanceof Error ? error.message : 'Download failed' }, 500)
         }
     })
 
