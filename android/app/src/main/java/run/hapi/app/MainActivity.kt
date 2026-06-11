@@ -2,6 +2,7 @@ package run.hapi.app
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -11,6 +12,7 @@ import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
 import android.webkit.ConsoleMessage
@@ -28,9 +30,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import run.hapi.app.sse.SseService
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -317,6 +327,68 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
                 finish()
             }
+        }
+
+        @JavascriptInterface
+        fun downloadFile(url: String, filename: String) {
+            lifecycleScope.launch {
+                val result = downloadWithOkHttp(url, filename)
+                withContext(Dispatchers.Main) {
+                    if (result) {
+                        Toast.makeText(this@MainActivity, "已下载 $filename", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "下载失败", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private val trustAllClient: OkHttpClient by lazy {
+        val trustManager = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        }
+        val sslContext = SSLContext.getInstance("TLS")
+        sslContext.init(null, arrayOf(trustManager), SecureRandom())
+        OkHttpClient.Builder()
+            .sslSocketFactory(sslContext.socketFactory, trustManager)
+            .hostnameVerifier { _, _ -> true }
+            .build()
+    }
+
+    private suspend fun downloadWithOkHttp(url: String, filename: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url(url).build()
+            val response = trustAllClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                Log.e("HapiBridge", "Download failed: HTTP ${response.code}")
+                return@withContext false
+            }
+            val body = response.body ?: return@withContext false
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, filename)
+                put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val contentUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                ?: return@withContext false
+
+            contentResolver.openOutputStream(contentUri)?.use { out ->
+                body.byteStream().use { input -> input.copyTo(out) }
+            } ?: return@withContext false
+
+            contentValues.clear()
+            contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+            contentResolver.update(contentUri, contentValues, null, null)
+
+            Log.d("HapiBridge", "Downloaded: $filename")
+            true
+        } catch (e: Exception) {
+            Log.e("HapiBridge", "Download failed", e)
+            false
         }
     }
 

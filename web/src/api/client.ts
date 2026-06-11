@@ -264,17 +264,25 @@ export class ApiClient {
     }
 
     async downloadFile(sessionId: string, path: string, filename?: string): Promise<void> {
+        const downloadName = filename || path.split(/[/\\]/).pop() || 'file'
         const params = new URLSearchParams()
         params.set('path', path)
-        if (filename) {
-            params.set('filename', filename)
-        }
+        if (filename) params.set('filename', filename)
         const liveToken = this.getToken ? this.getToken() : null
         const authToken = liveToken ?? this.token
-        if (authToken) {
-            params.set('token', authToken)
-        }
+        if (authToken) params.set('token', authToken)
         const url = this.buildUrl(`/api/sessions/${encodeURIComponent(sessionId)}/download?${params.toString()}`)
+
+        // Try native bridge (app webview)
+        const bridge = (globalThis as Record<string, unknown>).HapiBridge as
+            | { downloadFile?: (url: string, filename: string) => void }
+            | undefined
+        if (bridge?.downloadFile) {
+            bridge.downloadFile(url, downloadName)
+            return
+        }
+
+        // Browser: open download URL in new tab (hub supports ?token= for auth)
         window.open(url, '_blank')
     }
 
