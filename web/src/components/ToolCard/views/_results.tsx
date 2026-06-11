@@ -5,6 +5,7 @@ import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ChecklistList, extractTodoChecklist } from '@/components/ToolCard/checklist'
 import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny } from '@/lib/toolInputUtils'
+import { DownloadButton } from '@/components/ToolCard/DownloadButton'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
     const regex = /<tool_use_error>(.*?)<\/tool_use_error>/s
@@ -84,6 +85,14 @@ export function extractTextFromResult(result: unknown, depth: number = 0): strin
     }
 
     return null
+}
+
+function extractFilePathFromInput(input: unknown): string | null {
+    if (!isObject(input)) return null
+    const filePath = typeof input.file_path === 'string' ? input.file_path
+        : typeof input.path === 'string' ? input.path
+        : null
+    return filePath || null
 }
 
 interface CodexBashOutput {
@@ -440,11 +449,18 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
 }
 
 const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
-    const { state, result } = props.block.tool
+    const { state, result, input } = props.block.tool
+    const filePath = extractFilePathFromInput(input)
+    const canDownload = state === 'completed' && filePath !== null
 
     if (result === undefined || result === null) {
         if (state === 'completed') {
-            return <div className="text-sm text-[var(--app-hint)]">Done</div>
+            return (
+                <div className="flex items-center gap-2">
+                    <div className="text-sm text-[var(--app-hint)]">Done</div>
+                    {canDownload ? <DownloadButton filePath={filePath!} /> : null}
+                </div>
+            )
         }
         return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
     }
@@ -458,6 +474,11 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
                 <div className={`text-sm ${className}`}>
                     {renderText(text, { mode, language, collapseLongContent: props.surface === 'inline' })}
                 </div>
+                {canDownload ? (
+                    <div className="mt-2">
+                        <DownloadButton filePath={filePath!} />
+                    </div>
+                ) : null}
                 <RawJsonDevOnly value={result} />
             </>
         )
@@ -465,8 +486,11 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     return (
         <>
-            <div className="text-sm text-[var(--app-hint)]">
-                {state === 'completed' ? 'Done' : '(no output)'}
+            <div className="flex items-center gap-2">
+                <div className="text-sm text-[var(--app-hint)]">
+                    {state === 'completed' ? 'Done' : '(no output)'}
+                </div>
+                {canDownload ? <DownloadButton filePath={filePath!} /> : null}
             </div>
             <RawJsonDevOnly value={result} />
         </>
