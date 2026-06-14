@@ -550,5 +550,34 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
     })
 
+    app.delete('/machines/:id/project-skills', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const directory = c.req.query('directory')
+        if (!directory) {
+            return c.json({ success: false, error: 'directory query parameter is required' }, 400)
+        }
+
+        try {
+            const result = await engine.clearProjectSkillOverrides(machineId, directory)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to clear project skill overrides' }, 500)
+        }
+    })
+
     return app
 }

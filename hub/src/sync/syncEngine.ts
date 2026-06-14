@@ -495,6 +495,10 @@ export class SyncEngine {
         return await this.rpcGateway.updateProjectSkillOverride(machineId, directory, name, enabled)
     }
 
+    async clearProjectSkillOverrides(machineId: string, directory: string) {
+        return await this.rpcGateway.clearProjectSkillOverrides(machineId, directory)
+    }
+
     async readGlobalEnv(machineId: string) {
         return await this.rpcGateway.readGlobalEnv(machineId)
     }
