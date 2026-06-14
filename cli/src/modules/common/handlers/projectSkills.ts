@@ -41,6 +41,10 @@ interface UpdateResponse {
     error?: string
 }
 
+interface ClearProjectSkillOverridesRequest {
+    directory: string
+}
+
 function getGlobalSettingsPath(): string {
     const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude')
     return join(configDir, 'settings.json')
@@ -77,23 +81,22 @@ export function registerProjectSkillsHandlers(rpcHandlerManager: RpcHandlerManag
             const projectOverrides = projectSettings.skillOverrides ?? {}
 
             const result: ProjectSkill[] = skills.map(skill => {
-                const globalOverride = globalOverrides[skill.folderName] === 'off'
-                    ? 'off' as const
-                    : null
-                const projectOverride = projectOverrides[skill.folderName] === 'off'
-                    ? 'off' as const
-                    : null
-                const managedLocally = projectOverrides[skill.folderName] !== undefined
+                const globalIsOff = globalOverrides[skill.folderName] === 'off'
+                const projectRaw = projectOverrides[skill.folderName]
+                const managedLocally = projectRaw !== undefined
+                const projectIsOff = projectRaw === 'off'
+                // 合并：项目级显式（managedLocally）覆盖全局
+                const effectiveOff = managedLocally ? projectIsOff : globalIsOff
                 return {
                     name: skill.name,
                     folderName: skill.folderName,
                     description: skill.description,
                     scope: skill.scope,
                     projectPath: skill.projectPath,
-                    globalOverride,
-                    projectOverride,
+                    globalOverride: globalIsOff ? 'off' as const : null,
+                    projectOverride: projectIsOff ? 'off' as const : null,
                     managedLocally,
-                    effectiveState: projectOverride ?? globalOverride
+                    effectiveState: effectiveOff ? 'off' as const : null
                 }
             })
             return { success: true, skills: result }
@@ -127,9 +130,16 @@ export function registerProjectSkillsHandlers(rpcHandlerManager: RpcHandlerManag
                 if (!data.enabled) {
                     settings.skillOverrides[overrideKey] = 'off'
                 } else {
-                    delete settings.skillOverrides[overrideKey]
-                    if (Object.keys(settings.skillOverrides).length === 0) {
-                        delete settings.skillOverrides
+                    // 启用：若全局禁用则项目级写 'on' 反向启用，否则删除条目
+                    const globalSettings = await readJsonFile<SettingsFile>(getGlobalSettingsPath())
+                    const globalIsOff = globalSettings.skillOverrides?.[overrideKey] === 'off'
+                    if (globalIsOff) {
+                        settings.skillOverrides[overrideKey] = 'on'
+                    } else {
+                        delete settings.skillOverrides[overrideKey]
+                        if (Object.keys(settings.skillOverrides).length === 0) {
+                            delete settings.skillOverrides
+                        }
                     }
                 }
                 await writeJsonFile(filePath, settings)
@@ -139,6 +149,27 @@ export function registerProjectSkillsHandlers(rpcHandlerManager: RpcHandlerManag
         } catch (error) {
             logger.debug('Failed to update project skill override:', error)
             return rpcError('Failed to update project skill override')
+        }
+    })
+
+    rpcHandlerManager.registerHandler<ClearProjectSkillOverridesRequest, UpdateResponse>('clear-project-skill-overrides', async (data) => {
+        try {
+            if (!data.directory) {
+                return rpcError('directory is required')
+            }
+            settingsWriteLock = settingsWriteLock.catch(() => {}).then(async () => {
+                const filePath = getProjectSettingsPath(data.directory)
+                if (!existsSync(filePath)) return
+                const settings = await readJsonFile<SettingsFile>(filePath)
+                if (settings.skillOverrides === undefined) return
+                delete settings.skillOverrides
+                await writeJsonFile(filePath, settings)
+            })
+            await settingsWriteLock
+            return { success: true }
+        } catch (error) {
+            logger.debug('Failed to clear project skill overrides:', error)
+            return rpcError('Failed to clear project skill overrides')
         }
     })
 }

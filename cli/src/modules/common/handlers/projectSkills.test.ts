@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { RpcHandlerManager } from '../../../api/rpc/RpcHandlerManager'
@@ -131,7 +131,7 @@ describe('project skills RPC handlers', () => {
         expect(skill.effectiveState).toBe('off')
     })
 
-    it('update with enabled removes the override entry', async () => {
+    it('update with enabled removes the override entry when global is not off', async () => {
         await writeSkill(join(homeDir, '.claude', 'skills', 'alpha'), 'alpha', 'Alpha skill')
         await mkdir(join(projectDir, '.claude'), { recursive: true })
         await writeFile(
@@ -154,6 +154,60 @@ describe('project skills RPC handlers', () => {
         const skill = result.skills!.find(s => s.name === 'alpha')!
         expect(skill.projectOverride).toBeNull()
         expect(skill.managedLocally).toBe(false)
+        expect(skill.effectiveState).toBeNull()
+    })
+
+    it('update with enabled writes "on" when global is off to reverse-override', async () => {
+        await writeSkill(join(homeDir, '.claude', 'skills', 'alpha'), 'alpha', 'Alpha skill')
+        await mkdir(join(homeDir, '.claude'), { recursive: true })
+        await writeFile(
+            join(homeDir, '.claude', 'settings.json'),
+            JSON.stringify({ skillOverrides: { alpha: 'off' } }, null, 2)
+        )
+
+        const updateResult = await invoke<{ success: boolean }>(
+            rpc,
+            'update-project-skill-override',
+            { directory: projectDir, name: 'alpha', enabled: true }
+        )
+        expect(updateResult.success).toBe(true)
+
+        const result = await invoke<{
+            success: boolean
+            skills?: Array<{ name: string; projectOverride: string | null; managedLocally: boolean; effectiveState: string | null }>
+        }>(rpc, 'list-project-skills', { directory: projectDir })
+
+        const skill = result.skills!.find(s => s.name === 'alpha')!
+        expect(skill.managedLocally).toBe(true)
+        expect(skill.effectiveState).toBeNull()
+
+        const localSettings = JSON.parse(
+            await readFile(join(projectDir, '.claude', 'settings.local.json'), 'utf-8')
+        ) as { skillOverrides?: Record<string, string> }
+        expect(localSettings.skillOverrides?.alpha).toBe('on')
+    })
+
+    it('lists project "on" override as enabled when global is off', async () => {
+        await writeSkill(join(homeDir, '.claude', 'skills', 'alpha'), 'alpha', 'Alpha skill')
+        await mkdir(join(homeDir, '.claude'), { recursive: true })
+        await writeFile(
+            join(homeDir, '.claude', 'settings.json'),
+            JSON.stringify({ skillOverrides: { alpha: 'off' } }, null, 2)
+        )
+        await mkdir(join(projectDir, '.claude'), { recursive: true })
+        await writeFile(
+            join(projectDir, '.claude', 'settings.local.json'),
+            JSON.stringify({ skillOverrides: { alpha: 'on' } }, null, 2)
+        )
+
+        const result = await invoke<{
+            success: boolean
+            skills?: Array<{ name: string; globalOverride: string | null; projectOverride: string | null; managedLocally: boolean; effectiveState: string | null }>
+        }>(rpc, 'list-project-skills', { directory: projectDir })
+
+        const skill = result.skills!.find(s => s.name === 'alpha')!
+        expect(skill.globalOverride).toBe('off')
+        expect(skill.managedLocally).toBe(true)
         expect(skill.effectiveState).toBeNull()
     })
 
