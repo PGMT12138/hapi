@@ -24,6 +24,7 @@ const ENV_FIELDS = [
     { key: 'ANTHROPIC_DEFAULT_SONNET_MODEL', label: 'Sonnet', span: 1 },
     { key: 'ANTHROPIC_DEFAULT_HAIKU_MODEL', label: 'Haiku', span: 1 },
     { key: 'ANTHROPIC_DEFAULT_OPUS_MODEL', label: 'Opus', span: 1 },
+    { key: 'CLAUDE_CODE_AUTO_COMPACT_WINDOW', label: 'Auto Compact Window', span: 1, optional: true },
 ] as const
 
 function BackIcon() {

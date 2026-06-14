@@ -4,7 +4,14 @@ import { useModelConfigPresets } from '@/hooks/queries/useModelConfigPresets'
 import { useModelConfigPresetActions } from '@/hooks/mutations/useModelConfigPresetActions'
 import { OptionPicker } from '@/components/ui/OptionPicker'
 
-const ENV_FIELDS = [
+type EnvField = {
+    key: string
+    label: string
+    span: 1 | 2
+    optional?: boolean
+}
+
+const ENV_FIELDS: readonly EnvField[] = [
     { key: 'ANTHROPIC_AUTH_TOKEN', label: 'Auth Token', span: 2 },
     { key: 'ANTHROPIC_BASE_URL', label: 'Base URL', span: 2 },
     { key: 'ANTHROPIC_MODEL', label: 'Model', span: 1 },
@@ -12,7 +19,8 @@ const ENV_FIELDS = [
     { key: 'ANTHROPIC_DEFAULT_SONNET_MODEL', label: 'Sonnet', span: 1 },
     { key: 'ANTHROPIC_DEFAULT_HAIKU_MODEL', label: 'Haiku', span: 1 },
     { key: 'ANTHROPIC_DEFAULT_OPUS_MODEL', label: 'Opus', span: 1 },
-] as const
+    { key: 'CLAUDE_CODE_AUTO_COMPACT_WINDOW', label: 'Auto Compact Window', span: 1, optional: true },
+]
 
 export type PendingEnvAction = {
     needsWrite: boolean
@@ -112,7 +120,7 @@ export function ApiKeySection(props: EnvSectionProps) {
             for (const [k, v] of Object.entries(values)) {
                 if (v) env[k] = v
             }
-            const allFilled = ENV_FIELDS.every((f) => env[f.key])
+            const allFilled = ENV_FIELDS.filter((f) => !f.optional).every((f) => env[f.key])
             if (envEqual(env, loadedValues)) {
                 onEnvChange({ needsWrite: false, env: null, isValid: allFilled })
             } else {
