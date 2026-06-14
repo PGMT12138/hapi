@@ -25,6 +25,11 @@ const updateProjectSkillOverrideSchema = z.object({
     enabled: z.boolean()
 })
 
+const updateProjectPluginStatusSchema = z.object({
+    directory: z.string().min(1),
+    enabled: z.boolean()
+})
+
 const pathsExistsSchema = z.object({
     paths: z.array(z.string().min(1)).max(1000)
 })
@@ -576,6 +581,95 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             return c.json(result)
         } catch (error) {
             return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to clear project skill overrides' }, 500)
+        }
+    })
+
+    app.get('/machines/:id/project-plugins', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const directory = c.req.query('directory')
+        if (!directory) {
+            return c.json({ success: false, error: 'directory query parameter is required' }, 400)
+        }
+
+        try {
+            const result = await engine.listProjectPlugins(machineId, directory)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to list project plugins' }, 500)
+        }
+    })
+
+    app.patch('/machines/:id/project-plugins/:name', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const pluginName = c.req.param('name')
+        const body = await c.req.json().catch(() => null)
+        const parsed = updateProjectPluginStatusSchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ success: false, error: 'Invalid body' }, 400)
+        }
+
+        try {
+            const result = await engine.updateProjectPluginStatus(machineId, parsed.data.directory, pluginName, parsed.data.enabled)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update project plugin status' }, 500)
+        }
+    })
+
+    app.delete('/machines/:id/project-plugins', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ success: false, error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        if (!machine.active) {
+            return c.json({ success: false, error: 'Machine is offline' }, 503)
+        }
+
+        const directory = c.req.query('directory')
+        if (!directory) {
+            return c.json({ success: false, error: 'directory query parameter is required' }, 400)
+        }
+
+        try {
+            const result = await engine.clearProjectPluginOverrides(machineId, directory)
+            return c.json(result)
+        } catch (error) {
+            return c.json({ success: false, error: error instanceof Error ? error.message : 'Failed to clear project plugin overrides' }, 500)
         }
     })
 

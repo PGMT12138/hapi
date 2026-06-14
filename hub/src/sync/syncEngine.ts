@@ -499,6 +499,18 @@ export class SyncEngine {
         return await this.rpcGateway.clearProjectSkillOverrides(machineId, directory)
     }
 
+    async listProjectPlugins(machineId: string, directory: string) {
+        return await this.rpcGateway.listProjectPlugins(machineId, directory)
+    }
+
+    async updateProjectPluginStatus(machineId: string, directory: string, name: string, enabled: boolean) {
+        return await this.rpcGateway.updateProjectPluginStatus(machineId, directory, name, enabled)
+    }
+
+    async clearProjectPluginOverrides(machineId: string, directory: string) {
+        return await this.rpcGateway.clearProjectPluginOverrides(machineId, directory)
+    }
+
     async readGlobalEnv(machineId: string) {
         return await this.rpcGateway.readGlobalEnv(machineId)
     }

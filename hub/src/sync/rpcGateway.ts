@@ -282,6 +282,18 @@ export class RpcGateway {
         return await this.machineRpc(machineId, 'clear-project-skill-overrides', { directory }) as { success: boolean; error?: string }
     }
 
+    async listProjectPlugins(machineId: string, directory: string): Promise<{ success: boolean; plugins?: Array<{ name: string; pluginKey: string; description?: string; version?: string; author?: string; homepage?: string; hasMcp: boolean; skillCount: number; globalEnabled: boolean; projectEnabled: boolean | null; managedLocally: boolean; effectiveEnabled: boolean }>; error?: string }> {
+        return await this.machineRpc(machineId, 'list-project-plugins', { directory }) as { success: boolean; plugins?: Array<{ name: string; pluginKey: string; description?: string; version?: string; author?: string; homepage?: string; hasMcp: boolean; skillCount: number; globalEnabled: boolean; projectEnabled: boolean | null; managedLocally: boolean; effectiveEnabled: boolean }>; error?: string }
+    }
+
+    async updateProjectPluginStatus(machineId: string, directory: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'update-project-plugin-status', { directory, name, enabled }) as { success: boolean; error?: string }
+    }
+
+    async clearProjectPluginOverrides(machineId: string, directory: string): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'clear-project-plugin-overrides', { directory }) as { success: boolean; error?: string }
+    }
+
     async readGlobalEnv(machineId: string): Promise<{ success: boolean; env?: Record<string, string>; error?: string }> {
         return await this.machineRpc(machineId, 'read-global-env', {}) as { success: boolean; env?: Record<string, string>; error?: string }
     }
