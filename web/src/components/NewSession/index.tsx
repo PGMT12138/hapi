@@ -26,6 +26,7 @@ import {
     savePreferredYoloMode,
 } from './preferences'
 import { SessionTypeSelector } from './SessionTypeSelector'
+import { SkillsSection } from './SkillsSection'
 import { YoloToggle } from './YoloToggle'
 import { formatRunnerSpawnError } from '../../utils/formatRunnerSpawnError'
 
@@ -151,6 +152,7 @@ export function NewSession(props: {
     )
 
     const currentDirectoryExists = trimmedDirectory ? pathExistence[trimmedDirectory] : undefined
+    const canShowSkills = Boolean(machineId) && trimmedDirectory !== '' && currentDirectoryExists === true && selectedMachine?.active !== false
     const needsDirectoryCreationWarning = sessionType === 'simple' && trimmedDirectory !== '' && currentDirectoryExists === false
     const missingWorktreeDirectory = sessionType === 'worktree' && trimmedDirectory !== '' && currentDirectoryExists === false
     const directoryStatusMessage = missingWorktreeDirectory
@@ -352,6 +354,12 @@ export function NewSession(props: {
                 onSuggestionSelect={handleSuggestionSelect}
                 onPathClick={handlePathClick}
                 onChooseFolder={handleChooseFolder}
+            />
+            <SkillsSection
+                api={props.api}
+                machineId={machineId}
+                directory={trimmedDirectory}
+                canShow={canShowSkills}
             />
             <SessionTypeSelector
                 sessionType={sessionType}

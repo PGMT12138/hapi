@@ -554,6 +554,12 @@ export class ApiClient {
         })
     }
 
+    async clearProjectSkillOverrides(machineId: string, directory: string): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-skills?directory=${encodeURIComponent(directory)}`, {
+            method: 'DELETE'
+        })
+    }
+
     async getCcMcpServers(machineId: string): Promise<{ success: boolean; servers?: Array<{ name: string; type: string; url?: string; command?: string; enabled: boolean }>; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers`)
     }

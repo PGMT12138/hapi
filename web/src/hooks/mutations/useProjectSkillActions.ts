@@ -19,8 +19,17 @@ export function useProjectSkillActions(api: ApiClient | null, machineId: string 
         onSuccess: invalidate,
     })
 
+    const clearAll = useMutation({
+        mutationFn: async () => {
+            if (!api || !machineId) throw new Error('API unavailable')
+            return await api.clearProjectSkillOverrides(machineId, directory)
+        },
+        onSuccess: invalidate,
+    })
+
     return {
         updateSkillOverride: updateSkillOverride.mutateAsync,
-        isPending: updateSkillOverride.isPending,
+        clearAll: clearAll.mutateAsync,
+        isPending: updateSkillOverride.isPending || clearAll.isPending,
     }
 }

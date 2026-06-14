@@ -174,6 +174,8 @@ export default {
   'spawn.skills.title': 'Skills',
   'spawn.skills.empty': '该项目下未找到 skills',
   'spawn.skills.hint': '配置写入 .claude/settings.local.json',
+  'spawn.skills.useGlobal': '使用全局配置',
+  'spawn.skills.useGlobalHint': '关闭后可单独管理项目级 skill',
   'session.directoryMissingSimple': '目录不存在，创建会话时将自动创建。',
   'session.directoryMissingSimpleConfirm': '目录不存在。再次点击按钮将自动新建该目录。',
   'session.directoryMissingWorktree': 'worktree 需要已存在的仓库目录。',

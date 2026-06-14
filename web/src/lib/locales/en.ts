@@ -172,6 +172,8 @@ export default {
   'spawn.skills.title': 'Skills',
   'spawn.skills.empty': 'No skills found for this project',
   'spawn.skills.hint': 'Stored in .claude/settings.local.json',
+  'spawn.skills.useGlobal': 'Use global config',
+  'spawn.skills.useGlobalHint': 'Turn off to manage project-level skills individually',
   'session.directoryMissingSimple': 'Directory does not exist. Creating the session will create it automatically.',
   'session.directoryMissingSimpleConfirm': 'Directory does not exist. Click again to create it automatically.',
   'session.directoryMissingWorktree': 'Worktree sessions require an existing repository directory.',
