@@ -57,6 +57,21 @@ export interface ProjectSkill {
     effectiveState: CcSkillOverrideState | null
 }
 
+export interface ProjectPlugin {
+    name: string
+    pluginKey: string
+    description?: string
+    version?: string
+    author?: string
+    homepage?: string
+    hasMcp: boolean
+    skillCount: number
+    globalEnabled: boolean
+    projectEnabled: boolean | null
+    managedLocally: boolean
+    effectiveEnabled: boolean
+}
+
 export type CcMcpServerType = 'http' | 'stdio' | 'sse' | 'ws'
 
 export interface CcMcpServer {

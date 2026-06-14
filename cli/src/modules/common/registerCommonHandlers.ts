@@ -7,6 +7,7 @@ import { registerDifftasticHandlers } from './handlers/difftastic'
 import { registerFileHandlers } from './handlers/files'
 import { registerGitHandlers } from './handlers/git'
 import { registerProjectEnvHandlers } from './handlers/projectEnv'
+import { registerProjectPluginsHandlers } from './handlers/projectPlugins'
 import { registerProjectSkillsHandlers } from './handlers/projectSkills'
 import { registerGlobalSettingsHandlers } from './handlers/globalSettings'
 import { registerRipgrepHandlers } from './handlers/ripgrep'
@@ -28,5 +29,6 @@ export function registerCommonHandlers(rpcHandlerManager: RpcHandlerManager, wor
     registerUploadHandlers(rpcHandlerManager)
     registerProjectEnvHandlers(rpcHandlerManager)
     registerProjectSkillsHandlers(rpcHandlerManager)
+    registerProjectPluginsHandlers(rpcHandlerManager)
     registerGlobalSettingsHandlers(rpcHandlerManager)
 }
