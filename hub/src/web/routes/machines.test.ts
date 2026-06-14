@@ -56,4 +56,111 @@ describe('machines routes', () => {
             ]
         })
     })
+
+    it('lists project skills for an online machine', async () => {
+        const machine = createMachine()
+        const engine = {
+            getMachine: () => machine,
+            getMachineByNamespace: () => machine,
+            listProjectSkills: async () => ({
+                success: true,
+                skills: [
+                    {
+                        name: 'alpha',
+                        folderName: 'alpha',
+                        description: 'Alpha skill',
+                        scope: 'global',
+                        globalOverride: null,
+                        projectOverride: null,
+                        managedLocally: false,
+                        effectiveState: null
+                    }
+                ]
+            })
+        } as Partial<SyncEngine>
+
+        const app = new Hono<WebAppEnv>()
+        app.use('*', async (c, next) => {
+            c.set('namespace', 'default')
+            await next()
+        })
+        app.route('/api', createMachinesRoutes(() => engine as SyncEngine))
+
+        const response = await app.request('/api/machines/machine-1/project-skills?directory=/tmp')
+
+        expect(response.status).toBe(200)
+        const json = await response.json() as { success: boolean; skills?: Array<{ name: string }> }
+        expect(json.success).toBe(true)
+        expect(json.skills?.[0]?.name).toBe('alpha')
+    })
+
+    it('returns 400 when directory is missing', async () => {
+        const machine = createMachine()
+        const engine = {
+            getMachine: () => machine,
+            getMachineByNamespace: () => machine,
+            listProjectSkills: async () => ({ success: true, skills: [] })
+        } as Partial<SyncEngine>
+
+        const app = new Hono<WebAppEnv>()
+        app.use('*', async (c, next) => {
+            c.set('namespace', 'default')
+            await next()
+        })
+        app.route('/api', createMachinesRoutes(() => engine as SyncEngine))
+
+        const response = await app.request('/api/machines/machine-1/project-skills')
+
+        expect(response.status).toBe(400)
+    })
+
+    it('updates project skill override', async () => {
+        const machine = createMachine()
+        const engine = {
+            getMachine: () => machine,
+            getMachineByNamespace: () => machine,
+            updateProjectSkillOverride: async () => ({ success: true })
+        } as Partial<SyncEngine>
+
+        const app = new Hono<WebAppEnv>()
+        app.use('*', async (c, next) => {
+            c.set('namespace', 'default')
+            await next()
+        })
+        app.route('/api', createMachinesRoutes(() => engine as SyncEngine))
+
+        const response = await app.request('/api/machines/machine-1/project-skills/alpha', {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ directory: '/tmp', enabled: false })
+        })
+
+        expect(response.status).toBe(200)
+        const json = await response.json() as { success: boolean }
+        expect(json.success).toBe(true)
+    })
+
+    it('returns 400 on invalid body for project skill override', async () => {
+        const machine = createMachine()
+        const engine = {
+            getMachine: () => machine,
+            getMachineByNamespace: () => machine,
+            updateProjectSkillOverride: async () => ({ success: true })
+        } as Partial<SyncEngine>
+
+        const app = new Hono<WebAppEnv>()
+        app.use('*', async (c, next) => {
+            c.set('namespace', 'default')
+            await next()
+        })
+        app.route('/api', createMachinesRoutes(() => engine as SyncEngine))
+
+        const response = await app.request('/api/machines/machine-1/project-skills/alpha', {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ enabled: false })
+        })
+
+        expect(response.status).toBe(400)
+    })
 })
