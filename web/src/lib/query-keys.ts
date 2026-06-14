@@ -29,5 +29,6 @@ export const queryKeys = {
     ccMcpServerDetail: (machineId: string, name: string) => ['cc-mcp-server-detail', machineId, name] as const,
     ccPlugins: (machineId: string) => ['cc-plugins', machineId] as const,
     projectSkills: (machineId: string, directory: string) => ['project-skills', machineId, directory] as const,
+    projectPlugins: (machineId: string, directory: string) => ['project-plugins', machineId, directory] as const,
     ccPluginDetail: (machineId: string, name: string) => ['cc-plugin-detail', machineId, name] as const,
 }

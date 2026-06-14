@@ -560,6 +560,40 @@ export class ApiClient {
         })
     }
 
+    async getProjectPlugins(machineId: string, directory: string): Promise<{
+        success: boolean
+        plugins?: Array<{
+            name: string
+            pluginKey: string
+            description?: string
+            version?: string
+            author?: string
+            homepage?: string
+            hasMcp: boolean
+            skillCount: number
+            globalEnabled: boolean
+            projectEnabled: boolean | null
+            managedLocally: boolean
+            effectiveEnabled: boolean
+        }>
+        error?: string
+    }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-plugins?directory=${encodeURIComponent(directory)}`)
+    }
+
+    async updateProjectPluginStatus(machineId: string, directory: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-plugins/${encodeURIComponent(name)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ directory, enabled })
+        })
+    }
+
+    async clearProjectPluginOverrides(machineId: string, directory: string): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-plugins?directory=${encodeURIComponent(directory)}`, {
+            method: 'DELETE'
+        })
+    }
+
     async getCcMcpServers(machineId: string): Promise<{ success: boolean; servers?: Array<{ name: string; type: string; url?: string; command?: string; enabled: boolean }>; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers`)
     }

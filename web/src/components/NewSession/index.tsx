@@ -27,6 +27,7 @@ import {
 } from './preferences'
 import { SessionTypeSelector } from './SessionTypeSelector'
 import { SkillsSection } from './SkillsSection'
+import { PluginsSection } from './PluginsSection'
 import { YoloToggle } from './YoloToggle'
 import { formatRunnerSpawnError } from '../../utils/formatRunnerSpawnError'
 
@@ -356,6 +357,12 @@ export function NewSession(props: {
                 onChooseFolder={handleChooseFolder}
             />
             <SkillsSection
+                api={props.api}
+                machineId={machineId}
+                directory={trimmedDirectory}
+                canShow={canShowSkills}
+            />
+            <PluginsSection
                 api={props.api}
                 machineId={machineId}
                 directory={trimmedDirectory}
