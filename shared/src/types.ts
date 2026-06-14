@@ -45,6 +45,18 @@ export interface CcSkill {
     projectPath?: string
 }
 
+export interface ProjectSkill {
+    name: string
+    folderName: string
+    description?: string
+    scope: 'global' | 'project'
+    projectPath?: string
+    globalOverride: CcSkillOverrideState | null
+    projectOverride: CcSkillOverrideState | null
+    managedLocally: boolean
+    effectiveState: CcSkillOverrideState | null
+}
+
 export type CcMcpServerType = 'http' | 'stdio' | 'sse' | 'ws'
 
 export interface CcMcpServer {
