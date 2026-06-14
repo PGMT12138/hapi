@@ -270,6 +270,14 @@ export class RpcGateway {
         return await this.machineRpc(machineId, 'write-project-env', { directory, env }) as { success: boolean; error?: string }
     }
 
+    async listProjectSkills(machineId: string, directory: string): Promise<{ success: boolean; skills?: Array<{ name: string; folderName: string; description?: string; scope: 'global' | 'project'; projectPath?: string; globalOverride: string | null; projectOverride: string | null; managedLocally: boolean; effectiveState: string | null }>; error?: string }> {
+        return await this.machineRpc(machineId, 'list-project-skills', { directory }) as { success: boolean; skills?: Array<{ name: string; folderName: string; description?: string; scope: 'global' | 'project'; projectPath?: string; globalOverride: string | null; projectOverride: string | null; managedLocally: boolean; effectiveState: string | null }>; error?: string }
+    }
+
+    async updateProjectSkillOverride(machineId: string, directory: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.machineRpc(machineId, 'update-project-skill-override', { directory, name, enabled }) as { success: boolean; error?: string }
+    }
+
     async readGlobalEnv(machineId: string): Promise<{ success: boolean; env?: Record<string, string>; error?: string }> {
         return await this.machineRpc(machineId, 'read-global-env', {}) as { success: boolean; env?: Record<string, string>; error?: string }
     }

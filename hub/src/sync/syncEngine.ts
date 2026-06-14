@@ -487,6 +487,14 @@ export class SyncEngine {
         return await this.rpcGateway.writeProjectEnv(machineId, directory, env)
     }
 
+    async listProjectSkills(machineId: string, directory: string) {
+        return await this.rpcGateway.listProjectSkills(machineId, directory)
+    }
+
+    async updateProjectSkillOverride(machineId: string, directory: string, name: string, enabled: boolean) {
+        return await this.rpcGateway.updateProjectSkillOverride(machineId, directory, name, enabled)
+    }
+
     async readGlobalEnv(machineId: string) {
         return await this.rpcGateway.readGlobalEnv(machineId)
     }
