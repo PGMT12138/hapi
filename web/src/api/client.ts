@@ -529,6 +529,31 @@ export class ApiClient {
         })
     }
 
+    async getProjectSkills(machineId: string, directory: string): Promise<{
+        success: boolean
+        skills?: Array<{
+            name: string
+            folderName: string
+            description?: string
+            scope: 'global' | 'project'
+            projectPath?: string
+            globalOverride: string | null
+            projectOverride: string | null
+            managedLocally: boolean
+            effectiveState: string | null
+        }>
+        error?: string
+    }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-skills?directory=${encodeURIComponent(directory)}`)
+    }
+
+    async updateProjectSkillOverride(machineId: string, directory: string, name: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
+        return await this.request(`/api/machines/${encodeURIComponent(machineId)}/project-skills/${encodeURIComponent(name)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ directory, enabled })
+        })
+    }
+
     async getCcMcpServers(machineId: string): Promise<{ success: boolean; servers?: Array<{ name: string; type: string; url?: string; command?: string; enabled: boolean }>; error?: string }> {
         return await this.request(`/api/machines/${encodeURIComponent(machineId)}/cc-mcp-servers`)
     }
