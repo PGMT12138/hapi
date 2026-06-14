@@ -8,6 +8,8 @@ import { usePlatform } from '@/hooks/usePlatform'
 import { useSpawnSession } from '@/hooks/mutations/useSpawnSession'
 import { formatRunnerSpawnError } from '@/utils/formatRunnerSpawnError'
 import { useTranslation } from '@/lib/use-translation'
+import { useProjectSkills } from '@/hooks/queries/useProjectSkills'
+import { useProjectSkillActions } from '@/hooks/mutations/useProjectSkillActions'
 
 type SessionType = 'simple' | 'worktree'
 
@@ -51,6 +53,18 @@ export function SpawnSession(props: {
         pathsToCheck
     )
     const currentDirectoryExists = trimmedDirectory ? pathExistence[trimmedDirectory] : undefined
+    const [skillsExpanded, setSkillsExpanded] = useState(false)
+    const canShowSkills = !!props.machineId && !!trimmedDirectory && currentDirectoryExists === true && props.machine?.active !== false
+    const { skills: projectSkills, isLoading: skillsLoading, error: skillsError } = useProjectSkills(
+        canShowSkills ? props.api : null,
+        canShowSkills ? props.machineId : null,
+        canShowSkills ? trimmedDirectory : null
+    )
+    const { updateSkillOverride: updateProjectSkill, isPending: skillUpdatePending } = useProjectSkillActions(
+        canShowSkills ? props.api : null,
+        canShowSkills ? props.machineId : null,
+        trimmedDirectory
+    )
     const needsDirectoryCreationWarning = sessionType === 'simple' && trimmedDirectory !== '' && currentDirectoryExists === false
     const missingWorktreeDirectory = sessionType === 'worktree' && trimmedDirectory !== '' && currentDirectoryExists === false
     const directoryStatusMessage = missingWorktreeDirectory
@@ -69,6 +83,14 @@ export function SpawnSession(props: {
     useEffect(() => {
         setDirectoryCreationConfirmed(false)
     }, [props.machineId, sessionType, trimmedDirectory])
+
+    async function handleProjectSkillToggle(name: string, currentlyEnabled: boolean) {
+        try {
+            await updateProjectSkill({ name, enabled: !currentlyEnabled })
+        } catch {
+            // 失败由 query 不更新反映；忽略
+        }
+    }
 
     async function spawn() {
         if (!trimmedDirectory) return
@@ -136,6 +158,62 @@ export function SpawnSession(props: {
                                 {directoryStatusMessage}
                             </div>
                         ) : null}
+
+                        {canShowSkills && (
+                            <div className="rounded-md border border-[var(--app-divider)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setSkillsExpanded(v => !v)}
+                                    className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-[var(--app-fg)]"
+                                >
+                                    <span>{t('spawn.skills.title')} ({projectSkills.length})</span>
+                                    <span className="text-xs text-[var(--app-hint)]">
+                                        {skillsExpanded ? '−' : '+'}
+                                    </span>
+                                </button>
+                                {skillsExpanded && (
+                                    <div className="border-t border-[var(--app-divider)]">
+                                        {skillsLoading ? (
+                                            <div className="px-3 py-2 text-xs text-[var(--app-hint)]">{t('misc.loading')}</div>
+                                        ) : skillsError ? (
+                                            <div className="px-3 py-2 text-xs text-red-500">{skillsError}</div>
+                                        ) : projectSkills.length === 0 ? (
+                                            <div className="px-3 py-2 text-xs text-[var(--app-hint)]">{t('spawn.skills.empty')}</div>
+                                        ) : (
+                                            <>
+                                                {projectSkills.map(skill => {
+                                                    const enabled = skill.effectiveState !== 'off'
+                                                    return (
+                                                        <div key={skill.name}
+                                                            className="flex items-center justify-between gap-3 px-3 py-2 border-b border-[var(--app-divider)] last:border-b-0">
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="text-sm font-medium text-[var(--app-fg)] truncate">{skill.name}</div>
+                                                                {skill.description && (
+                                                                    <div className="text-xs text-[var(--app-hint)] truncate mt-0.5">{skill.description}</div>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                role="switch"
+                                                                aria-checked={enabled}
+                                                                disabled={skillUpdatePending}
+                                                                onClick={() => { void handleProjectSkillToggle(skill.name, enabled) }}
+                                                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${enabled ? 'bg-[var(--app-link)]' : 'bg-[var(--app-divider)]'}`}
+                                                            >
+                                                                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                })}
+                                                <div className="px-3 py-1.5 text-[10px] text-[var(--app-hint)]">
+                                                    {t('spawn.skills.hint')}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-2">
                             <label className="text-xs font-medium text-[var(--app-hint)]">
