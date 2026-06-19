@@ -16,8 +16,18 @@ const sendMessageBodySchema = z.object({
     text: z.string(),
     localId: z.string().min(1).optional(),
     attachments: z.array(AttachmentMetadataSchema).optional(),
-    ephemeral: z.boolean().optional()
-})
+    ephemeral: z.boolean().optional(),
+    scheduledAt: z.number().int().positive().nullable().optional()
+}).refine(
+    (data) => data.scheduledAt == null || typeof data.localId === 'string',
+    { message: 'scheduledAt requires localId', path: ['localId'] }
+).refine(
+    (data) => data.scheduledAt == null || data.scheduledAt <= Date.now() + 7 * 24 * 60 * 60 * 1000,
+    { message: 'scheduledAt must be within 7 days from now', path: ['scheduledAt'] }
+).refine(
+    (data) => data.scheduledAt == null || !data.attachments?.length,
+    { message: 'scheduled messages with attachments are not supported', path: ['scheduledAt'] }
+)
 
 export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
     const app = new Hono<WebAppEnv>()
@@ -67,7 +77,7 @@ export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         const body = await c.req.json().catch(() => null)
         const parsed = sendMessageBodySchema.safeParse(body)
         if (!parsed.success) {
-            return c.json({ error: 'Invalid body' }, 400)
+            return c.json({ error: 'Invalid body', issues: parsed.error.flatten() }, 400)
         }
 
         // Require text or attachments
@@ -80,8 +90,29 @@ export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             localId: parsed.data.localId,
             attachments: parsed.data.attachments,
             sentFrom: 'webapp',
-            ephemeral: parsed.data.ephemeral ?? false
+            ephemeral: parsed.data.ephemeral ?? false,
+            scheduledAt: parsed.data.scheduledAt
         })
+        return c.json({ ok: true })
+    })
+
+    app.delete('/sessions/:id/messages/:localId', async (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const sessionResult = requireSessionFromParam(c, engine)
+        if (sessionResult instanceof Response) {
+            return sessionResult
+        }
+        const sessionId = sessionResult.sessionId
+        const localId = c.req.param('localId')
+
+        const cancelled = engine.cancelQueuedMessage(sessionId, localId)
+        if (!cancelled) {
+            return c.json({ error: 'Message not found or not cancellable' }, 404)
+        }
         return c.json({ ok: true })
     })
 

@@ -37,6 +37,41 @@ import { TerminalManager } from '@/terminal/TerminalManager'
 import { applyVersionedAck } from './versionedUpdate'
 import { buildHubRequestHeaders, buildSocketIoExtraHeaderOptions } from './hubExtraHeaders'
 
+/** LRU-based dedup filter for incoming socket messages.
+ *  Messages with an `id` are deduped by id (capacity-bound LRU).
+ *  Messages without an `id` are deduped by seq (monotonic cursor).
+ *  This prevents re-delivered scheduled messages (hub restart re-emit)
+ *  from being consumed twice by the runner. */
+class IncomingMessageFilter {
+    private seenIds = new Map<string, true>()
+    private readonly capacity: number
+    private _cursorSeq: number | null = null
+
+    constructor(capacity: number = 500) {
+        this.capacity = capacity
+    }
+
+    accept(id: string | undefined, seq: number | null): boolean {
+        if (id) {
+            if (this.seenIds.has(id)) return false
+            this.seenIds.set(id, true)
+            if (this.seenIds.size > this.capacity) {
+                const first = this.seenIds.keys().next().value
+                if (first !== undefined) this.seenIds.delete(first)
+            }
+        }
+        if (seq !== null) {
+            if (this._cursorSeq !== null && seq <= this._cursorSeq) return false
+            this._cursorSeq = seq
+        }
+        return true
+    }
+
+    cursorSeq(): number | null {
+        return this._cursorSeq
+    }
+}
+
 /**
  * XML tags that Claude Code injects as `type:'user'` messages.
  * These are internal bookkeeping, not text the human actually typed.
@@ -81,7 +116,7 @@ export class ApiSessionClient extends EventEmitter {
     private readonly socket: Socket<ServerToClientEvents, ClientToServerEvents>
     private pendingMessages: { message: UserMessage; localId?: string }[] = []
     private pendingMessageCallback: ((message: UserMessage, localId?: string) => void) | null = null
-    private lastSeenMessageSeq: number | null = null
+    private readonly incomingFilter = new IncomingMessageFilter(500)
     private backfillInFlight: Promise<void> | null = null
     private needsBackfill = false
     private hasConnectedOnce = false
@@ -261,13 +296,12 @@ export class ApiSessionClient extends EventEmitter {
         }
     }
 
-    private handleIncomingMessage(message: { seq?: number; localId?: string | null; content: unknown }): void {
+    private handleIncomingMessage(message: { id?: string; seq?: number; localId?: string | null; content: unknown }): void {
+        const id = typeof message.id === 'string' ? message.id : undefined
         const seq = typeof message.seq === 'number' ? message.seq : null
-        if (seq !== null) {
-            if (this.lastSeenMessageSeq !== null && seq <= this.lastSeenMessageSeq) {
-                return
-            }
-            this.lastSeenMessageSeq = seq
+
+        if (!this.incomingFilter.accept(id, seq)) {
+            return
         }
 
         const userResult = UserMessageSchema.safeParse(message.content)
@@ -298,7 +332,7 @@ export class ApiSessionClient extends EventEmitter {
             return
         }
 
-        const startSeq = this.lastSeenMessageSeq
+        const startSeq = this.incomingFilter.cursorSeq()
         if (startSeq === null) {
             logger.debug('[API] Skipping backfill because no last-seen message sequence is available')
             return
@@ -340,7 +374,7 @@ export class ApiSessionClient extends EventEmitter {
                     this.handleIncomingMessage(message)
                 }
 
-                const observedSeq = this.lastSeenMessageSeq ?? maxSeq
+                const observedSeq = this.incomingFilter.cursorSeq() ?? maxSeq
                 const nextCursor = Math.max(maxSeq, observedSeq)
                 if (nextCursor <= cursor) {
                     logger.debug('[API] Backfill stopped due to non-advancing cursor', {

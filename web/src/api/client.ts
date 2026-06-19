@@ -325,16 +325,24 @@ export class ApiClient {
         return response.sessionId
     }
 
-    async sendMessage(sessionId: string, text: string, localId?: string | null, attachments?: AttachmentMetadata[], ephemeral?: boolean): Promise<void> {
+    async sendMessage(sessionId: string, text: string, localId?: string | null, attachments?: AttachmentMetadata[], ephemeral?: boolean, scheduledAt?: number | null): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
             method: 'POST',
             body: JSON.stringify({
                 text,
                 localId: localId ?? undefined,
                 attachments: attachments ?? undefined,
-                ephemeral: ephemeral ?? undefined
+                ephemeral: ephemeral ?? undefined,
+                scheduledAt: scheduledAt ?? undefined
             })
         })
+    }
+
+    async cancelQueuedMessage(sessionId: string, localId: string): Promise<boolean> {
+        const res = await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(localId)}`, {
+            method: 'DELETE'
+        }) as Response
+        return res.ok
     }
 
     async abortSession(sessionId: string): Promise<void> {

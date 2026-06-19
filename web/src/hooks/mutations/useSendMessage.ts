@@ -16,6 +16,7 @@ type SendMessageInput = {
     localId: string
     createdAt: number
     attachments?: AttachmentMetadata[]
+    scheduledAt?: number | null
 }
 
 type BlockedReason = 'no-api' | 'no-session' | 'pending'
@@ -48,6 +49,7 @@ function createOptimisticMessage(input: SendMessageInput, status: 'queued' | 'se
         // response that omits the field entirely (`undefined`) is treated as
         // already-invoked and stays in the thread, not the floating bar.
         invokedAt: null,
+        scheduledAt: input.scheduledAt ?? null,
         status,
         originalText: input.text,
     }
@@ -72,7 +74,7 @@ export function useSendMessage(
     sessionId: string | null,
     options?: UseSendMessageOptions
 ): {
-    sendMessage: (text: string, attachments?: AttachmentMetadata[]) => void
+    sendMessage: (text: string, attachments?: AttachmentMetadata[], scheduledAt?: number | null) => void
     sendEphemeralMessage: (text: string) => void
     retryMessage: (localId: string) => void
     isSending: boolean
@@ -88,7 +90,7 @@ export function useSendMessage(
             if (!api) {
                 throw new Error('API unavailable')
             }
-            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments)
+            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments, undefined, input.scheduledAt)
         },
         onMutate: async (input) => {
             const status = isSessionThinkingRef.current ? 'queued' as const : 'sending' as const
@@ -110,7 +112,7 @@ export function useSendMessage(
         },
     })
 
-    const sendMessage = (text: string, attachments?: AttachmentMetadata[]) => {
+    const sendMessage = (text: string, attachments?: AttachmentMetadata[], scheduledAt?: number | null) => {
         if (!api) {
             options?.onBlocked?.('no-api')
             haptic.notification('error')
@@ -153,6 +155,7 @@ export function useSendMessage(
                 localId,
                 createdAt,
                 attachments,
+                scheduledAt,
             })
         })()
     }

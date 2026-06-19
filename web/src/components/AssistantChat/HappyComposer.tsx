@@ -27,6 +27,7 @@ import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { StatusBar } from '@/components/AssistantChat/StatusBar'
 import { ComposerButtons } from '@/components/AssistantChat/ComposerButtons'
+import type { PendingSchedule } from '@/components/AssistantChat/ScheduleTimePicker'
 import { PromptPickerDialog } from '@/components/PromptPickerDialog'
 import { SlashCommandBrowserDialog } from '@/components/SlashCommandBrowserDialog'
 import { AttachmentItem } from '@/components/AssistantChat/AttachmentItem'
@@ -87,6 +88,11 @@ export function HappyComposer(props: {
     // STT props
     sttStatus?: 'idle' | 'recording' | 'recognizing'
     onSttToggle?: () => void
+    // Schedule props
+    pendingSchedule?: PendingSchedule | null
+    onSchedule?: (pending: PendingSchedule) => void
+    onClearSchedule?: () => void
+    hasAttachments?: boolean
 }) {
     const { t } = useTranslation()
     const {
@@ -964,6 +970,10 @@ export function HappyComposer(props: {
                             showSlashMenu={showSlashMenu}
                             sttStatus={sttStatus}
                             onSttToggle={onSttToggle}
+                            pendingSchedule={props.pendingSchedule}
+                            onSchedule={props.onSchedule}
+                            onClearSchedule={props.onClearSchedule}
+                            hasAttachments={props.hasAttachments}
                         />
                     </div>
                 </ComposerPrimitive.Root>

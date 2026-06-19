@@ -41,6 +41,7 @@ export type DecryptedMessage = ProtocolDecryptedMessage & {
     status?: MessageStatus
     originalText?: string
     invokedAt?: number | null
+    scheduledAt?: number | null
 }
 
 export type RunnerState = {

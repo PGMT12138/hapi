@@ -34,7 +34,7 @@ export { SlashCommandFavoriteStore } from './slashCommandFavoriteStore'
 export { SttConfigStore } from './sttConfigStore'
 export { UserStore } from './userStore'
 
-const SCHEMA_VERSION: number = 16
+const SCHEMA_VERSION: number = 17
 const REQUIRED_TABLES = [
     'sessions',
     'machines',
@@ -129,6 +129,7 @@ export class Store {
             13: () => this.migrateFromV13ToV14(),
             14: () => this.migrateFromV14ToV15(),
             15: () => this.migrateFromV15ToV16(),
+            16: () => this.migrateFromV16ToV17(),
         })
 
         if (currentVersion === 0) {
@@ -225,12 +226,15 @@ export class Store {
                 seq INTEGER NOT NULL,
                 local_id TEXT,
                 invoked_at INTEGER,
+                scheduled_at INTEGER,
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
             );
             CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, seq);
             CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_local_id ON messages(session_id, local_id) WHERE local_id IS NOT NULL;
             CREATE INDEX IF NOT EXISTS idx_messages_session_position
                 ON messages(session_id, COALESCE(invoked_at, created_at) DESC, seq DESC);
+            CREATE INDEX IF NOT EXISTS idx_messages_scheduled_pending
+                ON messages(scheduled_at) WHERE scheduled_at IS NOT NULL AND invoked_at IS NULL;
 
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -619,6 +623,18 @@ export class Store {
             DROP TABLE stt_configs;
             ALTER TABLE stt_configs_new RENAME TO stt_configs;
             CREATE INDEX IF NOT EXISTS idx_stt_configs_namespace ON stt_configs(namespace);
+        `)
+    }
+
+    private migrateFromV16ToV17(): void {
+        const columns = this.getMessageColumnNames()
+        if (columns.size === 0) return
+        if (!columns.has('scheduled_at')) {
+            this.db.exec('ALTER TABLE messages ADD COLUMN scheduled_at INTEGER')
+        }
+        this.db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_messages_scheduled_pending
+                ON messages(scheduled_at) WHERE scheduled_at IS NOT NULL AND invoked_at IS NULL
         `)
     }
 

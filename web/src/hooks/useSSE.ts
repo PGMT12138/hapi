@@ -11,7 +11,7 @@ import type {
     SyncEvent
 } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
-import { clearMessageWindow, getMessageWindowState, ingestIncomingMessages, markMessagesConsumed, updateMessageStatus } from '@/lib/message-window-store'
+import { clearMessageWindow, getMessageWindowState, ingestIncomingMessages, markMessagesConsumed, removeOptimisticMessage, updateMessageStatus } from '@/lib/message-window-store'
 
 type SSESubscription = {
     all?: boolean
@@ -514,6 +514,10 @@ export function useSSE(options: {
 
             if (event.type === 'message-received') {
                 ingestIncomingMessages(event.sessionId, [event.message])
+            }
+
+            if (event.type === 'message-cancelled') {
+                removeOptimisticMessage(event.sessionId, event.messageId)
             }
 
             if (event.type === 'session-added' || event.type === 'session-updated' || event.type === 'session-removed') {

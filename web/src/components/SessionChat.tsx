@@ -9,8 +9,10 @@ import type {
     DecryptedMessage,
     PermissionMode,
     Session,
-    SlashCommand
+    SlashCommand,
 } from '@/types/api'
+import type { PendingSchedule } from '@/components/AssistantChat/ScheduleTimePicker'
+import { resolvePendingSchedule } from '@/components/AssistantChat/ScheduleTimePicker'
 import type { ChatBlock, NormalizedMessage } from '@/chat/types'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import { normalizeDecryptedMessage } from '@/chat/normalize'
@@ -126,7 +128,7 @@ export function SessionChat(props: {
     onBack: () => void
     onRefresh: () => void
     onLoadMore: () => Promise<unknown>
-    onSend: (text: string, attachments?: AttachmentMetadata[]) => void
+    onSend: (text: string, attachments?: AttachmentMetadata[], scheduledAt?: number | null) => void
     onFlushPending: () => void
     onAtBottomChange: (atBottom: boolean) => void
     onRetryMessage?: (localId: string) => void
@@ -554,10 +556,14 @@ export function SessionChat(props: {
         })
     }, [navigate, props.session.id])
 
+    const [pendingSchedule, setPendingSchedule] = useState<PendingSchedule | null>(null)
+
     const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
-        props.onSend(text, attachments)
+        const scheduledAt = resolvePendingSchedule(pendingSchedule)
+        setPendingSchedule(null)
+        props.onSend(text, attachments, scheduledAt)
         setForceScrollToken((token) => token + 1)
-    }, [props.onSend])
+    }, [props.onSend, pendingSchedule])
 
     const attachmentAdapter = useMemo(() => {
         if (!props.session.active) {
@@ -646,7 +652,10 @@ export function SessionChat(props: {
                     ) : null}
 
                     <div className="px-3">
-                        <QueuedMessagesBar sessionId={props.session.id} />
+                        <QueuedMessagesBar
+                            sessionId={props.session.id}
+                            onCancelMessage={(localId) => props.api.cancelQueuedMessage(props.session.id, localId).catch(() => {})}
+                        />
                     </div>
 
                     <HappyComposer
@@ -699,6 +708,10 @@ export function SessionChat(props: {
                         onVoiceMicToggle={voice ? handleVoiceMicToggle : undefined}
                         sttStatus={stt.state.status}
                         onSttToggle={handleSttToggle}
+                        pendingSchedule={pendingSchedule}
+                        onSchedule={setPendingSchedule}
+                        onClearSchedule={() => setPendingSchedule(null)}
+                        hasAttachments={false}
                     />
                 </div>
             </AssistantRuntimeProvider>

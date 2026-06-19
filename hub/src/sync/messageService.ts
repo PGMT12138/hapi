@@ -28,7 +28,8 @@ export class MessageService {
             localId: message.localId,
             content: message.content,
             createdAt: message.createdAt,
-            invokedAt: message.invokedAt
+            invokedAt: message.invokedAt,
+            scheduledAt: message.scheduledAt
         }))
 
         let oldestSeq: number | null = null
@@ -93,7 +94,8 @@ export class MessageService {
             localId: message.localId,
             content: message.content,
             createdAt: message.createdAt,
-            invokedAt: message.invokedAt
+            invokedAt: message.invokedAt,
+            scheduledAt: message.scheduledAt
         }))
 
         // The cursor is the oldest row in the actual position-ordered page (pageRows[0]).
@@ -123,15 +125,17 @@ export class MessageService {
         }
     }
 
-    getMessagesAfter(sessionId: string, options: { afterSeq: number; limit: number }): DecryptedMessage[] {
-        const stored = this.store.messages.getMessagesAfter(sessionId, options.afterSeq, options.limit)
+    /** CLI reconnect backfill — excludes future-scheduled rows. */
+    getDeliverableMessagesAfter(sessionId: string, options: { afterSeq: number; limit: number; now: number }): DecryptedMessage[] {
+        const stored = this.store.messages.getDeliverableMessagesAfter(sessionId, options.afterSeq, options.now, options.limit)
         return stored.map((message) => ({
             id: message.id,
             seq: message.seq,
             localId: message.localId,
             content: message.content,
             createdAt: message.createdAt,
-            invokedAt: message.invokedAt
+            invokedAt: message.invokedAt,
+            scheduledAt: message.scheduledAt
         }))
     }
 
@@ -143,8 +147,13 @@ export class MessageService {
             attachments?: AttachmentMetadata[]
             sentFrom?: 'telegram-bot' | 'webapp'
             ephemeral?: boolean
+            scheduledAt?: number | null
         }
     ): Promise<void> {
+        if (payload.scheduledAt != null && (payload.attachments?.length ?? 0) > 0) {
+            throw new Error('sendMessage: scheduled messages with attachments are not supported')
+        }
+
         const sentFrom = payload.sentFrom ?? 'webapp'
 
         const content = {
@@ -184,26 +193,29 @@ export class MessageService {
             return
         }
 
-        const msg = this.store.messages.addMessage(sessionId, content, payload.localId ?? undefined)
+        const msg = this.store.messages.addMessage(sessionId, content, payload.localId ?? undefined, payload.scheduledAt ?? undefined)
         this.onSessionActivity?.(sessionId, msg.createdAt)
 
-        const update = {
-            id: msg.id,
-            seq: msg.seq,
-            createdAt: msg.createdAt,
-            body: {
-                t: 'new-message' as const,
-                sid: sessionId,
-                message: {
-                    id: msg.id,
-                    seq: msg.seq,
-                    createdAt: msg.createdAt,
-                    localId: msg.localId,
-                    content: msg.content
+        const isFutureScheduled = msg.scheduledAt !== null && msg.scheduledAt > Date.now()
+        if (!isFutureScheduled) {
+            const update = {
+                id: msg.id,
+                seq: msg.seq,
+                createdAt: msg.createdAt,
+                body: {
+                    t: 'new-message' as const,
+                    sid: sessionId,
+                    message: {
+                        id: msg.id,
+                        seq: msg.seq,
+                        createdAt: msg.createdAt,
+                        localId: msg.localId,
+                        content: msg.content
+                    }
                 }
             }
+            this.io.of('/cli').to(`session:${sessionId}`).emit('update', update)
         }
-        this.io.of('/cli').to(`session:${sessionId}`).emit('update', update)
 
         this.publisher.emit({
             type: 'message-received',
@@ -214,8 +226,68 @@ export class MessageService {
                 localId: msg.localId,
                 content: msg.content,
                 createdAt: msg.createdAt,
-                invokedAt: msg.invokedAt
+                invokedAt: msg.invokedAt,
+                scheduledAt: msg.scheduledAt
             }
         })
+    }
+
+    /** Force-invoke all immediate-queued messages for a session at session end. */
+    sweepImmediateQueuedOnSessionEnd(
+        sessionId: string,
+        invokedAt: number
+    ): { localIds: string[]; invokedAt: number } | null {
+        const queued = this.store.messages.getImmediateQueuedLocalMessages(sessionId)
+        const localIds = queued
+            .map((m) => m.localId)
+            .filter((id): id is string => typeof id === 'string')
+        if (localIds.length === 0) return null
+        this.store.messages.markMessagesInvoked(sessionId, localIds, invokedAt)
+        this.publisher.emit({ type: 'messages-consumed', sessionId, localIds, invokedAt })
+        return { localIds, invokedAt }
+    }
+
+    /** Called by the hub 5-second tick. Finds mature scheduled messages and emits
+     *  them to CLI via socket.io. Does NOT call markMessagesInvoked — the CLI ack
+     *  (messages-consumed) handles that. Messages are re-emitted on each tick until
+     *  the CLI acks, so a hub restart will naturally re-emit pending rows. */
+    releaseMatureScheduledMessages(now: number): void {
+        const mature = this.store.messages.getMatureScheduledMessages(now)
+        for (const msg of mature) {
+            const update = {
+                id: msg.id,
+                seq: msg.seq,
+                createdAt: msg.createdAt,
+                body: {
+                    t: 'new-message' as const,
+                    sid: msg.sessionId,
+                    message: {
+                        id: msg.id,
+                        seq: msg.seq,
+                        createdAt: msg.createdAt,
+                        localId: msg.localId,
+                        content: msg.content
+                    }
+                }
+            }
+            this.io.of('/cli').to(`session:${msg.sessionId}`).emit('update', update)
+        }
+    }
+
+    /** Cancel a queued message. Future-scheduled messages are deleted directly
+     *  (they were never emitted to CLI). Immediate-queued messages cannot be
+     *  cancelled because the CLI may have already consumed them. */
+    cancelQueuedMessage(sessionId: string, localId: string): boolean {
+        const lookup = this.store.messages.lookupQueuedMessage(sessionId, localId)
+        if (lookup.status === 'absent') return false
+        if (lookup.status === 'invoked') return false
+        const { scheduledAt, resolvedId } = lookup
+        const now = Date.now()
+        if (scheduledAt !== null && scheduledAt > now) {
+            this.store.messages.deleteQueuedMessageById(sessionId, resolvedId)
+            this.publisher.emit({ type: 'message-cancelled', sessionId, messageId: resolvedId, localId })
+            return true
+        }
+        return false
     }
 }

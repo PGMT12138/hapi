@@ -4,6 +4,7 @@ import { isQueuedForInvocation } from '@/lib/messages'
 import { EMPTY_STATE } from '@/hooks/queries/useMessages'
 import { normalizeDecryptedMessage } from '@/chat/normalize'
 import type { DecryptedMessage } from '@/types/api'
+import { useTranslation } from '@/lib/use-translation'
 
 function ClockIcon() {
     return (
@@ -25,10 +26,37 @@ function ClockIcon() {
     )
 }
 
-/**
- * Returns user messages that haven't been invoked yet (invokedAt == null and not sent/failed).
- * Covers both optimistic (status='queued') and server-loaded (status=undefined, invokedAt=null) cases.
- */
+function CancelIcon() {
+    return (
+        <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+        >
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+    )
+}
+
+function formatScheduledTime(ms: number): string {
+    const d = new Date(ms)
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+
+    if (d.toDateString() === now.toDateString()) {
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    }
+
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    if (d.toDateString() === tomorrow.toDateString()) {
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    }
+
+    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function useQueuedMessages(sessionId: string): DecryptedMessage[] {
     const state = useSyncExternalStore(
         useCallback((listener) => subscribeMessageWindow(sessionId, listener), [sessionId]),
@@ -36,9 +64,6 @@ function useQueuedMessages(sessionId: string): DecryptedMessage[] {
         () => EMPTY_STATE
     )
 
-    // `invokedAt` is the source of truth for invocation; see isQueuedForInvocation
-    // (lib/messages) for the shared predicate used by the thread filter and the
-    // window store trim helpers.
     const allMessages = [...state.messages, ...state.pending]
     return allMessages.filter(isQueuedForInvocation)
 }
@@ -52,9 +77,6 @@ function getTextFromMessage(msg: DecryptedMessage): string {
     if (text) {
         return text
     }
-    // Attachment-only sends: the composer / POST /messages allow empty text
-    // when attachments are present. Fall back to the filenames so the chip
-    // is not blank.
     const attachments = normalized.content.attachments ?? []
     if (attachments.length === 0) {
         return ''
@@ -62,14 +84,15 @@ function getTextFromMessage(msg: DecryptedMessage): string {
     return attachments.map((a) => a.filename ?? 'attachment').join(', ')
 }
 
-/**
- * Floating bar above the composer showing queued (pending invocation) messages.
- * Disappears automatically when all queued messages are invoked or consumed.
- *
- * TODO PR 2: add cancel/edit buttons per item.
- */
-export function QueuedMessagesBar({ sessionId }: { sessionId: string }) {
+export function QueuedMessagesBar({ sessionId, onCancelMessage }: { sessionId: string; onCancelMessage?: (localId: string) => void }) {
     const queued = useQueuedMessages(sessionId)
+    const { t } = useTranslation()
+
+    const handleCancel = (msg: DecryptedMessage) => {
+        if (msg.localId && onCancelMessage) {
+            onCancelMessage(msg.localId)
+        }
+    }
 
     if (queued.length === 0) {
         return null
@@ -78,27 +101,40 @@ export function QueuedMessagesBar({ sessionId }: { sessionId: string }) {
     return (
         <div
             role="status"
-            aria-label={`${queued.length} queued message${queued.length === 1 ? '' : 's'} pending invocation`}
             className="mx-auto w-full max-w-content mb-1"
         >
             <div className="px-3 py-2 text-sm text-[var(--app-fg-muted)]">
                 <div className="flex items-center gap-1.5 mb-1.5 text-xs font-medium text-[var(--app-hint)]">
                     <ClockIcon />
-                    <span>Queued</span>
+                    <span>{t('queued.label')}</span>
                 </div>
                 <ul
                     className="flex flex-col gap-1.5 max-h-32 sm:max-h-48 overflow-y-auto"
-                    aria-label="Queued messages"
                 >
                     {queued.map((msg) => {
                         const text = getTextFromMessage(msg)
+                        const isScheduled = msg.scheduledAt != null && msg.scheduledAt > Date.now()
                         return (
                             <li
                                 key={msg.localId ?? msg.id}
                                 className="flex items-start gap-2 min-w-0 rounded-lg bg-[var(--app-secondary-bg)] px-3 py-2 shadow-sm"
                             >
-                                <span className="line-clamp-3 whitespace-pre-wrap break-words text-[var(--app-fg)]">{text}</span>
-                                {/* TODO PR 2: cancel/edit buttons */}
+                                <span className="line-clamp-3 whitespace-pre-wrap break-words text-[var(--app-fg)] flex-1">{text}</span>
+                                {isScheduled ? (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <span className="text-xs text-[var(--app-hint)] whitespace-nowrap">
+                                            {formatScheduledTime(msg.scheduledAt!)}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCancel(msg)}
+                                            className="text-[var(--app-hint)] hover:text-[var(--app-fg)] transition-colors"
+                                            aria-label={t('queued.cancel')}
+                                        >
+                                            <CancelIcon />
+                                        </button>
+                                    </div>
+                                ) : null}
                             </li>
                         )
                     })}

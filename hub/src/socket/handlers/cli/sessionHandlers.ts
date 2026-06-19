@@ -88,10 +88,11 @@ export type SessionHandlersDeps = {
     onWebappEvent?: (event: SyncEvent) => void
     onBackgroundTaskDelta?: (sessionId: string, delta: { started: number; completed: number }) => void
     onSessionActivity?: (sessionId: string, updatedAt: number) => void
+    onSweepImmediateQueued?: (sessionId: string, invokedAt: number) => void
 }
 
 export function registerSessionHandlers(socket: CliSocketWithData, deps: SessionHandlersDeps): void {
-    const { store, resolveSessionAccess, emitAccessError, onSessionAlive, onSessionEnd, onWebappEvent, onBackgroundTaskDelta, onSessionActivity } = deps
+    const { store, resolveSessionAccess, emitAccessError, onSessionAlive, onSessionEnd, onWebappEvent, onBackgroundTaskDelta, onSessionActivity, onSweepImmediateQueued } = deps
 
     socket.on('message', (data: unknown) => {
         const parsed = messageSchema.safeParse(data)
@@ -348,27 +349,14 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             return
         }
 
-        // Force-invoke any user messages that are still queued at session end.
-        // Without this, the floating bar pins the queued rows after the CLI is
-        // gone — there is no longer an ack path (no CLI to emit
-        // messages-consumed) so they would stay queued forever.
+        // Force-invoke only immediate-queued messages (scheduled_at IS NULL).
+        // Scheduled messages must survive session end so the mature-scan path
+        // can deliver them later. See HAPI Bot R4 finding.
         try {
-            const queued = store.messages.getUninvokedLocalMessages(data.sid)
-            const localIds = queued
-                .map((m) => m.localId)
-                .filter((id): id is string => typeof id === 'string')
-            if (localIds.length > 0) {
-                const invokedAt = Date.now()
-                store.messages.markMessagesInvoked(data.sid, localIds, invokedAt)
-                onWebappEvent?.({
-                    type: 'messages-consumed',
-                    sessionId: data.sid,
-                    localIds,
-                    invokedAt
-                })
-            }
+            const invokedAt = Date.now()
+            onSweepImmediateQueued?.(data.sid, invokedAt)
         } catch (err) {
-            console.error('session-end markMessagesInvoked failed', err)
+            console.error('session-end sweepImmediateQueued failed', err)
         }
 
         onSessionEnd?.(data)

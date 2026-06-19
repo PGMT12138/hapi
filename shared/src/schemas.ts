@@ -168,7 +168,8 @@ export const DecryptedMessageSchema = z.object({
     localId: z.string().nullable(),
     content: z.unknown(),
     createdAt: z.number(),
-    invokedAt: z.number().nullable().optional()
+    invokedAt: z.number().nullable().optional(),
+    scheduledAt: z.number().nullable().optional()
 })
 
 export type DecryptedMessage = z.infer<typeof DecryptedMessageSchema>
@@ -269,6 +270,11 @@ export const SyncEventSchema = z.discriminatedUnion('type', [
             status: z.string(),
             subscriptionId: z.string().optional()
         }).optional()
+    }),
+    SessionChangedSchema.extend({
+        type: z.literal('message-cancelled'),
+        messageId: z.string(),
+        localId: z.string()
     })
 ])
 

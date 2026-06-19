@@ -43,10 +43,11 @@ export type CliHandlersDeps = {
     onWebappEvent?: (event: SyncEvent) => void
     onBackgroundTaskDelta?: (sessionId: string, delta: { started: number; completed: number }) => void
     onSessionActivity?: (sessionId: string, updatedAt: number) => void
+    onSweepImmediateQueued?: (sessionId: string, invokedAt: number) => void
 }
 
 export function registerCliHandlers(socket: CliSocketWithData, deps: CliHandlersDeps): void {
-    const { io, store, rpcRegistry, terminalRegistry, onSessionAlive, onSessionEnd, onMachineAlive, onWebappEvent, onBackgroundTaskDelta, onSessionActivity } = deps
+    const { io, store, rpcRegistry, terminalRegistry, onSessionAlive, onSessionEnd, onMachineAlive, onWebappEvent, onBackgroundTaskDelta, onSessionActivity, onSweepImmediateQueued } = deps
     const terminalNamespace = io.of('/terminal')
     const namespace = typeof socket.data.namespace === 'string' ? socket.data.namespace : null
 
@@ -107,7 +108,8 @@ export function registerCliHandlers(socket: CliSocketWithData, deps: CliHandlers
         onSessionEnd,
         onWebappEvent,
         onBackgroundTaskDelta,
-        onSessionActivity
+        onSessionActivity,
+        onSweepImmediateQueued
     })
     registerMachineHandlers(socket, {
         store,
@@ -131,28 +133,14 @@ export function registerCliHandlers(socket: CliSocketWithData, deps: CliHandlers
         rpcRegistry.unregisterAll(socket)
         cleanupTerminalHandlers(socket, { terminalRegistry, terminalNamespace })
 
-        // Auto-invoke queued messages for the disconnected CLI's session.
-        // When CLI disconnects unexpectedly (crash, kill, network failure) it
-        // may not emit session-end, leaving user messages stuck in queued state
-        // with invoked_at = null forever.
+        // Auto-invoke immediate-queued messages for the disconnected CLI's session.
+        // Only sweeps scheduled_at IS NULL rows — scheduled rows must survive
+        // so the mature-scan path can deliver them later.
         if (sessionId && resolveSessionAccess(sessionId).ok) {
             try {
-                const queued = store.messages.getUninvokedLocalMessages(sessionId)
-                const localIds = queued
-                    .map((m) => m.localId)
-                    .filter((id): id is string => typeof id === 'string')
-                if (localIds.length > 0) {
-                    const invokedAt = Date.now()
-                    store.messages.markMessagesInvoked(sessionId, localIds, invokedAt)
-                    onWebappEvent?.({
-                        type: 'messages-consumed',
-                        sessionId,
-                        localIds,
-                        invokedAt
-                    })
-                }
+                onSweepImmediateQueued?.(sessionId, Date.now())
             } catch (err) {
-                console.error('disconnect markMessagesInvoked failed', err)
+                console.error('disconnect sweepImmediateQueued failed', err)
             }
         }
     })

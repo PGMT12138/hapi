@@ -148,6 +148,7 @@ export interface ClientToServerEvents {
     }) => void
     'session-end': (data: { sid: string; time: number; reason?: SessionEndReason }) => void
     'messages-consumed': (data: { sid: string; localIds: string[] }) => void
+    'message-cancelled': (data: { sid: string; messageId: string; localId: string }) => void
     'update-metadata': (data: { sid: string; expectedVersion: number; metadata: unknown }, cb: (answer: {
         result: 'error'
         reason?: SocketErrorReason

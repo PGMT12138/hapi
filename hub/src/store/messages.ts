@@ -12,6 +12,7 @@ type DbMessageRow = {
     seq: number
     local_id: string | null
     invoked_at: number | null
+    scheduled_at: number | null
 }
 
 function toStoredMessage(row: DbMessageRow): StoredMessage {
@@ -22,7 +23,8 @@ function toStoredMessage(row: DbMessageRow): StoredMessage {
         createdAt: row.created_at,
         seq: row.seq,
         localId: row.local_id,
-        invokedAt: row.invoked_at ?? null
+        invokedAt: row.invoked_at ?? null,
+        scheduledAt: row.scheduled_at ?? null
     }
 }
 
@@ -30,9 +32,14 @@ export function addMessage(
     db: Database,
     sessionId: string,
     content: unknown,
-    localId?: string
+    localId?: string,
+    scheduledAt?: number | null
 ): StoredMessage {
     const now = Date.now()
+
+    if (scheduledAt != null && !localId) {
+        throw new Error('addMessage: scheduledAt requires a localId for the ack flow')
+    }
 
     if (localId) {
         const existing = db.prepare(
@@ -58,9 +65,9 @@ export function addMessage(
 
     db.prepare(`
         INSERT INTO messages (
-            id, session_id, content, created_at, seq, local_id, invoked_at
+            id, session_id, content, created_at, seq, local_id, invoked_at, scheduled_at
         ) VALUES (
-            @id, @session_id, @content, @created_at, @seq, @local_id, @invoked_at
+            @id, @session_id, @content, @created_at, @seq, @local_id, @invoked_at, @scheduled_at
         )
     `).run({
         id,
@@ -69,7 +76,8 @@ export function addMessage(
         created_at: now,
         seq: msgSeq,
         local_id: localId ?? null,
-        invoked_at: invokedAt
+        invoked_at: invokedAt,
+        scheduled_at: scheduledAt ?? null
     })
 
     const row = db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as DbMessageRow | undefined
@@ -98,18 +106,28 @@ export function getMessages(
     return rows.reverse().map(toStoredMessage)
 }
 
-export function getMessagesAfter(
+/** CLI reconnect backfill: returns messages above the seq cursor that are
+ *  deliverable now, i.e. excludes future-scheduled rows. Without this filter,
+ *  a CLI reconnect between schedule time and release time would replay future-
+ *  scheduled rows and the runner would consume them immediately. */
+export function getDeliverableMessagesAfter(
     db: Database,
     sessionId: string,
     afterSeq: number,
+    now: number,
     limit: number = 200
 ): StoredMessage[] {
     const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, limit)) : 200
     const safeAfterSeq = Number.isFinite(afterSeq) ? afterSeq : 0
 
-    const rows = db.prepare(
-        'SELECT * FROM messages WHERE session_id = ? AND seq > ? ORDER BY seq ASC LIMIT ?'
-    ).all(sessionId, safeAfterSeq, safeLimit) as DbMessageRow[]
+    const rows = db.prepare(`
+        SELECT * FROM messages
+        WHERE session_id = ?
+          AND seq > ?
+          AND (scheduled_at IS NULL OR scheduled_at <= ?)
+        ORDER BY seq ASC
+        LIMIT ?
+    `).all(sessionId, safeAfterSeq, now, safeLimit) as DbMessageRow[]
 
     return rows.map(toStoredMessage)
 }
@@ -240,4 +258,74 @@ export function mergeSessionMessages(
         db.exec('ROLLBACK')
         throw error
     }
+}
+
+/** Returns scheduled messages across all sessions whose scheduled_at <= beforeTime
+ *  and have not yet been invoked.  Used by the hub tick to emit mature messages to CLI. */
+export function getMatureScheduledMessages(
+    db: Database,
+    beforeTime: number
+): StoredMessage[] {
+    const rows = db.prepare(
+        'SELECT * FROM messages WHERE scheduled_at IS NOT NULL AND scheduled_at <= ? AND invoked_at IS NULL ORDER BY scheduled_at ASC'
+    ).all(beforeTime) as DbMessageRow[]
+    return rows.map(toStoredMessage)
+}
+
+/** Returns immediate-queued local messages for a session — i.e. rows that have
+ *  no scheduled_at.  Used by the session-end sweep so scheduled rows are not
+ *  mistakenly force-invoked. */
+export function getImmediateQueuedLocalMessages(
+    db: Database,
+    sessionId: string
+): StoredMessage[] {
+    const rows = db.prepare(`
+        SELECT * FROM messages
+        WHERE session_id = ?
+          AND invoked_at IS NULL
+          AND local_id IS NOT NULL
+          AND scheduled_at IS NULL
+        ORDER BY seq ASC
+    `).all(sessionId) as DbMessageRow[]
+    return rows.map(toStoredMessage)
+}
+
+export type LookupQueuedMessageResult =
+    | { status: 'absent' }
+    | { status: 'invoked'; message: StoredMessage }
+    | { status: 'queued'; localId: string | null; resolvedId: string; scheduledAt: number | null }
+
+/** Look up a queued message without deleting it. */
+export function lookupQueuedMessage(
+    db: Database,
+    sessionId: string,
+    localId: string
+): LookupQueuedMessageResult {
+    const row = db.prepare(
+        'SELECT * FROM messages WHERE session_id = ? AND local_id = ? LIMIT 1'
+    ).get(sessionId, localId) as DbMessageRow | undefined
+
+    if (!row) return { status: 'absent' }
+    if (row.invoked_at != null) {
+        return { status: 'invoked', message: toStoredMessage(row) }
+    }
+
+    return {
+        status: 'queued',
+        localId: row.local_id,
+        resolvedId: row.id,
+        scheduledAt: row.scheduled_at
+    }
+}
+
+/** Delete a queued (invoked_at IS NULL) message by id. */
+export function deleteQueuedMessageById(
+    db: Database,
+    sessionId: string,
+    messageId: string
+): boolean {
+    const result = db.prepare(
+        'DELETE FROM messages WHERE session_id = ? AND id = ? AND invoked_at IS NULL'
+    ).run(sessionId, messageId)
+    return result.changes > 0
 }
