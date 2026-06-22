@@ -18,10 +18,10 @@ export type MessageWindowState = {
     messagesVersion: number
 }
 
-export const VISIBLE_WINDOW_SIZE = 400
+export const VISIBLE_WINDOW_SIZE = 1000
 export const PENDING_WINDOW_SIZE = 200
 const AGENT_RUN_WINDOW_SIZE = 800
-const PAGE_SIZE = 200
+const PAGE_SIZE = 1000
 const COLD_LOAD_BACKFILL_PAGE_SIZE = 200
 const COLD_LOAD_REGULAR_TARGET = PAGE_SIZE
 const PENDING_OVERFLOW_WARNING = 'New messages arrived while you were away. Scroll to bottom to refresh.'
@@ -863,9 +863,8 @@ export async function fetchOlderMessages(api: ApiClient, sessionId: string): Pro
 
         updateStateForGeneration(sessionId, 'older', generation, (prev) => {
             const merged = mergeMessages(response.messages, prev.messages)
-            const trimmed = trimVisible(merged, 'prepend')
             return buildState(prev, {
-                messages: trimmed,
+                messages: merged,
                 hasMore: response.page.hasMore,
                 oldestPositionAt: isV8Cursor ? nextBeforeAt : null,
                 oldestPositionSeq: isV8Cursor ? nextBeforeSeq : null,
