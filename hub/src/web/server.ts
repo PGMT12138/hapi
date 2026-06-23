@@ -24,6 +24,7 @@ import { createPromptRoutes } from './routes/prompts'
 import { createSlashCommandFavoriteRoutes } from './routes/slashCommandFavorites'
 import { createSttConfigRoutes } from './routes/sttConfig'
 import { createSttRoutes } from './routes/stt'
+import { createTokenPlanUsageRoutes } from './routes/tokenPlanUsage'
 import type { SSEManager } from '../sse/sseManager'
 import type { VisibilityTracker } from '../visibility/visibilityTracker'
 import type { Server as BunServer } from 'bun'
@@ -107,6 +108,7 @@ function createWebApp(options: {
     app.route('/api', createSlashCommandFavoriteRoutes(options.store))
     app.route('/api', createSttConfigRoutes(options.store))
     app.route('/api', createSttRoutes(options.store))
+    app.route('/api', createTokenPlanUsageRoutes(options.getSyncEngine))
 
     // Skip static serving in relay mode, show helpful message on root
     if (options.relayMode) {

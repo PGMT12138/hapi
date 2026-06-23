@@ -623,4 +623,20 @@ export default {
   'file.error.readFailedWithDetail': '读取文件失败：{error}',
   'file.error.diffUnavailable': 'Diff 不可用。',
   'file.error.diffUnavailableWithDetail': 'Diff 不可用：{error}',
+
+  // Token Plan
+  'tokenPlan.title': '额度用量',
+  'tokenPlan.remaining': '剩余',
+  'tokenPlan.consumed': '已用',
+  'tokenPlan.usage': '用量',
+  'tokenPlan.resetAt': '重置时间',
+  'tokenPlan.limit.tokens': 'Token 限额（5小时窗口）',
+  'tokenPlan.limit.tokensWeek': 'Token 限额（1周窗口）',
+  'tokenPlan.limit.time': 'MCP 用量（1个月）',
+  'tokenPlan.noData': '暂无额度数据。',
+  'tokenPlan.usageDetails': '用量明细',
+  'tokenPlan.detailModel': '模型',
+  'tokenPlan.detailCount': '次数',
+  'tokenPlan.fetching': '加载额度数据中...',
+  'tokenPlan.autoRefresh': '每30秒自动刷新',
 } as const

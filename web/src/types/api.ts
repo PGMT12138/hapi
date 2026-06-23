@@ -304,3 +304,28 @@ export interface SttConfig {
     region: string
     updatedAt: string
 }
+
+export type TokenPlanLimit = {
+    type: string
+    percentage?: number
+    currentValue?: number
+    usage?: number
+    usageDetails?: Array<{ modelCode: string; usage: number }>
+    nextResetTime?: string
+    resetAt?: string
+    windowStart?: string
+    windowEnd?: string
+    expiresAt?: string
+    [key: string]: unknown
+}
+
+export type TokenPlanUsageResponse = {
+    available: boolean
+    platform?: 'zai' | 'zhipu'
+    quota?: {
+        limits: TokenPlanLimit[]
+    }
+    modelUsage?: unknown
+    toolUsage?: unknown
+    error?: string
+}

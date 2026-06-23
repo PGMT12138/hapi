@@ -1,10 +1,6 @@
 import {
-    getCodexCollaborationModeLabel,
-    getPermissionModeLabel,
-    getPermissionModeTone,
-    isPermissionModeAllowedForFlavor
+    getCodexCollaborationModeLabel
 } from '@hapi/protocol'
-import type { PermissionModeTone } from '@hapi/protocol'
 import { useMemo } from 'react'
 import type { AgentState, CodexCollaborationMode, PermissionMode } from '@/types/api'
 import type { ConversationStatus } from '@/realtime/types'
@@ -39,13 +35,6 @@ function getContextUsageStyle(usedPercent: number): { color: string; bgColor: st
     if (usedPercent >= 60) return { color: 'text-amber-600', bgColor: 'bg-amber-500/10' }
     if (usedPercent >= 50) return { color: 'text-yellow-600', bgColor: 'bg-yellow-500/10' }
     return { color: 'text-[var(--app-hint)]', bgColor: 'bg-[var(--app-subtle-bg)]' }
-}
-
-const PERMISSION_TONE_CLASSES: Record<PermissionModeTone, string> = {
-    neutral: 'text-[var(--app-hint)]',
-    info: 'text-blue-500',
-    warning: 'text-amber-500',
-    danger: 'text-red-500'
 }
 
 function getConnectionStatus(
@@ -140,6 +129,13 @@ function isCodexFastMode(model?: string | null, effort?: string | null): boolean
     return normalizedModel.includes('mini') || normalizedModel.includes('fast')
 }
 
+function getTokenPlanStyle(remainingPercent: number): { color: string; bgColor: string } {
+    if (remainingPercent < 15) return { color: 'text-red-500', bgColor: 'bg-red-500/15' }
+    if (remainingPercent < 30) return { color: 'text-orange-500', bgColor: 'bg-orange-500/10' }
+    if (remainingPercent < 50) return { color: 'text-amber-600', bgColor: 'bg-amber-500/10' }
+    return { color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' }
+}
+
 export function StatusBar(props: {
     active: boolean
     thinking: boolean
@@ -158,6 +154,8 @@ export function StatusBar(props: {
     parsedContext?: ParsedContextData | null
     contextFetching?: boolean
     onContextClick?: () => void
+    tokenPlanRemainingPercent?: number | null
+    onTokenPlanClick?: () => void
 }) {
     const { t } = useTranslation()
     const connectionStatus = useMemo(
@@ -209,16 +207,6 @@ export function StatusBar(props: {
         return { text, freeText: null, color, bgColor, isFetching: false }
     }, [props.contextFetching, props.parsedContext, props.usedPercentage, props.contextWindowSize, props.usedTokens, t])
 
-    const permissionMode = props.permissionMode
-    const displayPermissionMode = permissionMode
-        && permissionMode !== 'default'
-        && isPermissionModeAllowedForFlavor(permissionMode, props.agentFlavor)
-        ? permissionMode
-        : null
-
-    const permissionModeLabel = displayPermissionMode ? getPermissionModeLabel(displayPermissionMode) : null
-    const permissionModeTone = displayPermissionMode ? getPermissionModeTone(displayPermissionMode) : null
-    const permissionModeColor = permissionModeTone ? PERMISSION_TONE_CLASSES[permissionModeTone] : 'text-[var(--app-hint)]'
     const displayCollaborationMode = props.agentFlavor === 'codex' && props.collaborationMode === 'plan'
         ? props.collaborationMode
         : null
@@ -234,7 +222,7 @@ export function StatusBar(props: {
 
     return (
         <div className="flex items-center justify-between px-2 pb-1">
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                     <span
                         className={`h-2 w-2 rounded-full ${connectionStatus.dotColor} ${connectionStatus.isPulsing ? 'animate-pulse' : ''}`}
@@ -243,22 +231,38 @@ export function StatusBar(props: {
                         {connectionStatus.text}
                     </span>
                 </div>
-                {contextLabel ? (
-                    <button
-                        type="button"
-                        onClick={props.onContextClick}
-                        className={`flex items-center gap-2 rounded-md px-2 py-0.5 text-left transition-colors ${contextLabel.bgColor}${contextLabel.isFetching ? ' animate-pulse' : ''}`}
-                    >
-                        <span className={`text-[11px] font-medium ${contextLabel.color}`}>
-                            {contextLabel.text}
-                        </span>
-                        {contextLabel.freeText ? (
+                <div className="flex items-center gap-1.5">
+                    {contextLabel ? (
+                        <button
+                            type="button"
+                            onClick={props.onContextClick}
+                            className={`flex items-center gap-2 rounded-md px-2 py-0.5 text-left transition-colors ${contextLabel.bgColor}${contextLabel.isFetching ? ' animate-pulse' : ''}`}
+                        >
                             <span className={`text-[11px] font-medium ${contextLabel.color}`}>
-                                {contextLabel.freeText}
+                                {contextLabel.text}
                             </span>
-                        ) : null}
-                    </button>
-                ) : null}
+                            {contextLabel.freeText ? (
+                                <span className={`text-[11px] font-medium ${contextLabel.color}`}>
+                                    {contextLabel.freeText}
+                                </span>
+                            ) : null}
+                        </button>
+                    ) : null}
+                    {props.tokenPlanRemainingPercent != null ? (
+                        <button
+                            type="button"
+                            onClick={props.onTokenPlanClick}
+                            className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-left transition-colors ${getTokenPlanStyle(props.tokenPlanRemainingPercent).bgColor}`}
+                        >
+                            <span className={`text-[11px] font-bold leading-none ${getTokenPlanStyle(props.tokenPlanRemainingPercent).color}`}>
+                                TP
+                            </span>
+                            <span className={`text-[11px] font-medium ${getTokenPlanStyle(props.tokenPlanRemainingPercent).color}`}>
+                                {Math.round(props.tokenPlanRemainingPercent)}%
+                            </span>
+                        </button>
+                    ) : null}
+                </div>
             </div>
 
             <div className="flex min-w-0 items-center gap-2">
@@ -275,11 +279,6 @@ export function StatusBar(props: {
                 {collaborationModeLabel ? (
                     <span className="text-xs text-blue-500">
                         {collaborationModeLabel}
-                    </span>
-                ) : null}
-                {displayPermissionMode ? (
-                    <span className={`text-xs ${permissionModeColor}`}>
-                        {permissionModeLabel}
                     </span>
                 ) : null}
             </div>

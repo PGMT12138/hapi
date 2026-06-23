@@ -67,6 +67,8 @@ export function HappyComposer(props: {
     parsedContext?: ParsedContextData | null
     contextFetching?: boolean
     onContextClick?: () => void
+    tokenPlanRemainingPercent?: number | null
+    onTokenPlanClick?: () => void
     controlledByUser?: boolean
     agentFlavor?: string | null
     availableModelOptions?: Array<{ value: string | null; label: string }>
@@ -114,6 +116,8 @@ export function HappyComposer(props: {
         parsedContext,
         contextFetching,
         onContextClick,
+        tokenPlanRemainingPercent,
+        onTokenPlanClick,
         controlledByUser = false,
         agentFlavor,
         availableModelOptions,
@@ -909,6 +913,8 @@ export function HappyComposer(props: {
                         parsedContext={parsedContext}
                         contextFetching={contextFetching}
                         onContextClick={onContextClick}
+                        tokenPlanRemainingPercent={tokenPlanRemainingPercent}
+                        onTokenPlanClick={onTokenPlanClick}
                         model={model}
                         modelReasoningEffort={modelReasoningEffort}
                         permissionMode={permissionMode}

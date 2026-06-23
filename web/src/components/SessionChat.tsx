@@ -25,10 +25,12 @@ import { isQueuedForInvocation } from '@/lib/messages'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
 import { ContextPanel } from '@/components/ContextPanel'
+import { TokenPlanPanel } from '@/components/TokenPlanPanel'
 import { QueuedMessagesBar } from '@/components/AssistantChat/QueuedMessagesBar'
 import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createAttachmentAdapter } from '@/lib/attachmentAdapter'
 import { useTranslation } from '@/lib/use-translation'
+import { useTokenPlanUsage } from '@/hooks/queries/useTokenPlanUsage'
 import { SessionHeader } from '@/components/SessionHeader'
 import { TeamPanel } from '@/components/TeamPanel'
 import { useAssistantApi } from '@assistant-ui/react'
@@ -146,6 +148,7 @@ export function SessionChat(props: {
     const [forceScrollToken, setForceScrollToken] = useState(0)
     const [outlineOpen, setOutlineOpen] = useState(false)
     const [contextPanelOpen, setContextPanelOpen] = useState(false)
+    const [tokenPlanPanelOpen, setTokenPlanPanelOpen] = useState(false)
     const [contextFetching, setContextFetching] = useState(false)
     const contextFetchingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const contextFetchingStartRef = useRef(0)
@@ -375,6 +378,16 @@ export function SessionChat(props: {
         const usedTokens = typeof data.totalInputTokens === 'number' ? data.totalInputTokens : undefined
         return { usedPercentage, contextWindowSize, usedTokens }
     }, [props.session.metadata])
+
+    const machineIdForPlan = (props.session.metadata as Record<string, unknown> | undefined)?.machineId as string | undefined
+    const directoryForPlan = props.session.metadata?.path as string | undefined
+    const tokenPlanState = useTokenPlanUsage(props.api, machineIdForPlan ?? null, directoryForPlan ?? null)
+    const tokenPlanRemainingPercent = useMemo(() => {
+        if (!tokenPlanState.available || !tokenPlanState.data?.quota) return null
+        const tokensLimit = tokenPlanState.data.quota.limits.find((l) => l.type === 'TOKENS_LIMIT')
+        const pct = tokensLimit?.percentage
+        return typeof pct === 'number' ? 100 - pct : null
+    }, [tokenPlanState.available, tokenPlanState.data])
     const reconciled = useMemo(
         () => reconcileChatBlocks(reduced.blocks, blocksByIdRef.current),
         [reduced.blocks]
@@ -680,6 +693,8 @@ export function SessionChat(props: {
                         parsedContext={contextCommandOutput?.parsed ?? null}
                         contextFetching={contextFetching}
                         onContextClick={() => setContextPanelOpen(true)}
+                        tokenPlanRemainingPercent={tokenPlanRemainingPercent}
+                        onTokenPlanClick={() => setTokenPlanPanelOpen(true)}
                         controlledByUser={controlledByUser}
                         onCollaborationModeChange={
                             codexCollaborationModeSupported && props.session.active && !controlledByUser
@@ -735,6 +750,15 @@ export function SessionChat(props: {
                     contextGrowth={contextGrowth}
                     onClose={() => setContextPanelOpen(false)}
                     onRefresh={() => handleSend('/context')}
+                />
+            ) : null}
+
+            {tokenPlanPanelOpen ? (
+                <TokenPlanPanel
+                    data={tokenPlanState.data}
+                    onClose={() => setTokenPlanPanelOpen(false)}
+                    onRefresh={() => tokenPlanState.refetch()}
+                    isLoading={tokenPlanState.isLoading}
                 />
             ) : null}
         </div>

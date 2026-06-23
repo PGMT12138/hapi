@@ -31,4 +31,5 @@ export const queryKeys = {
     projectSkills: (machineId: string, directory: string) => ['project-skills', machineId, directory] as const,
     projectPlugins: (machineId: string, directory: string) => ['project-plugins', machineId, directory] as const,
     ccPluginDetail: (machineId: string, name: string) => ['cc-plugin-detail', machineId, name] as const,
+    tokenPlanUsage: (machineId: string, directory: string) => ['token-plan-usage', machineId, directory] as const,
 }

@@ -621,4 +621,20 @@ export default {
   'file.error.readFailedWithDetail': 'Failed to read file: {error}',
   'file.error.diffUnavailable': 'Diff unavailable.',
   'file.error.diffUnavailableWithDetail': 'Diff unavailable: {error}',
+
+  // Token Plan
+  'tokenPlan.title': 'Token Plan Usage',
+  'tokenPlan.remaining': 'Remaining',
+  'tokenPlan.consumed': 'Consumed',
+  'tokenPlan.usage': 'Usage',
+  'tokenPlan.resetAt': 'Resets at',
+  'tokenPlan.limit.tokens': 'Token Limit (5-Hour Window)',
+  'tokenPlan.limit.tokensWeek': 'Token Limit (1-Week Window)',
+  'tokenPlan.limit.time': 'MCP Usage (1 Month)',
+  'tokenPlan.noData': 'No plan usage data available.',
+  'tokenPlan.usageDetails': 'Usage Details',
+  'tokenPlan.detailModel': 'Model',
+  'tokenPlan.detailCount': 'Count',
+  'tokenPlan.fetching': 'Loading plan data...',
+  'tokenPlan.autoRefresh': 'Auto-refresh every 30s',
 } as const

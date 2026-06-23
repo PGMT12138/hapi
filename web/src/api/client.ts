@@ -26,6 +26,7 @@ import type {
     SkillsResponse,
     SpawnResponse,
     SttConfig,
+    TokenPlanUsageResponse,
     UploadFileResponse,
     VisibilityPayload,
     SessionResponse,
@@ -506,6 +507,12 @@ export class ApiClient {
             method: 'PUT',
             body: JSON.stringify({ env })
         })
+    }
+
+    async getTokenPlanUsage(machineId: string, directory: string): Promise<TokenPlanUsageResponse> {
+        return await this.request<TokenPlanUsageResponse>(
+            `/api/token-plan-usage?machineId=${encodeURIComponent(machineId)}&directory=${encodeURIComponent(directory)}`
+        )
     }
 
     async getSessionCodexModels(sessionId: string): Promise<CodexModelsResponse> {
