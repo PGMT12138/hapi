@@ -5,6 +5,7 @@ import type { SkillSummary } from '@/types/api'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import { queryKeys } from '@/lib/query-keys'
 import { getRecentSkills } from '@/lib/recent-skills'
+import { useDeferredReady } from '@/hooks/useDeferredReady'
 
 function levenshteinDistance(a: string, b: string): number {
     if (a.length === 0) return b.length
@@ -32,6 +33,7 @@ export function useSkills(
     getSuggestions: (query: string) => Promise<Suggestion[]>
 } {
     const resolvedSessionId = sessionId ?? 'unknown'
+    const deferredReady = useDeferredReady()
 
     const query = useQuery({
         queryKey: queryKeys.skills(resolvedSessionId),
@@ -41,7 +43,7 @@ export function useSkills(
             }
             return await api.getSkills(sessionId)
         },
-        enabled: Boolean(api && sessionId),
+        enabled: Boolean(api && sessionId) && deferredReady,
         staleTime: Infinity,
         gcTime: 30 * 60 * 1000,
         retry: false,

@@ -18,10 +18,10 @@ export type MessageWindowState = {
     messagesVersion: number
 }
 
-export const VISIBLE_WINDOW_SIZE = 1000
+export const VISIBLE_WINDOW_SIZE = 500
 export const PENDING_WINDOW_SIZE = 200
-const AGENT_RUN_WINDOW_SIZE = 800
-const PAGE_SIZE = 1000
+const AGENT_RUN_WINDOW_SIZE = 400
+const PAGE_SIZE = 500
 const COLD_LOAD_BACKFILL_PAGE_SIZE = 200
 const COLD_LOAD_REGULAR_TARGET = PAGE_SIZE
 const PENDING_OVERFLOW_WARNING = 'New messages arrived while you were away. Scroll to bottom to refresh.'

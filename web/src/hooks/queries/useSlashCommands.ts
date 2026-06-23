@@ -7,6 +7,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { getBuiltinSlashCommands, mergeSlashCommands } from '@/lib/codexSlashCommands'
 import { useTranslation } from '@/lib/use-translation'
 import { pluginCommandZhCN } from '@/lib/locales/plugin-command-translations'
+import { useDeferredReady } from '@/hooks/useDeferredReady'
 
 function levenshteinDistance(a: string, b: string): number {
     if (a.length === 0) return b.length
@@ -36,6 +37,7 @@ export function useSlashCommands(
 } {
     const { t, locale } = useTranslation()
     const resolvedSessionId = sessionId ?? 'unknown'
+    const deferredReady = useDeferredReady()
 
     // Fetch user-defined commands from the CLI (requires active session)
     const query = useQuery({
@@ -46,7 +48,7 @@ export function useSlashCommands(
             }
             return await api.getSlashCommands(sessionId)
         },
-        enabled: Boolean(api && sessionId),
+        enabled: Boolean(api && sessionId) && deferredReady,
         staleTime: Infinity,
         gcTime: 30 * 60 * 1000,
         retry: false, // Don't retry RPC failures
