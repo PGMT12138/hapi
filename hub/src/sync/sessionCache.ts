@@ -363,16 +363,29 @@ export class SessionCache {
 
     expireInactive(now: number = Date.now()): string[] {
         const sessionTimeoutMs = 30_000
+        const idleEvictMs = 7 * 24 * 60 * 60 * 1000
         const expired: string[] = []
+        const evicted: string[] = []
 
-        for (const session of this.sessions.values()) {
-            if (!session.active) continue
-            if (now - session.activeAt <= sessionTimeoutMs) continue
-            session.active = false
-            session.thinking = false
-            this.pendingThinkingUntilBySessionId.delete(session.id)
-            expired.push(session.id)
-            this.publisher.emit({ type: 'session-updated', sessionId: session.id, data: { active: false } })
+        for (const [sessionId, session] of this.sessions) {
+            if (session.active && now - session.activeAt > sessionTimeoutMs) {
+                session.active = false
+                session.thinking = false
+                this.pendingThinkingUntilBySessionId.delete(sessionId)
+                expired.push(sessionId)
+                this.publisher.emit({ type: 'session-updated', sessionId, data: { active: false } })
+            }
+
+            if (!session.active && !session.thinking && Number.isFinite(session.activeAt) && now - session.activeAt > idleEvictMs) {
+                evicted.push(sessionId)
+            }
+        }
+
+        for (const sessionId of evicted) {
+            this.sessions.delete(sessionId)
+            this.lastBroadcastAtBySessionId.delete(sessionId)
+            this.todoBackfillAttemptedSessionIds.delete(sessionId)
+            this.pendingThinkingUntilBySessionId.delete(sessionId)
         }
 
         return expired
@@ -393,47 +406,56 @@ export class SessionCache {
             return
         }
 
-        if (config.permissionMode !== undefined) {
+        const patch: {
+            permissionMode?: PermissionMode
+            model?: string | null
+            modelReasoningEffort?: string | null
+            effort?: string | null
+            collaborationMode?: CodexCollaborationMode
+        } = {}
+
+        if (config.permissionMode !== undefined && config.permissionMode !== session.permissionMode) {
             session.permissionMode = config.permissionMode
+            patch.permissionMode = config.permissionMode
         }
-        if (config.model !== undefined) {
-            if (config.model !== session.model) {
-                const updated = this.store.sessions.setSessionModel(sessionId, config.model, session.namespace, {
-                    touchUpdatedAt: false
-                })
-                if (!updated) {
-                    throw new Error('Failed to update session model')
-                }
+        if (config.model !== undefined && config.model !== session.model) {
+            const updated = this.store.sessions.setSessionModel(sessionId, config.model, session.namespace, {
+                touchUpdatedAt: false
+            })
+            if (!updated) {
+                throw new Error('Failed to update session model')
             }
             session.model = config.model
+            patch.model = config.model
         }
-        if (config.modelReasoningEffort !== undefined) {
-            if (config.modelReasoningEffort !== session.modelReasoningEffort) {
-                const updated = this.store.sessions.setSessionModelReasoningEffort(sessionId, config.modelReasoningEffort, session.namespace, {
-                    touchUpdatedAt: false
-                })
-                if (!updated) {
-                    throw new Error('Failed to update session model reasoning effort')
-                }
+        if (config.modelReasoningEffort !== undefined && config.modelReasoningEffort !== session.modelReasoningEffort) {
+            const updated = this.store.sessions.setSessionModelReasoningEffort(sessionId, config.modelReasoningEffort, session.namespace, {
+                touchUpdatedAt: false
+            })
+            if (!updated) {
+                throw new Error('Failed to update session model reasoning effort')
             }
             session.modelReasoningEffort = config.modelReasoningEffort
+            patch.modelReasoningEffort = config.modelReasoningEffort
         }
-        if (config.effort !== undefined) {
-            if (config.effort !== session.effort) {
-                const updated = this.store.sessions.setSessionEffort(sessionId, config.effort, session.namespace, {
-                    touchUpdatedAt: false
-                })
-                if (!updated) {
-                    throw new Error('Failed to update session effort')
-                }
+        if (config.effort !== undefined && config.effort !== session.effort) {
+            const updated = this.store.sessions.setSessionEffort(sessionId, config.effort, session.namespace, {
+                touchUpdatedAt: false
+            })
+            if (!updated) {
+                throw new Error('Failed to update session effort')
             }
             session.effort = config.effort
+            patch.effort = config.effort
         }
-        if (config.collaborationMode !== undefined) {
+        if (config.collaborationMode !== undefined && config.collaborationMode !== session.collaborationMode) {
             session.collaborationMode = config.collaborationMode
+            patch.collaborationMode = config.collaborationMode
         }
 
-        this.publisher.emit({ type: 'session-updated', sessionId, data: session })
+        if (Object.keys(patch).length > 0) {
+            this.publisher.emit({ type: 'session-updated', sessionId, data: patch })
+        }
     }
 
     getHiddenSessionsByNamespace(namespace: string): Session[] {
